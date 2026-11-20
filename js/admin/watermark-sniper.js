@@ -43,6 +43,23 @@
   let activeSimilarityProfile = null;
   let scannedViolations = [];
 
+  // ─── Batch Moderation & 24h Recovery State ──────────────────────────────
+  let isBatchMode = false;
+  let batchId = null;
+  let shareToken = null;
+  let batchData = null;
+  let batchProperties = [];
+  let batchPhotos = [];
+  let batchRecoverable = [];
+  let selectedBatchPropId = '';
+  let activeInspectedPhoto = null;
+  let activeInspectedProperty = null;
+  let isEdgeContain = true; // Contain (Edges Clear) enabled by default
+  let activeSidebarTab = 'inspector';
+  let trashCountdownTimer = null;
+  let pendingDeletePhoto = null;
+  let pendingDeleteListing = null;
+
   // ─── URL Signature Helpers ────────────────────────────────────────────────
   function extractUrlSignature(url){
     if(!url || typeof url !== 'string') return '';
@@ -546,6 +563,733 @@
     if(resetBtn){
       resetBtn.addEventListener('click', resetAllFilters);
     }
+  }
+
+  // ─── Batch Mode Loader & Gallery Controller ────────────────────────────────
+  async function loadBatchMode(pBatchId, pShareToken){
+    isBatchMode = true;
+    batchId = pBatchId || null;
+    shareToken = pShareToken || null;
+
+    setLoading(true, 'Querying private placement batch photos & metadata…');
+
+    try {
+      const { data, error } = await CP.sb().rpc('get_batch_photos_for_sniper', {
+        p_batch_id: batchId,
+        p_share_token: shareToken
+      });
+
+      if(error) throw error;
+      if(!data || !data.ok){
+        throw new Error(data?.error || 'Failed to load batch records');
+      }
+
+      batchData = data;
+      batchProperties = Array.isArray(data.properties) ? data.properties : [];
+      batchPhotos = Array.isArray(data.photos) ? data.photos : [];
+      batchRecoverable = Array.isArray(data.recoverable) ? data.recoverable : [];
+
+      if(data.batch_id && !batchId) {
+        batchId = data.batch_id;
+      }
+
+      // 1. Update Topbar Indicators
+      const modePill = document.getElementById('sniper-mode-pill');
+      if(modePill) modePill.textContent = 'Batch Moderation';
+
+      const invLabel = document.getElementById('stat-inventory-label');
+      if(invLabel) invLabel.textContent = 'Batch:';
+
+      const invCount = document.getElementById('stat-total-catalog');
+      if(invCount) invCount.textContent = `${batchProperties.length} listings`;
+
+      const photosCountEl = document.getElementById('stat-photos-catalog');
+      if(photosCountEl){
+        photosCountEl.textContent = `(${batchPhotos.length} photos)`;
+        photosCountEl.style.display = 'inline';
+      }
+
+      // Update 24h Trash pill in topbar
+      const trashStatBtn = document.getElementById('sniper-trash-stat');
+      const trashCountEl = document.getElementById('stat-trash-count');
+      if(trashStatBtn && trashCountEl){
+        trashStatBtn.style.display = 'inline-flex';
+        trashCountEl.textContent = batchRecoverable.length;
+      }
+
+      // 2. Setup Batch Banner
+      const batchBanner = document.getElementById('sniper-batch-banner');
+      const batchIdText = document.getElementById('sniper-batch-id-text');
+      const batchMarketBadge = document.getElementById('sniper-batch-market-badge');
+      const batchCountsText = document.getElementById('sniper-batch-counts');
+      const batchTrashPill = document.getElementById('batch-trash-pill-count');
+
+      if(batchBanner) batchBanner.style.display = 'flex';
+      if(batchIdText) batchIdText.textContent = batchId || (shareToken ? 'Curated Magic Link' : 'Private Placement Batch');
+      if(batchMarketBadge){
+        const info = data.batch_info || {};
+        const market = [info.target_city, info.target_state].filter(Boolean).join(', ');
+        batchMarketBadge.textContent = market || 'Private Placement';
+      }
+      if(batchCountsText){
+        batchCountsText.textContent = `${batchProperties.length} properties · ${batchPhotos.length} total photos`;
+      }
+      if(batchTrashPill){
+        batchTrashPill.textContent = batchRecoverable.length;
+      }
+
+      // 3. Populate Property Selector Dropdown inside Batch
+      const batchPropSelect = document.getElementById('sniper-batch-prop-select');
+      if(batchPropSelect){
+        batchPropSelect.innerHTML = `<option value="">All Properties in Batch (${batchProperties.length})</option>`;
+        batchProperties.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = `${p.address} (${p.photo_count || 0} photos · $${Number(p.monthly_rent || 0).toLocaleString()}/mo)`;
+          batchPropSelect.appendChild(opt);
+        });
+      }
+
+      // 4. Enforce Edge Contain Mode by default so watermarks on edges are visible
+      toggleEdgeContainMode(true);
+
+      // 5. Hide general catalog pagination and compliance filters (batch photos are inspected all-together)
+      const topPaging = document.getElementById('sniper-pagination-top');
+      const bottomPaging = document.getElementById('sniper-pagination-bottom');
+      if(topPaging) topPaging.style.display = 'none';
+      if(bottomPaging) bottomPaging.style.display = 'none';
+
+      // 6. Render the batch photo grid
+      renderBatchGrid();
+
+      // 7. Render 24h Recoverable Trash and start live countdown
+      renderTrashList();
+      startTrashTimer();
+
+      // 8. Open Sidebar to Inspector Tab
+      switchSidebarTab('inspector');
+      toggleSidebar(true);
+
+      toastSafe(`Batch loaded: ${batchProperties.length} properties with ${batchPhotos.length} total photos.`, 'success', 4000);
+
+    } catch(err){
+      console.error('[watermark-sniper] Error loading batch mode:', err);
+      toastSafe('Failed to load batch: ' + (err.message || 'Unknown error'), 'error', 6000);
+      renderGridEmpty('Could not load batch photos. Check your connection or share token and try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ─── Batch Grid Renderer ──────────────────────────────────────────────────
+  function renderBatchGrid(){
+    const grid = document.getElementById('sniper-grid');
+    if(!grid) return;
+    grid.innerHTML = '';
+
+    // Filter photos if a specific property is selected or search query entered
+    let filteredPhotos = batchPhotos;
+    if(selectedBatchPropId){
+      filteredPhotos = filteredPhotos.filter(p => p.property_id === selectedBatchPropId);
+    }
+    if(searchQuery){
+      const q = searchQuery.toLowerCase().trim();
+      filteredPhotos = filteredPhotos.filter(p => {
+        const full = `${p.address || ''} ${p.city || ''} ${p.state || ''} ${p.zip || ''} ${p.property_id || ''}`.toLowerCase();
+        return full.includes(q);
+      });
+    }
+
+    if(filteredPhotos.length === 0){
+      grid.innerHTML = `
+        <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center; color: var(--sniper-text-muted);">
+          <svg style="width: 48px; height: 48px; opacity: 0.3; margin-bottom: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <h3 style="font-size: 1.1rem; color: #fff; margin: 0 0 8px;">No Photos Match Current Filter</h3>
+          <p style="font-size: 0.875rem; max-width: 420px; margin: 0 0 16px;">Try clearing your search or selecting "All Properties in Batch".</p>
+          <button id="sniper-batch-reset-filter-btn" style="padding: 8px 16px; background: var(--sniper-surface-2); border: 1px solid var(--sniper-border); border-radius: 6px; color: #fff; font-size: 0.8125rem; font-weight: 600; cursor: pointer;">Show All Batch Photos</button>
+        </div>
+      `;
+      const btn = document.getElementById('sniper-batch-reset-filter-btn');
+      if(btn){
+        btn.addEventListener('click', () => {
+          selectedBatchPropId = '';
+          const sel = document.getElementById('sniper-batch-prop-select');
+          if(sel) sel.value = '';
+          const inp = document.getElementById('sniper-search-input');
+          if(inp) inp.value = '';
+          searchQuery = '';
+          renderBatchGrid();
+        });
+      }
+      return;
+    }
+
+    // Render every photo card in the batch
+    filteredPhotos.forEach(photo => {
+      const isSelected = activeInspectedPhoto && activeInspectedPhoto.id === photo.id;
+      const isHero = !!photo.is_hero;
+
+      const card = document.createElement('div');
+      card.className = 'sniper-card batch-photo-card' + (isSelected ? ' selected' : '') + (isHero ? ' is-hero' : '');
+      card.id = `batch-photo-card-${photo.id}`;
+      card.dataset.photoId = photo.id;
+      card.dataset.propId = photo.property_id;
+      card.tabIndex = 0;
+
+      const thumbUrl = getThumbUrl(photo.url, 'large');
+
+      let badgeHtml = '';
+      if(isHero){
+        badgeHtml += '<span class="sniper-badge-photo-count" style="background:#006aff;color:#fff;font-weight:700">★ Hero Cover</span>';
+      } else {
+        badgeHtml += `<span class="sniper-badge-photo-count">#${photo.display_order || 1}</span>`;
+      }
+      if(photo.watermark_status === 'flagged'){
+        badgeHtml += '<span class="sniper-badge-flagged">🚨 Flagged</span>';
+      }
+
+      card.innerHTML = `
+        <div class="sniper-card-media-wrap">
+          <div class="sniper-card-media">
+            <img class="sniper-card-img" src="${thumbUrl}" alt="${escSafe(photo.address)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="sniper-error-fallback" style="display:none">
+              <svg class="sniper-error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              <div class="sniper-error-txt">Photo Unavailable</div>
+            </div>
+            <!-- Delete Single Photo Hover/Touch Button -->
+            <button class="sniper-photo-delete-btn" title="Delete single photo from listing" aria-label="Delete photo" type="button" data-photo-id="${photo.id}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
+            </button>
+          </div>
+          <div class="sniper-card-top-badges">
+            <div class="sniper-card-top-right-badges" style="margin-left:auto">
+              ${badgeHtml}
+            </div>
+          </div>
+        </div>
+        <div class="sniper-card-footer">
+          <div class="sniper-card-title-row">
+            <div class="sniper-card-address" title="${escSafe(photo.address)}">${escSafe(photo.address || 'Unknown Address')}</div>
+            <a href="/property.html?id=${encodeURIComponent(photo.property_id)}${shareToken ? '#share=' + encodeURIComponent(shareToken) : ''}" target="_blank" rel="noopener noreferrer" class="sniper-card-ext-btn" title="Open listing in new tab" aria-label="Open listing">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+          </div>
+          <div class="sniper-card-city">${escSafe(photo.city || '')}${photo.state ? ', ' + escSafe(photo.state) : ''} ${escSafe(photo.zip || '')}</div>
+          <div class="sniper-card-bottom-row">
+            <span class="sniper-card-price">${photo.monthly_rent ? '$' + Number(photo.monthly_rent).toLocaleString() + '/mo' : 'Rent TBD'}</span>
+            <div class="sniper-card-pills">
+              <span class="sniper-card-beds">${photo.bedrooms || 0}b / ${photo.bathrooms || 0}ba</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Click photo -> completely identify parent listing in sidebar
+      card.addEventListener('click', (e) => {
+        // Prevent if clicking on external link or delete button
+        if(e.target.closest('.sniper-card-ext-btn') || e.target.closest('.sniper-photo-delete-btn')) return;
+        selectPhotoForInspection(photo);
+      });
+
+      card.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter' || e.key === ' '){
+          e.preventDefault();
+          selectPhotoForInspection(photo);
+        }
+      });
+
+      // Single photo delete button click
+      const delBtn = card.querySelector('.sniper-photo-delete-btn');
+      if(delBtn){
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          confirmDeleteSinglePhoto(photo);
+        });
+      }
+
+      grid.appendChild(card);
+    });
+  }
+
+  // ─── Photo Inspection & Listing Identification ────────────────────────────
+  function selectPhotoForInspection(photo){
+    activeInspectedPhoto = photo;
+    activeInspectedProperty = batchProperties.find(p => p.id === photo.property_id) || {
+      id: photo.property_id,
+      address: photo.address,
+      city: photo.city,
+      state: photo.state,
+      zip: photo.zip,
+      monthly_rent: photo.monthly_rent,
+      bedrooms: photo.bedrooms,
+      bathrooms: photo.bathrooms
+    };
+
+    // Update active highlight ring across batch cards
+    document.querySelectorAll('.batch-photo-card.selected').forEach(c => c.classList.remove('selected'));
+    const curCard = document.getElementById(`batch-photo-card-${photo.id}`);
+    if(curCard){
+      curCard.classList.add('selected');
+    }
+
+    // Switch to Inspector tab and show panel content
+    switchSidebarTab('inspector');
+    toggleSidebar(true);
+
+    const emptyView = document.getElementById('sniper-empty-inspector');
+    const contentView = document.getElementById('sniper-inspector-content');
+    if(emptyView) emptyView.style.display = 'none';
+    if(contentView) contentView.style.display = 'flex';
+
+    // Populate Parent Property Details
+    const addrEl = document.getElementById('inspector-address');
+    const cityEl = document.getElementById('inspector-city-state-zip');
+    const rentEl = document.getElementById('inspector-rent');
+    const specsEl = document.getElementById('inspector-specs');
+    const badgesEl = document.getElementById('inspector-badges');
+    const linkLive = document.getElementById('inspector-link-live');
+
+    if(addrEl) addrEl.textContent = activeInspectedProperty.address || 'Unknown Address';
+    if(cityEl) cityEl.textContent = `${activeInspectedProperty.city || ''}${activeInspectedProperty.state ? ', ' + activeInspectedProperty.state : ''} ${activeInspectedProperty.zip || ''}`;
+    if(rentEl) rentEl.textContent = activeInspectedProperty.monthly_rent ? `$${Number(activeInspectedProperty.monthly_rent).toLocaleString()}/month` : 'Contact for Rent';
+    if(specsEl){
+      const sqft = activeInspectedProperty.square_footage ? ` · ${activeInspectedProperty.square_footage.toLocaleString()} sqft` : '';
+      specsEl.textContent = `${activeInspectedProperty.bedrooms || 0} Beds · ${activeInspectedProperty.bathrooms || 0} Baths${sqft} · ${activeInspectedProperty.property_type || 'Single Family'}`;
+    }
+    if(badgesEl){
+      badgesEl.innerHTML = `
+        <span class="sniper-prop-badge private">Private Placement</span>
+        <span class="sniper-prop-badge">ID: ${escSafe(activeInspectedProperty.id)}</span>
+      `;
+    }
+    if(linkLive){
+      linkLive.href = `/property.html?id=${encodeURIComponent(activeInspectedProperty.id)}${shareToken ? '#share=' + encodeURIComponent(shareToken) : ''}`;
+    }
+
+    // Populate Active Photo Details
+    const photoMetaEl = document.getElementById('inspector-photo-meta');
+    const activeImgEl = document.getElementById('inspector-active-img');
+    if(photoMetaEl){
+      photoMetaEl.textContent = `#${photo.display_order || 1} ${photo.is_hero ? '(Cover Photo)' : ''}`;
+    }
+    if(activeImgEl){
+      activeImgEl.src = photo.url;
+    }
+
+    // Populate Thumbnail Strip for all photos in this specific house
+    renderInspectorThumbnails();
+  }
+
+  function renderInspectorThumbnails(){
+    const container = document.getElementById('inspector-thumbnails');
+    const countEl = document.getElementById('inspector-photo-total');
+    if(!container || !activeInspectedProperty) return;
+
+    const propPhotos = batchPhotos.filter(p => p.property_id === activeInspectedProperty.id);
+    if(countEl) countEl.textContent = propPhotos.length;
+
+    container.innerHTML = '';
+    propPhotos.forEach(p => {
+      const isCur = activeInspectedPhoto && activeInspectedPhoto.id === p.id;
+      const thumb = document.createElement('div');
+      thumb.className = 'sniper-thumb-item' + (isCur ? ' active' : '');
+      thumb.title = `Photo #${p.display_order || 1}`;
+      thumb.innerHTML = `<img src="${getSmallThumb(p.url)}" alt="" loading="lazy">`;
+
+      thumb.addEventListener('click', () => {
+        selectPhotoForInspection(p);
+        const targetCard = document.getElementById(`batch-photo-card-${p.id}`);
+        if(targetCard){
+          targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      });
+
+      container.appendChild(thumb);
+    });
+  }
+
+  // ─── Single Photo Deletion ────────────────────────────────────────────────
+  function confirmDeleteSinglePhoto(photo){
+    pendingDeletePhoto = photo;
+    const modal = document.getElementById('sniper-delete-photo-modal');
+    const addrEl = document.getElementById('modal-del-photo-address');
+    const imgEl = document.getElementById('modal-del-photo-img');
+
+    if(!modal) return;
+    if(addrEl) addrEl.textContent = photo.address || 'this property';
+    if(imgEl) imgEl.src = photo.url;
+    modal.style.display = 'flex';
+  }
+
+  function closeDeletePhotoModal(){
+    const modal = document.getElementById('sniper-delete-photo-modal');
+    if(modal) modal.style.display = 'none';
+    pendingDeletePhoto = null;
+  }
+
+  async function executeDeleteSinglePhoto(){
+    if(!pendingDeletePhoto) return;
+    const photoToDelete = pendingDeletePhoto;
+    closeDeletePhotoModal();
+
+    // Check admin authentication
+    if(window.CP && CP.Auth && typeof CP.Auth.isAdmin === 'function'){
+      const isAdm = await CP.Auth.isAdmin().catch(() => false);
+      if(!isAdm){
+        toastSafe('Admin authentication required to delete photos. Please sign in.', 'error');
+        return;
+      }
+    }
+
+    setLoading(true, 'Deleting photo from database…');
+
+    try {
+      const { data, error } = await CP.sb().rpc('delete_single_property_photo', {
+        p_photo_id: photoToDelete.id
+      });
+
+      if(error) throw error;
+      if(!data || !data.ok){
+        throw new Error(data?.error || 'Database rejected photo deletion');
+      }
+
+      // Purge from ImageKit if remote file_id exists
+      if(photoToDelete.file_id && window.CONFIG && CONFIG.SUPABASE_URL){
+        let authHeaderToken = CONFIG.SUPABASE_ANON_KEY || '';
+        try {
+          const sess = await CP.Auth.getSession().catch(() => null);
+          if(sess?.access_token) authHeaderToken = sess.access_token;
+        } catch(_) {}
+
+        fetch(`${CONFIG.SUPABASE_URL}/functions/v1/imagekit-delete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': CONFIG.SUPABASE_ANON_KEY || authHeaderToken,
+            'Authorization': `Bearer ${authHeaderToken}`
+          },
+          body: JSON.stringify({ fileIds: [photoToDelete.file_id] })
+        }).catch(e => console.warn('[watermark-sniper] Remote ImageKit purge error:', e));
+      }
+
+      // Update in-memory collections
+      batchPhotos = batchPhotos.filter(p => p.id !== photoToDelete.id);
+
+      // Decrement photo count on parent property
+      const parentProp = batchProperties.find(p => p.id === photoToDelete.property_id);
+      if(parentProp && parentProp.photo_count > 0){
+        parentProp.photo_count--;
+      }
+
+      // Smoothly remove card from DOM
+      const cardEl = document.getElementById(`batch-photo-card-${photoToDelete.id}`);
+      if(cardEl){
+        cardEl.style.transition = 'all 0.3s ease';
+        cardEl.style.opacity = '0';
+        cardEl.style.transform = 'scale(0.8)';
+        setTimeout(() => cardEl.remove(), 300);
+      }
+
+      // Update header banner counts
+      const countsEl = document.getElementById('sniper-batch-counts');
+      if(countsEl){
+        countsEl.textContent = `${batchProperties.length} properties · ${batchPhotos.length} total photos`;
+      }
+      const photosCountTop = document.getElementById('stat-photos-catalog');
+      if(photosCountTop){
+        photosCountTop.textContent = `(${batchPhotos.length} photos)`;
+      }
+
+      // If the deleted photo was currently inspected, advance to another photo of this property
+      if(activeInspectedPhoto && activeInspectedPhoto.id === photoToDelete.id){
+        const remaining = batchPhotos.filter(p => p.property_id === photoToDelete.property_id);
+        if(remaining.length > 0){
+          selectPhotoForInspection(remaining[0]);
+        } else {
+          // No more photos for this property
+          const emptyView = document.getElementById('sniper-empty-inspector');
+          const contentView = document.getElementById('sniper-inspector-content');
+          if(emptyView) emptyView.style.display = 'flex';
+          if(contentView) contentView.style.display = 'none';
+          activeInspectedPhoto = null;
+        }
+      } else if(activeInspectedProperty && activeInspectedProperty.id === photoToDelete.property_id){
+        renderInspectorThumbnails();
+      }
+
+      toastSafe(`Photo deleted successfully from ${photoToDelete.address}.`, 'success');
+
+    } catch(err){
+      console.error('[watermark-sniper] Photo deletion failed:', err);
+      toastSafe('Failed to delete photo: ' + (err.message || 'Unknown error'), 'error', 5000);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ─── Entire Listing Deletion (24-Hour Recovery Window) ─────────────────────
+  function confirmDeleteEntireListing(property){
+    if(!property) return;
+    pendingDeleteListing = property;
+
+    const modal = document.getElementById('sniper-delete-listing-modal');
+    const addrEl = document.getElementById('modal-del-listing-addr');
+    const photoCountEl = document.getElementById('modal-del-listing-photo-count');
+
+    if(!modal) return;
+    const propPhotos = batchPhotos.filter(p => p.property_id === property.id);
+    if(addrEl) addrEl.textContent = property.address || 'this listing';
+    if(photoCountEl) photoCountEl.textContent = propPhotos.length || property.photo_count || 0;
+
+    modal.style.display = 'flex';
+  }
+
+  function closeDeleteListingModal(){
+    const modal = document.getElementById('sniper-delete-listing-modal');
+    if(modal) modal.style.display = 'none';
+    pendingDeleteListing = null;
+  }
+
+  async function executeDeleteEntireListing(){
+    if(!pendingDeleteListing) return;
+    const propToDelete = pendingDeleteListing;
+    closeDeleteListingModal();
+
+    // Check admin authentication
+    if(window.CP && CP.Auth && typeof CP.Auth.isAdmin === 'function'){
+      const isAdm = await CP.Auth.isAdmin().catch(() => false);
+      if(!isAdm){
+        toastSafe('Admin authentication required to delete listings. Please sign in.', 'error');
+        return;
+      }
+    }
+
+    setLoading(true, `Archiving & deleting ${propToDelete.address}…`);
+
+    try {
+      const { data, error } = await CP.sb().rpc('archive_and_delete_property', {
+        p_property_id: propToDelete.id,
+        p_reason: 'Watermark sniper batch moderation'
+      });
+
+      if(error) throw error;
+      if(!data || !data.ok){
+        throw new Error(data?.error || 'Database rejected listing deletion');
+      }
+
+      // Remove property and its photos from in-memory arrays
+      batchProperties = batchProperties.filter(p => p.id !== propToDelete.id);
+      batchPhotos = batchPhotos.filter(p => p.property_id !== propToDelete.id);
+
+      // Remove all photo cards belonging to this property from the DOM
+      document.querySelectorAll(`.batch-photo-card[data-prop-id="${propToDelete.id}"]`).forEach(c => c.remove());
+
+      // Update property dropdown inside batch
+      const propSel = document.getElementById('sniper-batch-prop-select');
+      if(propSel){
+        const opt = propSel.querySelector(`option[value="${propToDelete.id}"]`);
+        if(opt) opt.remove();
+      }
+
+      // Update Topbar and Banner counts
+      const countsEl = document.getElementById('sniper-batch-counts');
+      if(countsEl){
+        countsEl.textContent = `${batchProperties.length} properties · ${batchPhotos.length} total photos`;
+      }
+      const invCount = document.getElementById('stat-total-catalog');
+      if(invCount) invCount.textContent = `${batchProperties.length} listings`;
+      const photosCountTop = document.getElementById('stat-photos-catalog');
+      if(photosCountTop) photosCountTop.textContent = `(${batchPhotos.length} photos)`;
+
+      // Reset inspector to empty state
+      const emptyView = document.getElementById('sniper-empty-inspector');
+      const contentView = document.getElementById('sniper-inspector-content');
+      if(emptyView) emptyView.style.display = 'flex';
+      if(contentView) contentView.style.display = 'none';
+      activeInspectedPhoto = null;
+      activeInspectedProperty = null;
+
+      // Re-fetch 24h recoverable list and switch to Trash tab so admin can see restoration option
+      await fetchRecoverableTrash();
+      switchSidebarTab('trash');
+
+      toastSafe(`Deleted ${propToDelete.address}. Listing is restorable for 24 hours in the 24h Trash tab.`, 'warning', 6000);
+
+    } catch(err){
+      console.error('[watermark-sniper] Listing deletion failed:', err);
+      toastSafe('Failed to delete listing: ' + (err.message || 'Unknown error'), 'error', 5000);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ─── 24-Hour Recovery Trash Engine ────────────────────────────────────────
+  async function fetchRecoverableTrash(){
+    try {
+      const { data, error } = await CP.sb().rpc('get_recoverable_properties', {
+        p_batch_id: batchId
+      });
+      if(error) throw error;
+      if(data && data.ok && Array.isArray(data.items)){
+        batchRecoverable = data.items;
+        renderTrashList();
+      }
+    } catch(err){
+      console.warn('[watermark-sniper] Could not refresh 24h trash:', err);
+    }
+  }
+
+  function renderTrashList(){
+    const listEl = document.getElementById('sniper-trash-list');
+    const emptyEl = document.getElementById('sniper-empty-trash');
+    const trashPillTop = document.getElementById('stat-trash-count');
+    const trashPillBatch = document.getElementById('batch-trash-pill-count');
+    const trashPillSidebar = document.getElementById('sidebar-trash-count');
+
+    const count = batchRecoverable.length;
+    if(trashPillTop) trashPillTop.textContent = count;
+    if(trashPillBatch) trashPillBatch.textContent = count;
+    if(trashPillSidebar) trashPillSidebar.textContent = count;
+
+    if(!listEl) return;
+
+    if(count === 0){
+      if(emptyEl) emptyEl.style.display = 'flex';
+      Array.from(listEl.querySelectorAll('.sniper-trash-card')).forEach(el => el.remove());
+      return;
+    }
+
+    if(emptyEl) emptyEl.style.display = 'none';
+    listEl.innerHTML = '';
+
+    const nowMs = Date.now();
+    batchRecoverable.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'sniper-trash-card';
+      card.id = `trash-card-${item.recovery_id}`;
+
+      const expMs = new Date(item.recovery_expires_at).getTime();
+      const secRemaining = Math.max(0, Math.round((expMs - nowMs) / 1000));
+
+      card.innerHTML = `
+        <div class="sniper-trash-card-top">
+          <div>
+            <div class="sniper-trash-addr">${escSafe(item.address)}</div>
+            <div class="sniper-trash-meta">${escSafe(item.city)}, ${escSafe(item.state)} · ${item.photo_count || 0} photos · $${Number(item.monthly_rent || 0).toLocaleString()}/mo</div>
+          </div>
+          <span class="sniper-trash-countdown" id="countdown-${item.recovery_id}" data-expires-at="${item.recovery_expires_at}">
+            ⏱ ${formatCountdown(secRemaining)}
+          </span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px">
+          <span style="font-size:0.6875rem;color:var(--sniper-text-muted)">Deleted: ${new Date(item.archived_at).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}</span>
+          <button type="button" class="sniper-btn-restore" data-recovery-id="${item.recovery_id}" data-address="${escSafe(item.address)}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="sniper-icon-13"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            <span>Restore Listing</span>
+          </button>
+        </div>
+      `;
+
+      card.querySelector('.sniper-btn-restore').addEventListener('click', () => {
+        executeRestoreProperty(item.recovery_id, item.address);
+      });
+
+      listEl.appendChild(card);
+    });
+  }
+
+  function startTrashTimer(){
+    clearInterval(trashCountdownTimer);
+    trashCountdownTimer = setInterval(() => {
+      updateTrashCountdowns();
+    }, 1000);
+  }
+
+  function updateTrashCountdowns(){
+    const nowMs = Date.now();
+    document.querySelectorAll('.sniper-trash-countdown').forEach(el => {
+      const expIso = el.dataset.expiresAt;
+      if(!expIso) return;
+      const secRemaining = Math.max(0, Math.round((new Date(expIso).getTime() - nowMs) / 1000));
+      if(secRemaining <= 0){
+        el.textContent = 'Expired';
+        el.style.color = '#ef4444';
+      } else {
+        el.textContent = `⏱ ${formatCountdown(secRemaining)}`;
+      }
+    });
+  }
+
+  function formatCountdown(totalSec){
+    if(totalSec <= 0) return 'Expired';
+    const hrs = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    const secs = totalSec % 60;
+    if(hrs > 0){
+      return `${hrs}h ${mins}m left`;
+    }
+    return `${mins}m ${secs}s left`;
+  }
+
+  async function executeRestoreProperty(recoveryId, address){
+    setLoading(true, `Restoring ${address} from archive…`);
+
+    try {
+      const { data, error } = await CP.sb().rpc('restore_archived_property', {
+        p_recovery_id: recoveryId
+      });
+
+      if(error) throw error;
+      if(!data || !data.ok){
+        throw new Error(data?.error || 'Database rejected listing restoration');
+      }
+
+      toastSafe(`Successfully restored ${address} with all photos!`, 'success', 5000);
+
+      // Re-load batch mode to fetch the restored listing and photos into live view
+      await loadBatchMode(batchId, shareToken);
+
+    } catch(err){
+      console.error('[watermark-sniper] Restoration failed:', err);
+      toastSafe('Failed to restore listing: ' + (err.message || 'Unknown error'), 'error', 6000);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ─── Sidebar Tab Switcher ──────────────────────────────────────────────────
+  function switchSidebarTab(tabName){
+    activeSidebarTab = tabName;
+
+    // Update Tab Buttons
+    document.querySelectorAll('.sniper-sidebar-tab').forEach(btn => {
+      const isCur = btn.dataset.tab === tabName;
+      btn.classList.toggle('active', isCur);
+      btn.setAttribute('aria-selected', isCur ? 'true' : 'false');
+    });
+
+    // Update Tab Panes
+    const paneInspector = document.getElementById('pane-inspector');
+    const paneTrash = document.getElementById('pane-trash');
+    const paneQueue = document.getElementById('pane-queue');
+
+    if(paneInspector) paneInspector.style.display = tabName === 'inspector' ? 'flex' : 'none';
+    if(paneTrash) paneTrash.style.display = tabName === 'trash' ? 'flex' : 'none';
+    if(paneQueue) paneQueue.style.display = tabName === 'queue' ? 'flex' : 'none';
+  }
+
+  // ─── Edge Inspection Mode Toggle (Contain vs Cover) ───────────────────────
+  function toggleEdgeContainMode(forceState){
+    const grid = document.getElementById('sniper-grid');
+    const btn = document.getElementById('sniper-btn-edge-mode');
+    const txt = document.getElementById('sniper-edge-mode-txt');
+    if(!grid) return;
+
+    isEdgeContain = forceState !== undefined ? forceState : !grid.classList.contains('edge-contain');
+    grid.classList.toggle('edge-contain', isEdgeContain);
+
+    if(btn) btn.classList.toggle('active', isEdgeContain);
+    if(txt) txt.textContent = isEdgeContain ? 'Contain (Edges Clear)' : 'Cover (Fill Grid)';
   }
 
   // ─── Pagination Controls ───────────────────────────────────────────────────
@@ -1218,8 +1962,12 @@
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => {
           searchQuery = val;
-          loadPage(1);
-        }, 250);
+          if(isBatchMode){
+            renderBatchGrid();
+          } else {
+            loadPage(1);
+          }
+        }, 200);
       });
     }
 
@@ -1228,7 +1976,11 @@
         if(searchInput) searchInput.value = '';
         searchClear.style.display = 'none';
         searchQuery = '';
-        loadPage(1);
+        if(isBatchMode){
+          renderBatchGrid();
+        } else {
+          loadPage(1);
+        }
         if(searchInput) searchInput.focus();
       });
     }
@@ -1403,6 +2155,82 @@
     const modalCloseBtn = document.getElementById('sniper-modal-close-btn');
     if(modalCloseBtn) modalCloseBtn.addEventListener('click', closeDeleteConfirmationModal);
 
+    // ─── Batch Moderation & Recovery UI Listeners ───────────────────────────
+    const batchPropSelect = document.getElementById('sniper-batch-prop-select');
+    if(batchPropSelect){
+      batchPropSelect.addEventListener('change', () => {
+        selectedBatchPropId = batchPropSelect.value;
+        renderBatchGrid();
+      });
+    }
+
+    const edgeBtn = document.getElementById('sniper-btn-edge-mode');
+    if(edgeBtn){
+      edgeBtn.addEventListener('click', () => toggleEdgeContainMode());
+    }
+
+    const batchTrashBtn = document.getElementById('sniper-btn-batch-trash');
+    if(batchTrashBtn){
+      batchTrashBtn.addEventListener('click', () => {
+        switchSidebarTab('trash');
+        toggleSidebar(true);
+      });
+    }
+
+    const topTrashStat = document.getElementById('sniper-trash-stat');
+    if(topTrashStat){
+      topTrashStat.addEventListener('click', () => {
+        switchSidebarTab('trash');
+        toggleSidebar(true);
+      });
+    }
+
+    // Sidebar Tab Switches
+    const tabInspector = document.getElementById('tab-btn-inspector');
+    if(tabInspector) tabInspector.addEventListener('click', () => switchSidebarTab('inspector'));
+
+    const tabTrash = document.getElementById('tab-btn-trash');
+    if(tabTrash) tabTrash.addEventListener('click', () => switchSidebarTab('trash'));
+
+    const tabQueue = document.getElementById('tab-btn-queue');
+    if(tabQueue) tabQueue.addEventListener('click', () => switchSidebarTab('queue'));
+
+    // Inspector Action Buttons
+    const btnDelActivePhoto = document.getElementById('inspector-btn-del-active-photo');
+    if(btnDelActivePhoto){
+      btnDelActivePhoto.addEventListener('click', () => {
+        if(activeInspectedPhoto) confirmDeleteSinglePhoto(activeInspectedPhoto);
+      });
+    }
+
+    const btnDelListing = document.getElementById('inspector-btn-delete-listing');
+    if(btnDelListing){
+      btnDelListing.addEventListener('click', () => {
+        if(activeInspectedProperty) confirmDeleteEntireListing(activeInspectedProperty);
+      });
+    }
+
+    // Single Photo Delete Modal Listeners
+    const photoCloseBtn = document.getElementById('modal-photo-close-btn');
+    if(photoCloseBtn) photoCloseBtn.addEventListener('click', closeDeletePhotoModal);
+
+    const photoCancelBtn = document.getElementById('modal-photo-cancel-btn');
+    if(photoCancelBtn) photoCancelBtn.addEventListener('click', closeDeletePhotoModal);
+
+    const photoConfirmBtn = document.getElementById('modal-photo-confirm-btn');
+    if(photoConfirmBtn) photoConfirmBtn.addEventListener('click', executeDeleteSinglePhoto);
+
+    // Entire Listing Delete Modal Listeners
+    const listingCloseBtn = document.getElementById('modal-listing-close-btn');
+    if(listingCloseBtn) listingCloseBtn.addEventListener('click', closeDeleteListingModal);
+
+    const listingCancelBtn = document.getElementById('modal-listing-cancel-btn');
+    if(listingCancelBtn) listingCancelBtn.addEventListener('click', closeDeleteListingModal);
+
+    const listingConfirmBtn = document.getElementById('modal-listing-confirm-btn');
+    if(listingConfirmBtn) listingConfirmBtn.addEventListener('click', executeDeleteEntireListing);
+
+
     // 7. Grid Density Switcher (Medium by default)
     function setGridDensity(density){
       const grid = document.getElementById('sniper-grid');
@@ -1551,6 +2379,8 @@
         if(inp) inp.focus();
       } else if(e.key === 'Escape'){
         closeDeleteConfirmationModal();
+        closeDeletePhotoModal();
+        closeDeleteListingModal();
         if(shortcutsModal) shortcutsModal.style.display = 'none';
         const sidebar = document.getElementById('sniper-sidebar');
         if(sidebar && !sidebar.classList.contains('collapsed')){
@@ -1579,10 +2409,23 @@
     } catch(_) {}
 
     initUI();
+
+    // Check if URL specifies Batch Moderation Mode (#share=... or ?share=... or ?batch=...)
+    const urlParams = new URLSearchParams(window.location.search);
+    let hashStr = window.location.hash.replace(/^#/, '');
+    const hashParams = new URLSearchParams(hashStr);
+
+    const paramShare = urlParams.get('share') || hashParams.get('share') || (hashStr.startsWith('share=') ? hashStr.slice(6) : null);
+    const paramBatch = urlParams.get('batch') || hashParams.get('batch') || (hashStr.startsWith('batch=') ? hashStr.slice(6) : null);
+
+    if(paramShare || paramBatch){
+      await loadBatchMode(paramBatch, paramShare);
+      return;
+    }
+
     await loadFilterOptions();
 
     // Check if query params specify initial filters (e.g. ?city=Columbus or ?state=OH or ?compliance=zero_photos)
-    const urlParams = new URLSearchParams(window.location.search);
     if(urlParams.has('state')) {
       filterState = urlParams.get('state');
       const el = document.getElementById('sniper-state-select');

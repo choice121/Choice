@@ -1823,3 +1823,622 @@ html, body.sniper-standalone-body {
   color: var(--sniper-danger);
 }
 
+/* ==========================================================================
+   Choice Properties — Watermark Sniper Batch Mode & 24h Recovery Architecture
+   ========================================================================== */
+
+/* ─── Batch Mode Banner ─────────────────────────────────────────────────── */
+.sniper-batch-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  border-radius: var(--sniper-radius-lg);
+  padding: 12px 18px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+[data-theme="light"] .sniper-batch-banner {
+  background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%);
+  border-color: rgba(59, 130, 246, 0.25);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+}
+
+.sniper-batch-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sniper-batch-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.sniper-batch-info-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sniper-batch-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sniper-batch-label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--sniper-text-muted);
+}
+
+.sniper-batch-id-text {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: var(--sniper-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.sniper-batch-market-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: rgba(16, 185, 129, 0.16);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.sniper-batch-sub-row {
+  font-size: 0.78125rem;
+  color: var(--sniper-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sniper-batch-exit-link {
+  color: var(--sniper-primary);
+  text-decoration: underline;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sniper-batch-exit-link:hover {
+  color: #fff;
+}
+
+.sniper-batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sniper-batch-select-wrap select {
+  min-width: 190px;
+  max-width: 280px;
+  background: var(--sniper-surface-2);
+  color: var(--sniper-text);
+  border: 1px solid var(--sniper-border-bright);
+  border-radius: var(--sniper-radius);
+  padding: 6px 10px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ─── Edge Inspection Mode (Contain vs Cover) ────────────────────────────── */
+.sniper-grid.edge-contain .sniper-card-media {
+  background: #060913 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="light"] .sniper-grid.edge-contain .sniper-card-media {
+  background: #0f172a !important;
+}
+
+.sniper-grid.edge-contain .sniper-card-img {
+  object-fit: contain !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+}
+
+/* Subtle corner registration marks in Contain mode for watermark detection */
+.sniper-grid.edge-contain .sniper-card-media::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+  z-index: 2;
+  border-radius: 4px;
+}
+
+/* Selected Card Highlight */
+.sniper-card.selected {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px #3b82f6, 0 8px 24px rgba(59, 130, 246, 0.3) !important;
+  transform: translateY(-2px);
+}
+
+/* ─── Single Photo Delete Hover Button ──────────────────────────────────── */
+.sniper-photo-delete-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 15;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(220, 38, 38, 0.92);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  transition: all 0.18s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sniper-card:hover .sniper-photo-delete-btn,
+.sniper-card.selected .sniper-photo-delete-btn,
+.sniper-card:focus-within .sniper-photo-delete-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sniper-photo-delete-btn:hover {
+  background: #ef4444;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.6);
+}
+
+.sniper-photo-delete-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Always visible on touch devices */
+@media (hover: none) {
+  .sniper-photo-delete-btn {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    width: 36px;
+    height: 36px;
+    top: 6px;
+    right: 6px;
+  }
+}
+
+/* ─── Sidebar Multi-Tab Header ──────────────────────────────────────────── */
+.sniper-sidebar-tabs {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  background: var(--sniper-surface);
+  border-bottom: 1px solid var(--sniper-border);
+  padding: 0 8px;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.sniper-sidebar-tab {
+  flex: 1;
+  height: 36px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--sniper-radius);
+  color: var(--sniper-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.sniper-sidebar-tab:hover {
+  color: var(--sniper-text);
+  background: var(--sniper-surface-2);
+}
+
+.sniper-sidebar-tab.active {
+  background: var(--sniper-surface-2);
+  color: var(--sniper-text);
+  border: 1px solid var(--sniper-border-bright);
+}
+
+.sniper-sidebar-tab strong {
+  color: var(--sniper-primary);
+}
+
+.sniper-sidebar-tab[data-tab="trash"].active strong {
+  color: var(--sniper-warning);
+}
+
+.sniper-tab-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ─── Tab 1: Selected Listing Inspector ─────────────────────────────────── */
+.sniper-empty-inspector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  text-align: center;
+  color: var(--sniper-text-muted);
+}
+
+.sniper-inspector-content {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 16px;
+}
+
+.sniper-inspector-hero {
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  border-radius: var(--sniper-radius);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sniper-inspector-addr {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--sniper-text);
+  letter-spacing: -0.01em;
+}
+
+.sniper-inspector-city {
+  font-size: 0.8125rem;
+  color: var(--sniper-text-muted);
+}
+
+.sniper-inspector-price {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--sniper-success);
+  margin-top: 4px;
+}
+
+.sniper-inspector-specs {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--sniper-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.sniper-inspector-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.sniper-prop-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--sniper-surface-3);
+  color: var(--sniper-text);
+  border: 1px solid var(--sniper-border);
+}
+
+.sniper-prop-badge.private {
+  background: rgba(139, 92, 246, 0.16);
+  color: #c4b5fd;
+  border-color: rgba(139, 92, 246, 0.35);
+}
+
+/* Inspected Photo Preview Box */
+.sniper-inspector-active-photo-box {
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  border-radius: var(--sniper-radius);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sniper-inspector-photo-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--sniper-text-muted);
+}
+
+.sniper-btn-del-active-photo {
+  background: var(--sniper-danger-bg);
+  color: var(--sniper-danger);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.sniper-btn-del-active-photo:hover {
+  background: var(--sniper-danger);
+  color: #fff;
+}
+
+.sniper-inspector-active-preview {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #060913;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sniper-inspector-active-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Mini Thumbnail Strip in Inspector */
+.sniper-inspector-gallery-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sniper-inspector-gallery-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78125rem;
+  font-weight: 700;
+  color: var(--sniper-text-muted);
+}
+
+.sniper-badge-count {
+  background: var(--sniper-surface-3);
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  color: var(--sniper-text);
+}
+
+.sniper-inspector-thumbnails {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.sniper-thumb-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  background: #060913;
+  transition: all 0.15s ease;
+}
+
+.sniper-thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sniper-thumb-item.active {
+  border-color: var(--sniper-primary);
+  box-shadow: 0 0 8px rgba(0, 106, 255, 0.6);
+}
+
+.sniper-thumb-item:hover {
+  transform: scale(1.05);
+}
+
+/* Inspector Actions */
+.sniper-inspector-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.sniper-btn-open-prop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--sniper-surface-2);
+  color: var(--sniper-text);
+  border: 1px solid var(--sniper-border);
+  padding: 10px;
+  border-radius: var(--sniper-radius);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.sniper-btn-open-prop:hover {
+  background: var(--sniper-surface-3);
+  border-color: var(--sniper-border-bright);
+}
+
+.sniper-btn-delete-listing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #dc2626;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 11px;
+  border-radius: var(--sniper-radius);
+  font-size: 0.875rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.4);
+  transition: all 0.15s ease;
+}
+
+.sniper-btn-delete-listing:hover {
+  background: #ef4444;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.5);
+}
+
+/* ─── Tab 2: 24h Recoverable Trash List ─────────────────────────────────── */
+.sniper-trash-header {
+  padding: 16px;
+  background: var(--sniper-surface-2);
+  border-bottom: 1px solid var(--sniper-border);
+}
+
+.sniper-trash-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: var(--sniper-text);
+}
+
+.sniper-trash-sub {
+  font-size: 0.75rem;
+  color: var(--sniper-text-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.sniper-trash-list {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 10px;
+}
+
+.sniper-empty-trash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 50px 20px;
+  text-align: center;
+  color: var(--sniper-text-muted);
+}
+
+.sniper-trash-card {
+  background: var(--sniper-surface-2);
+  border: 1px solid var(--sniper-border);
+  border-radius: var(--sniper-radius);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sniper-trash-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sniper-trash-addr {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--sniper-text);
+}
+
+.sniper-trash-meta {
+  font-size: 0.75rem;
+  color: var(--sniper-text-muted);
+}
+
+.sniper-trash-countdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: ui-monospace, monospace;
+}
+
+.sniper-btn-restore {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--sniper-surface-3);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sniper-btn-restore:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: #38bdf8;
+}
+
+/* Modal Photo Preview */
+.sniper-modal-photo-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #060913;
+  padding: 10px;
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+

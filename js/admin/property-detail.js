@@ -19,12 +19,8 @@
 
   let _prop      = null;
   let _photos    = [];  // sorted property_photos objects {id,url,display_order,watermark_status}
-  let _appsCache = [];
-  let _inqsCache = [];
   let _lightboxOpen = false;
   let _lbIdx     = 0;
-  let _lbUrls    = [];
-  let _lastSelfSaveAt = 0;
 
   // ── Formatters ──────────────────────────────────────────────────────────────
   function esc(s) { return S ? S.esc(s) : String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -269,13 +265,11 @@
   }
   function lightboxPhotoUrl(url) {
     if (!url) return '/assets/placeholder-property.jpg';
-    if (/^(data:|blob:)/i.test(url)) return url;
     if (window.CONFIG && CONFIG.img) return CONFIG.img(url, 'lightbox');
     return url;
   }
   function thumbUrl(url) {
     if (!url) return '/assets/placeholder-property.jpg';
-    if (/^(data:|blob:)/i.test(url)) return url;
     if (window.CONFIG && CONFIG.img) return CONFIG.img(url, 'strip');
     return url;
   }
@@ -367,10 +361,7 @@
 
   // ── Lightbox ─────────────────────────────────────────────────────────────────
   function openLightbox(startIdx, urls) {
-    const clean = (Array.isArray(urls) ? urls : []).filter(Boolean);
-    if (!clean.length) return;
-    _lbUrls = clean;
-    _lbIdx = Math.max(0, Math.min(startIdx || 0, _lbUrls.length - 1));
+    _lbIdx = startIdx;
     _lightboxOpen = true;
     let lb = document.getElementById('pd-lightbox');
     if (!lb) {
@@ -392,65 +383,44 @@
       document.body.appendChild(lb);
       document.getElementById('pd-lb-close').addEventListener('click', closeLightbox);
       document.getElementById('pd-lb-overlay').addEventListener('click', closeLightbox);
-      document.getElementById('pd-lb-prev').addEventListener('click', () => lbNav(-1));
-      document.getElementById('pd-lb-next').addEventListener('click', () => lbNav(1));
-      let _lbTx = 0, _lbTy = 0;
-      const imgWrap = document.getElementById('pd-lb-img-wrap');
-      imgWrap?.addEventListener('touchstart', e => {
-        if (e.touches.length === 1) { _lbTx = e.touches[0].clientX; _lbTy = e.touches[0].clientY; }
-      }, { passive: true });
-      imgWrap?.addEventListener('touchend', e => {
-        if (!_lightboxOpen || _lbUrls.length < 2) return;
-        const dx = _lbTx - e.changedTouches[0].clientX;
-        const dy = _lbTy - e.changedTouches[0].clientY;
-        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) lbNav(dx > 0 ? 1 : -1);
-      }, { passive: true });
+      document.getElementById('pd-lb-prev').addEventListener('click', () => lbNav(-1, urls));
+      document.getElementById('pd-lb-next').addEventListener('click', () => lbNav(1, urls));
     }
-    const showNav = _lbUrls.length > 1 ? '' : 'none';
-    const prevBtn = document.getElementById('pd-lb-prev');
-    const nextBtn = document.getElementById('pd-lb-next');
-    if (prevBtn) prevBtn.style.display = showNav;
-    if (nextBtn) nextBtn.style.display = showNav;
+    // Always refresh keydown listener so it captures the current urls closure
     document.removeEventListener('keydown', lbKeyHandler);
     document.addEventListener('keydown', lbKeyHandler);
     lb.classList.add('open');
     document.body.style.overflow = 'hidden';
-    buildLbThumbs(_lbUrls);
-    lbShow(_lbIdx, _lbUrls);
+    buildLbThumbs(urls);
+    lbShow(_lbIdx, urls);
   }
 
   function closeLightbox() {
     _lightboxOpen = false;
     const lb = document.getElementById('pd-lightbox');
     if (lb) lb.classList.remove('open');
-    if (!document.querySelector('.pd-edit-panel.open')) {
-      document.body.style.overflow = '';
-    }
+    document.body.style.overflow = '';
     document.removeEventListener('keydown', lbKeyHandler);
   }
 
   function lbKeyHandler(e) {
     if (!_lightboxOpen) return;
-    if (e.key === 'Escape')     { e.stopPropagation(); closeLightbox(); }
-    if (e.key === 'ArrowLeft')  lbNav(-1);
-    if (e.key === 'ArrowRight') lbNav(1);
+    if (e.key === 'Escape')     closeLightbox();
+    if (e.key === 'ArrowLeft')  lbNav(-1, _photos.map(p => p.url).filter(Boolean));
+    if (e.key === 'ArrowRight') lbNav(1, _photos.map(p => p.url).filter(Boolean));
   }
 
-  function lbNav(dir, urls) {
-    const list = (Array.isArray(urls) && urls.length) ? urls : _lbUrls;
-    if (!list.length) return;
-    lbShow((_lbIdx + dir + list.length) % list.length, list);
-  }
+  function lbNav(dir, urls) { lbShow((_lbIdx + dir + urls.length) % urls.length, urls); }
 
   function lbShow(idx, urls) {
-    const list = (Array.isArray(urls) && urls.length) ? urls : _lbUrls;
-    if (!list.length) return;
-    _lbIdx = ((idx % list.length) + list.length) % list.length;
+    _lbIdx = idx;
     const img = document.getElementById('pd-lb-img');
     if (img) {
       img.style.opacity = '0';
       setTimeout(() => {
-        img.src = lightboxPhotoUrl(list[_lbIdx]);
+        // FIX: use lightbox preset (full quality, no width cap) instead of gallery
+        // preset (w-1200, q-90) so the admin sees actual upload quality when reviewing.
+        img.src = lightboxPhotoUrl(urls[idx]);
         img.onerror = function() {
           this.onerror = null;
           this.src = '/assets/placeholder-property.jpg';
@@ -459,21 +429,18 @@
       }, 100);
     }
     const counter = document.getElementById('pd-lb-counter');
-    if (counter) counter.textContent = (_lbIdx + 1) + ' / ' + list.length;
-    document.querySelectorAll('.pd-lb-thumb').forEach((t, i) => t.classList.toggle('active', i === _lbIdx));
+    if (counter) counter.textContent = (idx + 1) + ' / ' + urls.length;
+    document.querySelectorAll('.pd-lb-thumb').forEach((t, i) => t.classList.toggle('active', i === idx));
   }
 
   function buildLbThumbs(urls) {
     const el = document.getElementById('pd-lb-thumbs');
     if (!el) return;
-    const list = (Array.isArray(urls) && urls.length) ? urls : _lbUrls;
-    el.innerHTML = list.length > 1
-      ? list.map((u, i) =>
-          `<button class="pd-lb-thumb" data-idx="${i}"><img src="${esc(thumbUrl(u))}" alt="" loading="lazy"></button>`
-        ).join('')
-      : '';
+    el.innerHTML = urls.map((u, i) =>
+      `<button class="pd-lb-thumb" data-idx="${i}"><img src="${esc(thumbUrl(u))}" alt="" loading="lazy"></button>`
+    ).join('');
     el.querySelectorAll('.pd-lb-thumb').forEach(btn =>
-      btn.addEventListener('click', () => lbShow(parseInt(btn.dataset.idx, 10), list))
+      btn.addEventListener('click', () => lbShow(parseInt(btn.dataset.idx), urls))
     );
   }
 
@@ -530,12 +497,6 @@
   // ── Full page render ─────────────────────────────────────────────────────────
   function render(p, apps, inqs) {
     _prop   = p;
-    if (Array.isArray(apps)) _appsCache = apps;
-    if (Array.isArray(inqs)) _inqsCache = inqs;
-    const useApps = Array.isArray(apps) ? apps : _appsCache;
-    const useInqs = Array.isArray(inqs) ? inqs : _inqsCache;
-    apps = useApps;
-    inqs = useInqs;
     _photos = Array.isArray(p.property_photos)
       ? p.property_photos.slice().sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
       : [];
@@ -1288,10 +1249,7 @@
       <div class="pd-edit-overlay" id="pd-edit-overlay"></div>
       <div class="pd-edit-drawer">
         <div class="pd-edit-header">
-          <div style="display:flex;align-items:center;gap:8px;min-width:0">
-            <h3>Edit Property</h3>
-            <span class="pd-save-pill" id="pd-edit-save-status">Auto-save ready</span>
-          </div>
+          <h3>Edit Property</h3>
           <button class="pd-edit-close" id="pd-edit-close" aria-label="Close">✕</button>
         </div>
         <div class="pd-edit-body">
@@ -1301,7 +1259,7 @@
             <div class="pd-edit-group" id="pd-edit-photos-group">
               <div class="pd-edit-group-title">Photos <span id="pd-edit-photo-count" style="font-weight:400;color:var(--muted)">(${_photos.length})</span></div>
               <div id="pd-edit-thumbs" class="pd-edit-thumb-grid">
-                ${_photos.length ? _photos.map((ph, i) => `<div class="pd-edit-thumb-item" data-idx="${i}" data-photo-id="${esc(ph.id)}" title="Tap to view full size">
+                ${_photos.length ? _photos.map((ph, i) => `<div class="pd-edit-thumb-item" data-photo-id="${esc(ph.id)}">
                   <img src="${esc(thumbUrl(ph.url))}" alt="Photo ${i+1}" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
                   ${i === 0 ? '<span class="pd-cover-badge">Cover</span>' : ''}
                 </div>`).join('') : '<div style="font-size:.78rem;color:var(--muted);padding:8px 2px">No photos yet — add some below.</div>'}
@@ -1597,96 +1555,55 @@
           </form>
         </div>
         <div class="pd-edit-footer">
-          <button class="btn btn-ghost" id="pd-edit-cancel" type="button">Done</button>
+          <button class="btn btn-ghost" id="pd-edit-cancel">Cancel</button>
           <button class="btn btn-danger btn-sm" id="pd-drawer-delete-btn" type="button" style="display:inline-flex;align-items:center;gap:6px;margin-right:auto">
             ${ico('trash')} Delete property
           </button>
           <div style="display:flex;gap:6px;margin-left:auto;align-items:center">
-            <button class="btn btn-ghost btn-sm" id="pd-edit-undo" type="button" disabled title="Undo last change">↩ Undo</button>
-            <button class="btn btn-ghost btn-sm" id="pd-edit-redo" type="button" disabled title="Redo">Redo ↪</button>
-            <button class="btn btn-primary" id="pd-edit-save" type="button">
-              ${ico('check')} Save Now
+            <button class="btn btn-ghost btn-sm" id="pd-edit-undo" disabled title="Undo last change">↩ Undo</button>
+            <button class="btn btn-ghost btn-sm" id="pd-edit-redo" disabled title="Redo">Redo ↪</button>
+            <button class="btn btn-primary" id="pd-edit-save">
+              ${ico('check')} Save
             </button>
           </div>
         </div>
       </div>`;
 
     document.body.appendChild(panel);
-    document.body.style.overflow = 'hidden';
 
     requestAnimationFrame(() => panel.classList.add('open'));
 
-    // ── Swipe-to-dismiss from header only (so normal scrolling stays smooth) ──
-    const _drawerEl = panel.querySelector('.pd-edit-drawer');
-    const _headerEl = panel.querySelector('.pd-edit-header');
-    let _swipeY0 = null;
-    if (_headerEl && _drawerEl) {
-      _headerEl.addEventListener('touchstart', e => {
-        if (e.target.closest('button')) return;
-        _swipeY0 = e.touches[0].clientY;
-      }, { passive: true });
-      _headerEl.addEventListener('touchmove', e => {
-        if (_swipeY0 === null) return;
-        const dy = e.touches[0].clientY - _swipeY0;
-        if (dy > 0) _drawerEl.style.transform = `translateY(${Math.min(dy, 260)}px)`;
-      }, { passive: true });
-      _headerEl.addEventListener('touchend', e => {
-        if (_swipeY0 === null) return;
-        const dy = e.changedTouches[0].clientY - _swipeY0;
-        _swipeY0 = null;
-        _drawerEl.style.transform = '';
-        if (dy > 100) _closeEditPanel();
-      }, { passive: true });
-    }
+    // ── Swipe-to-dismiss: drag down > 100px to close ──
+    let _swipeY0 = 0;
+    panel.addEventListener('touchstart', e => { _swipeY0 = e.touches[0].clientY; }, { passive: true });
+    panel.addEventListener('touchmove', e => {
+      const dy = e.touches[0].clientY - _swipeY0;
+      if (dy > 0) panel.style.transform = `translateY(${Math.min(dy, 260)}px)`;
+    }, { passive: true });
+    panel.addEventListener('touchend', e => {
+      const dy = e.changedTouches[0].clientY - _swipeY0;
+      panel.style.transform = '';
+      if (dy > 100) {
+        panel.classList.remove('open');
+        setTimeout(() => { if (panel.parentNode) panel.parentNode.removeChild(panel); }, 300);
+        _formDirty = false;
+      }
+    }, { passive: true });
 
     // ── Store original snapshot for diff audit log ──
     _editOriginal = JSON.parse(JSON.stringify(_prop || {}));
     _formDirty = false;
-    let _editSaveTimer = null;
-    let _editSaving = false;
-    let _editSaveQueued = false;
-
-    function _setEditSaveStatus(state, text) {
-      const el = document.getElementById('pd-edit-save-status');
-      if (!el) return;
-      el.className = 'pd-save-pill' + (state ? ' ' + state : '');
-      el.textContent = text;
-    }
-
-    function _renderEditThumbs() {
-      const thumbsEl = document.getElementById('pd-edit-thumbs');
-      const countEl = document.getElementById('pd-edit-photo-count');
-      if (countEl) countEl.textContent = `(${_photos.length})`;
-      if (!thumbsEl) return;
-      thumbsEl.innerHTML = _photos.length
-        ? _photos.map((ph, i) => `<div class="pd-edit-thumb-item" data-idx="${i}" data-photo-id="${esc(ph.id)}" title="Tap to view full size">
-            <img src="${esc(thumbUrl(ph.url))}" alt="Photo ${i+1}" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
-            ${i === 0 ? '<span class="pd-cover-badge">Cover</span>' : ''}
-          </div>`).join('')
-        : '<div style="font-size:.78rem;color:var(--muted);padding:8px 2px">No photos yet — add some below.</div>';
-    }
-
-    // Click existing photo thumbnails -> open full-size lightbox above drawer
-    document.getElementById('pd-edit-thumbs')?.addEventListener('click', e => {
-      const item = e.target.closest('.pd-edit-thumb-item');
-      if (!item) return;
-      const urls = _photos.map(x => x.url).filter(Boolean);
-      const idx = parseInt(item.dataset.idx || '0', 10) || 0;
-      if (urls.length) openLightbox(idx, urls);
-    });
 
     function _markDirty() {
-      if (!_formDirty) {
-        _formDirty = true;
-        const h3 = panel.querySelector('.pd-edit-header h3');
-        if (h3 && !h3.querySelector('.pd-dirty-dot')) {
-          const dot = document.createElement('span');
-          dot.className = 'pd-dirty-dot';
-          dot.title = 'Saving…';
-          h3.appendChild(dot);
-        }
+      if (_formDirty) return;
+      _formDirty = true;
+      const h3 = panel.querySelector('.pd-edit-header h3');
+      if (h3 && !h3.querySelector('.pd-dirty-dot')) {
+        const dot = document.createElement('span');
+        dot.className = 'pd-dirty-dot';
+        dot.title = 'Unsaved changes';
+        h3.appendChild(dot);
       }
-      _setEditSaveStatus('', 'Pending…');
     }
 
     function _syncEditUndoRedo() {
@@ -1705,46 +1622,6 @@
       _syncEditUndoRedo();
     }
 
-    async function _runSerializedSave(silent) {
-      if (_editSaving) {
-        _editSaveQueued = true;
-        return;
-      }
-      _editSaving = true;
-      _setEditSaveStatus('saving', 'Saving…');
-      try {
-        await saveEdit({ silent });
-      } finally {
-        _editSaving = false;
-        if (_editSaveQueued) {
-          _editSaveQueued = false;
-          _runSerializedSave(true);
-        }
-      }
-    }
-
-    function _scheduleAutoSave(immediate) {
-      clearTimeout(_editSaveTimer);
-      if (immediate) {
-        _runSerializedSave(true);
-      } else {
-        _editSaveTimer = setTimeout(() => _runSerializedSave(true), 750);
-      }
-    }
-
-    function _closeEditPanel() {
-      clearTimeout(_editUndoDebounce);
-      clearTimeout(_editSaveTimer);
-      _formDirty = false;
-      panel.classList.remove('open');
-      setTimeout(() => {
-        if (panel.parentNode) panel.remove();
-        if (!document.querySelector('.pd-edit-panel.open') && !_lightboxOpen) {
-          document.body.style.overflow = '';
-        }
-      }, 300);
-    }
-
     // Initialise history with current (pre-edit) state
     _editHistory = [];
     _editHistoryIdx = -1;
@@ -1758,20 +1635,16 @@
     }
     _syncEditUndoRedo();
 
-    // Track changes for dirty flag + history + auto-save
-    panel.querySelector('#pd-edit-form')?.addEventListener('input', e => {
-      if (e.target && e.target.id === 'pd-landlord-search') return;
+    // Track changes for dirty flag + history (debounced 600 ms)
+    panel.querySelector('#pd-edit-form')?.addEventListener('input', () => {
       _markDirty();
       clearTimeout(_editUndoDebounce);
       _editUndoDebounce = setTimeout(_pushEditHistory, 600);
-      _scheduleAutoSave(false);
     });
-    panel.querySelector('#pd-edit-form')?.addEventListener('change', e => {
-      if (e.target && (e.target.id === 'pd-landlord-search' || e.target.id === 'pd-edit-file-input')) return;
+    panel.querySelector('#pd-edit-form')?.addEventListener('change', () => {
       _markDirty();
       clearTimeout(_editUndoDebounce);
       _editUndoDebounce = setTimeout(_pushEditHistory, 600);
-      _scheduleAutoSave(true);
     });
 
     document.getElementById('pd-edit-undo')?.addEventListener('click', () => {
@@ -1782,7 +1655,6 @@
       if (form) _restoreFormState(form, _editHistory[_editHistoryIdx]);
       _syncEditUndoRedo();
       _markDirty();
-      _scheduleAutoSave(true);
     });
 
     document.getElementById('pd-edit-redo')?.addEventListener('click', () => {
@@ -1793,7 +1665,6 @@
       if (form) _restoreFormState(form, _editHistory[_editHistoryIdx]);
       _syncEditUndoRedo();
       _markDirty();
-      _scheduleAutoSave(true);
     });
 
     // ── Description character counter ──
@@ -1807,12 +1678,23 @@
       });
     }
 
+
+
     const _guardedClose = async () => {
-      clearTimeout(_editSaveTimer);
-      if (_formDirty && !_editSaving) {
-        await _runSerializedSave(true);
+      if (_formDirty) {
+        const leave = await S.confirm({
+          title: 'Discard changes?',
+          message: 'You have unsaved changes. Leave without saving?',
+          ok: 'Discard',
+          cancel: 'Keep editing',
+          danger: true,
+        });
+        if (!leave) return;
       }
-      _closeEditPanel();
+      clearTimeout(_editUndoDebounce);
+      _formDirty = false;
+      panel.classList.remove('open');
+      setTimeout(() => panel.remove(), 300);
     };
 
     document.getElementById('pd-edit-close').addEventListener('click', _guardedClose);
@@ -1821,11 +1703,12 @@
     document.getElementById('pd-drawer-delete-btn')?.addEventListener('click', (e) => {
       executeDeleteProperty(p.id, p.title, e.currentTarget);
     });
-    // Manual Save Now saves immediately and stays open
-    document.getElementById('pd-edit-save').addEventListener('click', () => {
-      clearTimeout(_editSaveTimer);
-      _runSerializedSave(false);
-    });
+    document.getElementById('pd-edit-save').addEventListener('click', () => saveEdit(() => {
+      clearTimeout(_editUndoDebounce);
+      _formDirty = false;
+      panel.classList.remove('open');
+      setTimeout(() => panel.remove(), 300);
+    }));
 
     // ── Geocode button ──
     document.getElementById('pd-geocode-btn').addEventListener('click', async () => {
@@ -1850,9 +1733,7 @@
         const lng = feat.geometry.coordinates[0];
         form.elements.lat.value = lat.toFixed(6);
         form.elements.lng.value = lng.toFixed(6);
-        S.toast('Coordinates updated & saved!', 'success');
-        _markDirty();
-        _scheduleAutoSave(true);
+        S.toast('Coordinates updated!', 'success');
         // Audit log (non-blocking)
         CP.Auth.getSession().then(({ data }) => {
           CP.sb().from('admin_actions').insert([{
@@ -1870,69 +1751,11 @@
       }
     });
 
-    // ── Photo upload wiring (inside edit panel — auto-uploads & live syncs immediately) ──
+    // ── Photo upload wiring (inside edit panel) ──
     _editPendingPhotos.clear();
     const _editFileInput   = document.getElementById('pd-edit-file-input');
     const _editPendingZone = document.getElementById('pd-edit-pending-zone');
     const _editPhotoStatus = document.getElementById('pd-edit-photo-status');
-    let _editUploading = false;
-
-    async function _uploadEditPendingQueue() {
-      if (_editUploading || _editPendingPhotos.size === 0) return;
-      _editUploading = true;
-      _setEditSaveStatus('saving', 'Uploading photo…');
-      if (_editPhotoStatus) { _editPhotoStatus.style.display = ''; _editPhotoStatus.textContent = 'Uploading photos…'; }
-      let uploadedCnt = 0;
-
-      while (_editPendingPhotos.size > 0) {
-        const nextEntry = _editPendingPhotos.entries().next().value;
-        if (!nextEntry) break;
-        const [sid, file] = nextEntry;
-        _editPendingPhotos.delete(sid);
-        if (_editPhotoStatus) {
-          const rem = _editPendingPhotos.size + 1;
-          _editPhotoStatus.textContent = `Uploading (${rem} remaining)…`;
-        }
-        try {
-          const result = await _uploadAdminPhoto(file, propId, () => {});
-          const { data: newPhotoRows, error: rpcErr } = await CP.sb()
-            .rpc('add_property_photo', { p_property_id: propId, p_url: result.url, p_file_id: result.fileId || null, p_display_order: null, p_is_hero: false });
-          if (rpcErr) throw new Error(rpcErr.message);
-          let added = Array.isArray(newPhotoRows) ? newPhotoRows[0] : newPhotoRows;
-          if (!added || !added.id) {
-            const { data: freshRows } = await CP.sb()
-              .from('property_photos')
-              .select('id,url,display_order,watermark_status,file_id,caption,room_label,media_type,source_url')
-              .eq('property_id', propId)
-              .order('display_order');
-            if (Array.isArray(freshRows)) {
-              _photos = freshRows.slice().sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-              added = null;
-            }
-          }
-          if (added) {
-            _photos.push(added);
-            _photos.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-          }
-          if (_prop) _prop.property_photos = _photos;
-          _editPendingZone?.querySelector(`[data-pending-sid="${sid}"]`)?.remove();
-          _renderEditThumbs();
-          refreshGalleryInPlace();
-          _lastSelfSaveAt = Date.now();
-          uploadedCnt++;
-        } catch (uploadErr) {
-          S.toast('Photo upload failed: ' + (uploadErr.message || uploadErr), 'error');
-          _editPendingZone?.querySelector(`[data-pending-sid="${sid}"]`)?.remove();
-        }
-      }
-
-      _editUploading = false;
-      if (_editPhotoStatus) {
-        _editPhotoStatus.textContent = uploadedCnt > 0 ? `${uploadedCnt} photo${uploadedCnt > 1 ? 's' : ''} added ✓` : '';
-        _editPhotoStatus.style.display = uploadedCnt > 0 ? '' : 'none';
-      }
-      _setEditSaveStatus(uploadedCnt > 0 ? 'saved' : '', uploadedCnt > 0 ? 'Saved ✓' : 'Auto-save ready');
-    }
 
     function _addEditPendingFile(file) {
       if (!file.type.startsWith('image/')) return;
@@ -1950,42 +1773,38 @@
       item.className = 'pd-edit-thumb-item pd-edit-thumb-pending';
       item.dataset.pendingSid = sid;
       item.style.cssText = 'position:relative;overflow:hidden;border-radius:6px;background:var(--surface-2);border:2px dashed var(--brand)';
-      item.innerHTML = `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;z-index:2;pointer-events:none">
-        ${ico('spin')}
+      item.innerHTML = `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;z-index:2">
+        ${ico('clock')}
         <span style="font-size:.6rem;color:var(--muted);text-align:center;padding:0 4px;word-break:break-all">${esc(file.name.length > 18 ? file.name.slice(0, 15) + '…' : file.name)}</span>
-        <button type="button" data-remove-sid="${sid}" style="pointer-events:auto;font-size:.6rem;padding:2px 6px;border-radius:3px;background:rgba(220,38,38,.85);color:#fff;border:none;cursor:pointer">Remove</button>
+        <button type="button" data-remove-sid="${sid}" style="font-size:.6rem;padding:1px 6px;border-radius:3px;background:rgba(220,38,38,.85);color:#fff;border:none;cursor:pointer">Remove</button>
       </div>`;
       const reader = new FileReader();
       reader.onload = ev => {
         const img = document.createElement('img');
         img.src = ev.target.result; img.alt = 'Preview';
-        img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.55;z-index:1';
+        img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.35;z-index:1';
         item.insertBefore(img, item.firstChild);
       };
       reader.readAsDataURL(file);
       _editPendingZone?.appendChild(item);
+      if (_editPhotoStatus) { _editPhotoStatus.style.display = ''; _editPhotoStatus.textContent = _editPendingPhotos.size + ' new photo' + (_editPendingPhotos.size > 1 ? 's' : '') + ' queued'; }
     }
 
     _editFileInput?.addEventListener('change', e => {
       [...e.target.files].forEach(_addEditPendingFile);
       _editFileInput.value = '';
-      _uploadEditPendingQueue();
     });
 
     _editPendingZone?.addEventListener('click', e => {
       const btn = e.target.closest('[data-remove-sid]');
-      if (btn) {
-        const sid = btn.dataset.removeSid;
-        _editPendingPhotos.delete(sid);
-        _editPendingZone.querySelector(`[data-pending-sid="${sid}"]`)?.remove();
-        return;
+      if (!btn) return;
+      const sid = btn.dataset.removeSid;
+      _editPendingPhotos.delete(sid);
+      _editPendingZone.querySelector(`[data-pending-sid="${sid}"]`)?.remove();
+      if (_editPhotoStatus) {
+        _editPhotoStatus.textContent = _editPendingPhotos.size > 0 ? _editPendingPhotos.size + ' new photo' + (_editPendingPhotos.size > 1 ? 's' : '') + ' queued' : '';
+        _editPhotoStatus.style.display = _editPendingPhotos.size > 0 ? '' : 'none';
       }
-      const card = e.target.closest('.pd-edit-thumb-pending');
-      if (!card) return;
-      const imgs = [..._editPendingZone.querySelectorAll('.pd-edit-thumb-pending img')].map(el => el.src).filter(Boolean);
-      const clickedImg = card.querySelector('img')?.src;
-      const idx = Math.max(0, imgs.indexOf(clickedImg));
-      if (imgs.length) openLightbox(idx, imgs);
     });
 
     // ── Populate landlord dropdown with live search filter ──
@@ -2037,18 +1856,7 @@
     }
   }
 
-  async function saveEdit(optsOrClose) {
-    const opts = typeof optsOrClose === 'function'
-      ? { closeAfter: true, onClose: optsOrClose, silent: false }
-      : (optsOrClose && typeof optsOrClose === 'object' ? optsOrClose : { silent: false });
-    const silent = !!opts.silent;
-    const statusPill = document.getElementById('pd-edit-save-status');
-    const setStatus = (cls, msg) => {
-      if (!statusPill) return;
-      statusPill.className = 'pd-save-pill' + (cls ? ' ' + cls : '');
-      statusPill.textContent = msg;
-    };
-
+  async function saveEdit(closePanel) {
     const form = document.getElementById('pd-edit-form');
     if (!form) return;
     const fd = new FormData(form);
@@ -2058,41 +1866,30 @@
     const getBool = (k) => { const v = get(k); return v === 'true' ? true : v === 'false' ? false : null; };
 
     if (!get('title') || !get('address')) {
-      setStatus('error', 'Title & address required');
-      if (!silent) S.toast('Title and address are required', 'error');
-      return;
+      S.toast('Title and address are required', 'error'); return;
     }
 
     // ── Coordinate validation ──
     const latVal = getNum('lat');
     const lngVal = getNum('lng');
     if (latVal !== null && (latVal < -90 || latVal > 90)) {
-      setStatus('error', 'Invalid latitude');
-      if (!silent) S.toast('Latitude must be between −90 and 90', 'error');
-      return;
+      S.toast('Latitude must be between −90 and 90', 'error'); return;
     }
     if (lngVal !== null && (lngVal < -180 || lngVal > 180)) {
-      setStatus('error', 'Invalid longitude');
-      if (!silent) S.toast('Longitude must be between −180 and 180', 'error');
-      return;
+      S.toast('Longitude must be between −180 and 180', 'error'); return;
     }
 
     // ── Virtual tour URL validation ──
     const vtUrl = get('virtual_tour_url');
     if (vtUrl) {
       try { new URL(vtUrl); } catch (_) {
-        setStatus('error', 'Invalid virtual tour URL');
-        if (!silent) S.toast('Virtual tour URL is not a valid URL (must start with https://)', 'error');
-        return;
+        S.toast('Virtual tour URL is not a valid URL (must start with https://)', 'error'); return;
       }
       if (!vtUrl.startsWith('http://') && !vtUrl.startsWith('https://')) {
-        setStatus('error', 'Virtual tour URL must use http/https');
-        if (!silent) S.toast('Virtual tour URL must start with http:// or https://', 'error');
-        return;
+        S.toast('Virtual tour URL must start with http:// or https://', 'error'); return;
       }
     }
 
-    setStatus('saving', 'Saving…');
     const saveBtn = document.getElementById('pd-edit-save');
     if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = ico('spin') + ' Saving…'; }
 
@@ -2259,54 +2056,23 @@
       error = res.error;
     }
 
-    if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = ico('check') + ' Save Now'; }
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = ico('check') + ' Save changes'; }
 
-    if (error) {
-      setStatus('error', 'Save failed');
-      S.toast('Save failed: ' + error.message, 'error');
-      return;
-    }
+    if (error) { S.toast('Save failed: ' + error.message, 'error'); return; }
 
-    _lastSelfSaveAt = Date.now();
-    _formDirty = false;
-    const h3 = document.querySelector('#pd-edit-panel .pd-edit-header h3');
-    h3?.querySelector('.pd-dirty-dot')?.remove();
-    _editInitialFormState = JSON.parse(JSON.stringify(currentFormState));
-    if (Object.keys(patch).length > 0 && _prop) {
-      Object.assign(_prop, patch);
-      if (patch.landlord_id !== undefined) {
-        if (!patch.landlord_id) {
-          _prop.landlords = null;
-        } else if (Array.isArray(_landlordCache)) {
-          const foundL = _landlordCache.find(l => String(l.id) === String(patch.landlord_id));
-          if (foundL) _prop.landlords = foundL;
-        }
-      }
-      _prop.property_photos = _photos;
-    }
-    _editOriginal = JSON.parse(JSON.stringify(_prop || {}));
-
+    S.toast('Property saved!', 'success');
     _lastSavedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    setStatus('saved', 'Saved ✓');
-    if (!silent) S.toast('Property saved!', 'success');
+    const lsi = document.getElementById('pd-lastsaved');
+    if (lsi) lsi.textContent = 'Last saved ' + _lastSavedAt;
 
-    // Refresh the underlying page UI live while keeping the drawer open
-    if (Object.keys(patch).length > 0 && _prop) {
-      const sy = window.scrollY;
-      try {
-        render(_prop, _appsCache, _inqsCache);
-      } catch (e) { console.warn('[property-detail] live re-render skipped:', e); }
-      const lsiAfter = document.getElementById('pd-lastsaved');
-      if (lsiAfter) lsiAfter.textContent = 'Last saved ' + _lastSavedAt;
-      window.scrollTo({ top: sy });
-    } else {
-      const lsi = document.getElementById('pd-lastsaved');
-      if (lsi) lsi.textContent = 'Last saved ' + _lastSavedAt;
+    // Refresh the inline status toggle if status changed
+    if (patch.status && patch.status !== _prop.status) {
+      _prop.status = patch.status;
+      const toggle = document.getElementById('pd-status-toggle');
+      if (toggle) { toggle.outerHTML = renderStatusBar(patch.status); bindStatusToggle(); }
     }
 
-    if (opts.closeAfter && typeof opts.onClose === 'function') {
-      opts.onClose();
-    }
+    closePanel();
 
     // ── Real-diff audit log (non-blocking) ──
     CP.Auth.getSession().then(({ data }) => {
@@ -2332,6 +2098,20 @@
         }]).catch(() => {});
       }
     }).catch(() => {});
+
+    // Reload page data
+    const { data } = await CP.sb()
+      .from('properties')
+      .select('*, landlords(id,user_id,business_name,contact_name,avatar_url,tagline,verified), property_photos(id,url,display_order,watermark_status,file_id,caption,room_label,media_type,source_url)')
+      .eq('id', propId)
+      .single();
+    if (data) {
+      const [appsRes, inqsRes] = await Promise.all([
+        CP.sb().from('applications').select('id,status,created_at,tenants(full_name,name,email)').eq('property_id', propId).order('created_at',{ascending:false}).limit(25),
+        CP.sb().from('inquiries').select('id,created_at,name,email,phone,message').eq('property_id', propId).order('created_at',{ascending:false}).limit(25)
+      ]);
+      render(data, appsRes.data || [], inqsRes.data || []);
+    }
   }
 
   // ── Admin photo upload helpers ────────────────────────────────────────────────
@@ -2479,10 +2259,7 @@
       <div class="pd-edit-overlay" id="pd-pm-overlay"></div>
       <div class="pd-edit-drawer">
         <div class="pd-edit-header">
-          <div style="display:flex;align-items:center;gap:8px;min-width:0">
-            <h3>Manage Photos</h3>
-            <span class="pd-save-pill" id="pd-pm-save-status">Auto-save ready</span>
-          </div>
+          <h3>Manage Photos</h3>
           <button class="pd-edit-close" id="pd-pm-close" aria-label="Close">✕</button>
         </div>
         <div class="pd-edit-body">
@@ -2493,7 +2270,7 @@
               <input type="file" id="pd-pm-replace-input" accept="image/jpeg,image/png,image/webp,image/*" multiple>
               <i class="fas fa-arrow-right-arrow-left rz-icon"></i>
               <strong>Drop replacement photos here</strong>
-              <p id="pd-pm-replace-hint">Deletes ${_photos.length ? 'all ' + _photos.length + ' existing photo' + (_photos.length !== 1 ? 's' : '') : 'existing photos'} &amp; uploads these new ones</p>
+              <p>Deletes ${_photos.length ? 'all ' + _photos.length + ' existing photo' + (_photos.length !== 1 ? 's' : '') : 'existing photos'} &amp; uploads these new ones</p>
             </div>
             <div class="pd-pm-replace-preview" id="pd-pm-replace-preview" style="display:none"></div>
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-top:8px">
@@ -2508,7 +2285,7 @@
 
           <div class="pd-pm-replace-divider">Or manage individual photos</div>
 
-          <p class="pd-pm-hint"><i class="fas fa-grip-dots-vertical"></i> Tap any photo for full size · Drag to reorder · First photo is cover.</p>
+          <p class="pd-pm-hint"><i class="fas fa-grip-dots-vertical"></i> Drag to reorder &middot; First photo is the cover image.</p>
           <div class="pd-pm-grid" id="pd-pm-grid">
             ${_photos.map((ph, i) => `
               <div class="pd-pm-item" data-photo-id="${esc(String(ph.id || ''))}" data-url="${esc(ph.url || '')}" draggable="true">
@@ -2522,13 +2299,13 @@
                 </button>
               </div>`).join('')}
           </div>
-          ${!_photos.length ? '<div class="pd-empty-row" id="pd-pm-empty" style="text-align:center;padding:24px 16px">No photos yet — add some below.</div>' : ''}
+          ${!_photos.length ? '<div class="pd-empty-row" style="text-align:center;padding:24px 16px">No photos yet — add some below.</div>' : ''}
 
           <div class="pd-pm-upload-zone" id="pd-pm-upload-zone">
             <input type="file" id="pd-pm-file-input" accept="image/jpeg,image/png,image/webp,image/*" multiple>
             <i class="fas fa-cloud-upload-alt"></i>
-            <strong>Add photos (auto-uploads immediately)</strong>
-            <p>JPG, PNG or WEBP &middot; max 10 MB each &middot; drop files here or tap to browse</p>
+            <strong>Add photos</strong>
+            <p>JPG, PNG or WEBP &middot; max 10 MB each &middot; drop files here or click to browse</p>
           </div>
 
           <div class="pd-pm-upload-progress" id="pd-pm-upload-progress">
@@ -2544,134 +2321,35 @@
           <div class="pd-pm-grid" id="pd-pm-pending-grid" style="margin-top:10px"></div>
         </div>
         <div class="pd-edit-footer">
-          <button class="btn btn-ghost" id="pd-pm-cancel" type="button">Done</button>
+          <button class="btn btn-ghost" id="pd-pm-cancel">Cancel</button>
           <div style="display:flex;gap:6px;margin-left:auto;align-items:center">
-            <button class="btn btn-ghost btn-sm" id="pd-pm-undo" type="button" disabled title="Undo last reorder or cover change">↩ Undo</button>
-            <button class="btn btn-ghost btn-sm" id="pd-pm-redo" type="button" disabled title="Redo">Redo ↪</button>
-            <button class="btn btn-primary" id="pd-pm-save" type="button">
-              <i class="fas fa-check"></i> Save Order
+            <button class="btn btn-ghost btn-sm" id="pd-pm-undo" disabled title="Undo last reorder or cover change">↩ Undo</button>
+            <button class="btn btn-ghost btn-sm" id="pd-pm-redo" disabled title="Redo">Redo ↪</button>
+            <button class="btn btn-primary" id="pd-pm-save">
+              <i class="fas fa-check"></i> Save
             </button>
           </div>
         </div>
       </div>`;
 
     document.body.appendChild(panel);
-    document.body.style.overflow = 'hidden';
     requestAnimationFrame(() => {
       panel.classList.add('open');
       if (focusUpload) {
         setTimeout(() => {
           const zone = document.getElementById('pd-pm-upload-zone');
           if (zone) zone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Trigger file picker on mobile for direct upload
           const fi = document.getElementById('pd-pm-file-input');
           if (fi && window.innerWidth < 768) fi.click();
         }, 350);
       }
     });
 
-    const closePanel = () => {
-      panel.classList.remove('open');
-      setTimeout(() => {
-        if (panel.parentNode) panel.remove();
-        if (!document.querySelector('.pd-edit-panel.open') && !_lightboxOpen) {
-          document.body.style.overflow = '';
-        }
-      }, 300);
-    };
+    const closePanel = () => { panel.classList.remove('open'); setTimeout(() => panel.remove(), 300); };
     document.getElementById('pd-pm-close').addEventListener('click', closePanel);
     document.getElementById('pd-pm-cancel').addEventListener('click', closePanel);
     document.getElementById('pd-pm-overlay').addEventListener('click', closePanel);
-
-    const _pmStatusEl = document.getElementById('pd-pm-save-status');
-    function _setPmStatus(cls, msg) {
-      if (!_pmStatusEl) return;
-      _pmStatusEl.className = 'pd-save-pill' + (cls ? ' ' + cls : '');
-      _pmStatusEl.textContent = msg;
-    }
-
-    function _syncEditDrawerThumbs() {
-      const thumbsEl = document.getElementById('pd-edit-thumbs');
-      const countEl = document.getElementById('pd-edit-photo-count');
-      if (countEl) countEl.textContent = `(${_photos.length})`;
-      if (thumbsEl) {
-        thumbsEl.innerHTML = _photos.length
-          ? _photos.map((ph, i) => `<div class="pd-edit-thumb-item" data-idx="${i}" data-photo-id="${esc(ph.id)}" title="Tap to view full size">
-              <img src="${esc(thumbUrl(ph.url))}" alt="Photo ${i+1}" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
-              ${i === 0 ? '<span class="pd-cover-badge">Cover</span>' : ''}
-            </div>`).join('')
-          : '<div style="font-size:.78rem;color:var(--muted);padding:8px 2px">No photos yet — add some below.</div>';
-      }
-      const rHint = document.getElementById('pd-pm-replace-hint');
-      if (rHint) rHint.textContent = `Deletes ${_photos.length ? 'all ' + _photos.length + ' existing photo' + (_photos.length !== 1 ? 's' : '') : 'existing photos'} & uploads these new ones`;
-    }
-
-    async function _persistPmOrder(opts) {
-      const silent = opts && opts.silent !== false;
-      const items = document.querySelectorAll('#pd-pm-grid .pd-pm-item');
-      if (!items.length) {
-        _photos = [];
-        if (_prop) _prop.property_photos = [];
-        refreshGalleryInPlace();
-        _syncEditDrawerThumbs();
-        return true;
-      }
-      _setPmStatus('saving', 'Saving…');
-      const updates = Array.from(items)
-        .map((item, i) => ({ id: item.dataset.photoId, display_order: i }))
-        .filter(u => u.id);
-      const { error } = await CP.sb().from('property_photos').upsert(updates, { onConflict: 'id' });
-      if (error) {
-        _setPmStatus('error', 'Save failed');
-        S.toast('Failed to save order: ' + error.message, 'error');
-        return false;
-      }
-      _lastSelfSaveAt = Date.now();
-      const byId = new Map(_photos.map(ph => [String(ph.id), ph]));
-      const ordered = [];
-      updates.forEach((u, idx) => {
-        const ph = byId.get(String(u.id));
-        if (ph) {
-          ph.display_order = idx;
-          ph.is_hero = idx === 0;
-          ordered.push(ph);
-        }
-      });
-      if (ordered.length) _photos = ordered;
-      if (_prop) _prop.property_photos = _photos;
-      refreshGalleryInPlace();
-      _syncEditDrawerThumbs();
-      _setPmStatus('saved', 'Saved ✓');
-      if (!silent) S.toast('Photo order saved!', 'success');
-      CP.Auth.getSession().then(({ data }) => {
-        CP.sb().from('admin_actions').insert([{
-          user_id:     data?.session?.user?.id || null,
-          action:      'property.photo_reorder',
-          target_type: 'property',
-          target_id:   String(propId),
-          metadata:    { count: updates.length }
-        }]).catch(() => {});
-      }).catch(() => {});
-      return true;
-    }
-
-    // ── Click photo in Photo Manager grid -> open full-size lightbox ──
-    const _pmGridEl = document.getElementById('pd-pm-grid');
-    let _pmPtrX = 0, _pmPtrY = 0;
-    _pmGridEl?.addEventListener('pointerdown', e => {
-      _pmPtrX = e.clientX;
-      _pmPtrY = e.clientY;
-    });
-    _pmGridEl?.addEventListener('click', e => {
-      if (Math.hypot(e.clientX - _pmPtrX, e.clientY - _pmPtrY) > 10) return;
-      if (e.target.closest('.pd-pm-handle, .pd-pm-cover-btn, .pd-pm-delete')) return;
-      const item = e.target.closest('.pd-pm-item');
-      if (!item) return;
-      const items = [..._pmGridEl.querySelectorAll('.pd-pm-item')];
-      const urls = items.map(el => el.dataset.url || '').filter(Boolean);
-      const clickedUrl = item.dataset.url || '';
-      const idx = Math.max(0, urls.indexOf(clickedUrl));
-      if (urls.length) openLightbox(idx, urls);
-    });
 
     // ── Delete existing photos ────────────────────────────────────────────────
     panel.addEventListener('click', async e => {
@@ -2682,18 +2360,13 @@
       if (!id) return;
       const ok = await S.confirm({ title: 'Delete this photo?', message: 'This cannot be undone.', ok: 'Delete', cancel: 'Cancel', danger: true });
       if (!ok) return;
-      _setPmStatus('saving', 'Deleting…');
       const { error } = await CP.sb().from('property_photos').delete().eq('id', id);
-      if (error) { _setPmStatus('error', 'Delete failed'); S.toast('Delete failed: ' + error.message, 'error'); return; }
-      _lastSelfSaveAt = Date.now();
+      if (error) { S.toast('Delete failed: ' + error.message, 'error'); return; }
       _photos = _photos.filter(ph => String(ph.id) !== String(id));
-      if (_prop) _prop.property_photos = _photos;
       const item = btn.closest('.pd-pm-item');
       if (item) item.remove();
       refreshOrderBadges();
       refreshGalleryInPlace();
-      _syncEditDrawerThumbs();
-      _setPmStatus('saved', 'Saved ✓');
       S.toast('Photo deleted', 'success');
       // Best-effort CDN cleanup (fire-and-forget, never surfaced to user)
       if (fileId && window.CONFIG?.SUPABASE_URL && window.CONFIG?.SUPABASE_ANON_KEY) {
@@ -2722,7 +2395,7 @@
       }).catch(() => {});
     });
 
-    // ── Set as cover (move to position 0 & auto-save) ────────────────────────
+    // ── Set as cover (move to position 0) ────────────────────────────────────
     panel.addEventListener('click', e => {
       const btn = e.target.closest('[data-set-cover]');
       if (!btn || btn.classList.contains('is-cover')) return;
@@ -2732,13 +2405,14 @@
       if (!item || !grid) return;
       grid.insertBefore(item, grid.firstChild);
       refreshOrderBadges();
+      // Update cover button states
       grid.querySelectorAll('.pd-pm-cover-btn').forEach((cb, idx) => {
         cb.classList.toggle('is-cover', idx === 0);
         cb.textContent = idx === 0 ? '★ Cover' : 'Set cover';
         cb.title = idx === 0 ? 'Cover photo' : 'Set as cover';
       });
+      S.toast('Cover photo updated — tap Save to confirm', 'success');
       _pmPushHistory();
-      _persistPmOrder({ silent: true });
     });
 
     const _pmGrid = document.getElementById('pd-pm-grid');
@@ -2762,17 +2436,13 @@
 
     _pmSyncButtons();
 
-    bindDragToReorder(_pmGrid, () => {
-      _pmPushHistory();
-      _persistPmOrder({ silent: true });
-    });
+    bindDragToReorder(_pmGrid, _pmPushHistory);
 
     document.getElementById('pd-pm-undo')?.addEventListener('click', () => {
       if (!_pmGrid || _pmHistIdx <= 0) return;
       _pmHistIdx--;
       _pmRestoreOrder(_pmGrid, _pmHistory[_pmHistIdx]);
       _pmSyncButtons();
-      _persistPmOrder({ silent: true });
     });
 
     document.getElementById('pd-pm-redo')?.addEventListener('click', () => {
@@ -2780,7 +2450,6 @@
       _pmHistIdx++;
       _pmRestoreOrder(_pmGrid, _pmHistory[_pmHistIdx]);
       _pmSyncButtons();
-      _persistPmOrder({ silent: true });
     });
 
     // ── Replace-all flow ─────────────────────────────────────────────────────
@@ -2839,20 +2508,11 @@
 
     replacePreview.addEventListener('click', e => {
       const btn = e.target.closest('[data-remove-rp]');
-      if (btn) {
-        if (_replacing) return;
-        const sid = btn.dataset.removeRp;
-        _replaceMap.delete(sid);
-        replacePreview.querySelector(`[data-rsid="${sid}"]`)?.remove();
-        _renderReplacePreview();
-        return;
-      }
-      const thumb = e.target.closest('.pd-pm-replace-thumb');
-      if (!thumb) return;
-      const srcs = [...replacePreview.querySelectorAll('.pd-pm-replace-thumb img')].map(i => i.src).filter(Boolean);
-      const clicked = thumb.querySelector('img')?.src;
-      const idx = Math.max(0, srcs.indexOf(clicked));
-      if (srcs.length) openLightbox(idx, srcs);
+      if (!btn || _replacing) return;
+      const sid = btn.dataset.removeRp;
+      _replaceMap.delete(sid);
+      replacePreview.querySelector(`[data-rsid="${sid}"]`)?.remove();
+      _renderReplacePreview();
     });
 
     replaceClear?.addEventListener('click', () => {
@@ -2870,25 +2530,6 @@
       [...e.dataTransfer.files].forEach(_addReplaceFile);
     });
 
-    function _renderPmGridFromPhotos() {
-      const pmGrid = document.getElementById('pd-pm-grid');
-      const emptyEl = document.getElementById('pd-pm-empty');
-      if (emptyEl && _photos.length) emptyEl.remove();
-      if (!pmGrid) return;
-      pmGrid.innerHTML = _photos.map((ph, i) => `
-        <div class="pd-pm-item" data-photo-id="${esc(String(ph.id || ''))}" data-url="${esc(ph.url || '')}" draggable="true">
-          <div class="pd-pm-handle" title="Drag (or touch the handle) to reorder"><i class="fas fa-grip-vertical"></i></div>
-          <img src="${esc(thumbUrl(ph.url || ''))}" alt="Photo ${i + 1}" loading="lazy">
-          <div class="pd-pm-order">${i + 1}</div>
-          ${ph.watermark_status && ph.watermark_status !== 'applied' ? '<div class="pd-pm-badge">⚠</div>' : ''}
-          <button class="pd-pm-cover-btn${i === 0 ? ' is-cover' : ''}" data-set-cover="${esc(String(ph.id || ''))}" title="${i === 0 ? 'Cover photo' : 'Set as cover'}">${i === 0 ? '★ Cover' : 'Set cover'}</button>
-          <button class="pd-pm-delete" data-photo-id="${esc(String(ph.id || ''))}" data-file-id="${esc(String(ph.file_id || ''))}" title="Delete photo" aria-label="Delete photo">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>`).join('');
-      _syncEditDrawerThumbs();
-    }
-
     replaceBtn?.addEventListener('click', async () => {
       if (_replacing || !_replaceMap.size) return;
       const entries  = [..._replaceMap.entries()];
@@ -2904,7 +2545,6 @@
       if (!ok) return;
 
       _replacing = true;
-      _setPmStatus('saving', 'Replacing…');
       replaceBtn.disabled = true;
       replaceBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting old…';
       if (replaceClear) replaceClear.style.display = 'none';
@@ -2917,9 +2557,7 @@
         const pmGrid = document.getElementById('pd-pm-grid');
         if (pmGrid) pmGrid.innerHTML = '';
         refreshGalleryInPlace();
-        _syncEditDrawerThumbs();
       } catch (delErr) {
-        _setPmStatus('error', 'Delete failed');
         S.toast('Delete failed: ' + (delErr.message || delErr), 'error');
         replaceBtn.disabled = false;
         replaceBtn.innerHTML = '<i class="fas fa-repeat"></i> Replace all';
@@ -2964,12 +2602,10 @@
       if (uploadProg) uploadProg.style.display = 'none';
       if (uploadBar)  uploadBar.style.width = '100%';
       _replacing = false;
-      replaceBtn.innerHTML = '<i class="fas fa-repeat"></i> Replace all';
 
       if (successCnt > 0) {
-        _lastSelfSaveAt = Date.now();
-        _setPmStatus('saved', 'Saved ✓');
         S.toast(`${successCnt} photo${successCnt > 1 ? 's' : ''} uploaded — gallery updated!`, 'success');
+        // Audit log (non-blocking)
         CP.Auth.getSession().then(({ data }) => {
           CP.sb().from('admin_actions').insert([{
             user_id:     data?.session?.user?.id || null,
@@ -2979,29 +2615,27 @@
             metadata:    { count: successCnt, replaced: true, deleted_count: oldCount }
           }]).catch(() => {});
         }).catch(() => {});
-        // Reload fresh photo rows and update Photo Manager & Gallery live (stay open)
-        const { data: freshRows } = await CP.sb()
-          .from('property_photos')
-          .select('id,url,display_order,watermark_status,file_id,caption,room_label,media_type,source_url')
-          .eq('property_id', propId).order('display_order');
-        if (Array.isArray(freshRows)) {
-          _photos = freshRows.slice().sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-          if (_prop) _prop.property_photos = _photos;
-          _renderPmGridFromPhotos();
+        // Reload fresh photo data, update gallery, close panel
+        const { data: freshProp } = await CP.sb()
+          .from('properties')
+          .select('*, landlords(id,user_id,business_name,contact_name,avatar_url,tagline,verified), property_photos(id,url,display_order,watermark_status,file_id)')
+          .eq('id', propId).single();
+        if (freshProp) {
+          _photos = Array.isArray(freshProp.property_photos)
+            ? freshProp.property_photos.slice().sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+            : [];
           refreshGalleryInPlace();
         }
-        _replaceMap.clear();
-        replacePreview.innerHTML = '';
-        _renderReplacePreview();
+        closePanel();
       } else {
-        _setPmStatus('error', 'Upload failed');
         replaceBtn.disabled = false;
+        replaceBtn.innerHTML = '<i class="fas fa-repeat"></i> Replace all';
         replaceBtn.style.opacity = '1';
         if (replaceCount) replaceCount.textContent = 'All uploads failed — try again';
       }
     });
 
-    // ── Upload zone (auto-uploads & updates live immediately) ──────────────────
+    // ── Upload zone ───────────────────────────────────────────────────────────
     const fileInput   = document.getElementById('pd-pm-file-input');
     const uploadZone  = document.getElementById('pd-pm-upload-zone');
     const pendingGrid = document.getElementById('pd-pm-pending-grid');
@@ -3010,90 +2644,9 @@
     const uploadText  = document.getElementById('pd-pm-upload-text');
     const uploadPct   = document.getElementById('pd-pm-upload-pct');
 
+    // Map of safeId → File, preserving insertion order
     const _pendingMap = new Map();
     let _uploading    = false;
-
-    async function _uploadPendingQueue() {
-      if (_uploading || !_pendingMap.size) return;
-      _uploading = true;
-      _setPmStatus('saving', 'Uploading…');
-      uploadProg.style.display = '';
-      let successCnt = 0;
-      let idx = 0;
-
-      while (_pendingMap.size > 0) {
-        const nextEntry = _pendingMap.entries().next().value;
-        if (!nextEntry) break;
-        const [sid, file] = nextEntry;
-        _pendingMap.delete(sid);
-        const totalEst = idx + _pendingMap.size + 1;
-        const itemEl = pendingGrid.querySelector(`[data-pending-id="${sid}"]`);
-        const ovlEl  = document.getElementById(`pd-pm-ovl-${sid}`);
-        if (ovlEl) ovlEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:var(--brand)"></i><span style="color:#fff;font-size:.72rem">Uploading…</span>';
-        const pctBase = Math.round((idx / totalEst) * 100);
-        uploadBar.style.width = pctBase + '%';
-        uploadPct.textContent = pctBase + '%';
-        uploadText.textContent = `Uploading photo ${idx + 1}…`;
-        try {
-          const result = await _uploadAdminPhoto(file, propId, (pct) => {
-            const overall = Math.round(((idx + pct / 100) / totalEst) * 100);
-            uploadBar.style.width = overall + '%';
-            uploadPct.textContent = overall + '%';
-          });
-          const { data: insRows, error: insErr } = await CP.sb()
-            .rpc('add_property_photo', { p_property_id: propId, p_url: result.url, p_file_id: result.fileId || null, p_display_order: null, p_is_hero: false });
-          if (insErr) throw new Error(insErr.message);
-          let added = Array.isArray(insRows) ? insRows[0] : insRows;
-          if (!added || !added.id) {
-            const { data: freshRows } = await CP.sb()
-              .from('property_photos')
-              .select('id,url,display_order,watermark_status,file_id,caption,room_label,media_type,source_url')
-              .eq('property_id', propId).order('display_order');
-            if (Array.isArray(freshRows)) {
-              _photos = freshRows.slice().sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-              added = null;
-            }
-          }
-          if (added) {
-            _photos.push(added);
-            _photos.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-          }
-          if (_prop) _prop.property_photos = _photos;
-          _renderPmGridFromPhotos();
-          refreshGalleryInPlace();
-          _lastSelfSaveAt = Date.now();
-          itemEl?.remove();
-          successCnt++;
-        } catch (err) {
-          const msg = String(err?.message || err).slice(0, 80);
-          if (ovlEl) ovlEl.innerHTML = `<i class="fas fa-times-circle" style="color:#f87171"></i><span style="color:#f87171;font-size:.7rem">Failed</span><span style="color:rgba(255,255,255,.7);font-size:.64rem;text-align:center;max-width:110px;word-break:break-word">${esc(msg)}</span>`;
-          if (itemEl) itemEl.classList.add('error');
-        }
-        idx++;
-        if (_pendingMap.size > 0) await new Promise(r => setTimeout(r, 300));
-      }
-
-      uploadBar.style.width = '100%';
-      uploadPct.textContent = '100%';
-      setTimeout(() => { uploadProg.style.display = 'none'; }, 500);
-      _uploading = false;
-
-      if (successCnt > 0) {
-        _setPmStatus('saved', 'Saved ✓');
-        S.toast(`${successCnt} photo${successCnt > 1 ? 's' : ''} uploaded & saved!`, 'success');
-        CP.Auth.getSession().then(({ data }) => {
-          CP.sb().from('admin_actions').insert([{
-            user_id:     data?.session?.user?.id || null,
-            action:      'property.photo_upload',
-            target_type: 'property',
-            target_id:   String(propId),
-            metadata:    { count: successCnt }
-          }]).catch(() => {});
-        }).catch(() => {});
-      } else {
-        _setPmStatus('error', 'Upload failed');
-      }
-    }
 
     function _addPendingFile(file) {
       if (['image/heic', 'image/heif'].includes(file.type.toLowerCase()) || /\.heic$/i.test(file.name)) {
@@ -3102,6 +2655,7 @@
       if (file.size > 10 * 1024 * 1024) {
         S.toast(`"${file.name}" exceeds the 10 MB limit.`, 'error'); return;
       }
+      // Deduplicate by name+size
       for (const f of _pendingMap.values()) {
         if (f.name === file.name && f.size === file.size) return;
       }
@@ -3121,48 +2675,105 @@
       reader.onload = (ev) => {
         const img = document.createElement('img');
         img.src = ev.target.result; img.alt = 'Preview';
-        img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.55';
+        img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.35';
         item.insertBefore(img, item.firstChild);
       };
       reader.readAsDataURL(file);
       pendingGrid.appendChild(item);
     }
 
+    // Remove a pending file
     pendingGrid.addEventListener('click', e => {
       const btn = e.target.closest('[data-remove-pending]');
-      if (btn) {
-        if (_uploading) return;
-        const sid = btn.dataset.removePending;
-        _pendingMap.delete(sid);
-        pendingGrid.querySelector(`[data-pending-id="${sid}"]`)?.remove();
-        return;
-      }
-      const card = e.target.closest('.pd-pm-uploading-item');
-      if (!card) return;
-      const srcs = [...pendingGrid.querySelectorAll('.pd-pm-uploading-item img')].map(i => i.src).filter(Boolean);
-      const clicked = card.querySelector('img')?.src;
-      const idx = Math.max(0, srcs.indexOf(clicked));
-      if (srcs.length) openLightbox(idx, srcs);
+      if (!btn || _uploading) return;
+      const sid = btn.dataset.removePending;
+      _pendingMap.delete(sid);
+      pendingGrid.querySelector(`[data-pending-id="${sid}"]`)?.remove();
     });
 
     fileInput.addEventListener('change', e => {
       [...e.target.files].forEach(_addPendingFile);
       fileInput.value = '';
-      _uploadPendingQueue();
     });
     uploadZone.addEventListener('dragover',  e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
     uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
     uploadZone.addEventListener('drop', e => {
       e.preventDefault(); uploadZone.classList.remove('drag-over');
       [...e.dataTransfer.files].forEach(_addPendingFile);
-      _uploadPendingQueue();
     });
 
-    document.getElementById('pd-pm-save').addEventListener('click', () => {
+    // ── Save / Upload handler ─────────────────────────────────────────────────
+    async function _onSave() {
       if (_uploading) return;
-      if (_pendingMap.size) { _uploadPendingQueue(); return; }
-      _persistPmOrder({ silent: false });
-    });
+      if (!_pendingMap.size) { savePhotoOrder(closePanel); return; }
+
+      _uploading = true;
+      const saveBtn = document.getElementById('pd-pm-save');
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading…'; }
+      uploadProg.style.display = '';
+
+      const entries  = [..._pendingMap.entries()]; // [[sid, File], …]
+      const total    = entries.length;
+      let successCnt = 0;
+
+      // Sequential uploads — one at a time to avoid CDN rate limits
+      const baseOrder = _photos.length ? Math.max(..._photos.map(ph => ph.display_order ?? 0)) + 1 : 0;
+      for (let idx = 0; idx < total; idx++) {
+        const [sid, file] = entries[idx];
+        const itemEl = pendingGrid.querySelector(`[data-pending-id="${sid}"]`);
+        const ovlEl  = document.getElementById(`pd-pm-ovl-${sid}`);
+        if (ovlEl) ovlEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:var(--brand)"></i><span style="color:#fff;font-size:.72rem">Uploading…</span>';
+        const pctBase = Math.round((idx / total) * 100);
+        uploadBar.style.width = pctBase + '%';
+        uploadPct.textContent = pctBase + '%';
+        uploadText.textContent = `Uploading ${idx + 1} of ${total}…`;
+        try {
+          const result = await _uploadAdminPhoto(file, propId, (pct) => {
+            const overall = Math.round(((idx + pct / 100) / total) * 100);
+            uploadBar.style.width = overall + '%';
+            uploadPct.textContent = overall + '%';
+          });
+          const { error: insErr } = await CP.sb()
+            .rpc('add_property_photo', { p_property_id: propId, p_url: result.url, p_file_id: result.fileId || null, p_display_order: null, p_is_hero: false });
+          if (insErr) throw new Error(insErr.message);
+          successCnt++;
+          if (ovlEl) ovlEl.innerHTML = '<i class="fas fa-check-circle" style="color:#4ade80"></i><span style="color:#fff;font-size:.72rem">Uploaded</span>';
+          if (itemEl) itemEl.style.borderColor = 'rgba(34,197,94,.6)';
+        } catch (err) {
+          const msg = String(err?.message || err).slice(0, 80);
+          if (ovlEl) ovlEl.innerHTML = `<i class="fas fa-times-circle" style="color:#f87171"></i><span style="color:#f87171;font-size:.7rem">Failed</span><span style="color:rgba(255,255,255,.7);font-size:.64rem;text-align:center;max-width:110px;word-break:break-word">${esc(msg)}</span>`;
+          if (itemEl) itemEl.classList.add('error');
+        }
+        // Small pause between uploads to avoid CDN rate limiting
+        if (idx < total - 1) await new Promise(r => setTimeout(r, 400));
+      }
+
+      uploadBar.style.width = '100%';
+      uploadPct.textContent = '100%';
+      _uploading = false;
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-check"></i> Save'; }
+
+      if (successCnt > 0) {
+        S.toast(`${successCnt} photo${successCnt > 1 ? 's' : ''} uploaded!`, 'success');
+        // Audit log (non-blocking)
+        CP.Auth.getSession().then(({ data }) => {
+          CP.sb().from('admin_actions').insert([{
+            user_id:     data?.session?.user?.id || null,
+            action:      'property.photo_upload',
+            target_type: 'property',
+            target_id:   String(propId),
+            metadata:    { count: successCnt }
+          }]).catch(() => {});
+        }).catch(() => {});
+        // Brief pause so user sees the Done state, then save order + close
+        setTimeout(() => { uploadProg.style.display = 'none'; savePhotoOrder(closePanel); }, 900);
+      } else {
+        S.toast('All uploads failed — see errors above.', 'error');
+        uploadProg.style.display = 'none';
+      }
+    }
+
+    document.getElementById('pd-pm-save').addEventListener('click', _onSave);
   }
 
   function refreshOrderBadges() {
@@ -3420,7 +3031,6 @@
         .on('postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'properties', filter: 'id=eq.' + propId },
           async () => {
-            if (Date.now() - _lastSelfSaveAt < 4000) return;
             // If edit drawer is open, don't clobber the in-progress form
             if (document.getElementById('pd-edit-panel')) {
               S.toast('This property was updated elsewhere — your edit is still open.', 'info');
@@ -3443,7 +3053,6 @@
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'property_photos', filter: 'property_id=eq.' + propId },
           async () => {
-            if (Date.now() - _lastSelfSaveAt < 4000) return;
             // Skip while photo manager is open — an upload may be in progress
             if (document.getElementById('pd-photo-manager')) return;
             const fresh = await CP.sb().from('property_photos')

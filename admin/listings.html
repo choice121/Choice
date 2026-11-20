@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1794849238206"></script>
+  <script src="/js/cp-error-reporter.js?v=1795196239539"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
@@ -11,6 +11,7 @@
   // Preserve any ?status= or ?landlord= query params in the redirect.
   (function () {
     var p = new URLSearchParams(location.search);
+    if (!p.get('status') && !p.get('landlord')) p.set('status', 'all');
     var next = '/listings.html';
     var qs = p.toString();
     if (qs) next += '?' + qs;

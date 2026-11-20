@@ -54,7 +54,7 @@ const PER_PAGE     = 24;
 
 // ── Admin mode state ───────────────────────────────────────────────────────
 let isAdminMode       = false;
-let adminStatusFilter = 'all';
+let adminStatusFilter = 'active';
 let adminLandlordId   = null;
 let adminLandlordName = null;
 let _adminSelected    = new Set(); // property IDs checked for bulk ops
@@ -103,7 +103,11 @@ function readURL() {
   activeType     = p.get('type')     || 'all';
   sortBy         = p.get('sort')     || 'newest';
   currentPage    = parseInt(p.get('page') || '1', 10);
-  if (isAdminMode && p.get('landlord')) adminLandlordId = p.get('landlord');
+  if (isAdminMode) {
+    adminLandlordId = p.get('landlord') || null;
+    const urlStatus = p.get('status');
+    adminStatusFilter = urlStatus || (adminLandlordId ? 'all' : 'active');
+  }
 }
 
 // ── Write state → URL ─────────────────────────────────────────────────────
@@ -125,6 +129,7 @@ function pushURL(replace = false) {
   if (sortBy && sortBy !== 'newest') p.set('sort', sortBy);
   if (currentPage > 1) p.set('page', currentPage);
   if (isAdminMode && adminLandlordId) p.set('landlord', adminLandlordId);
+  if (isAdminMode && adminStatusFilter && adminStatusFilter !== 'active') p.set('status', adminStatusFilter);
   const url = (p.toString() ? `?${p}` : window.location.pathname) +
     (activeShareToken ? `#share=${encodeURIComponent(activeShareToken)}` : '');
   if (replace) history.replaceState(null, '', url);
@@ -176,8 +181,10 @@ async function initAdminMode() {
   if (!isAdminMode) return;
 
   const usp = new URLSearchParams(window.location.search);
-  if (usp.get('status')) adminStatusFilter = usp.get('status');
   if (usp.get('landlord')) adminLandlordId = usp.get('landlord');
+  if (usp.get('status')) adminStatusFilter = usp.get('status');
+  else if (adminLandlordId) adminStatusFilter = 'all';
+  else adminStatusFilter = 'active';
 
   // Resolve landlord name if filter is active
   if (adminLandlordId) {
@@ -190,13 +197,47 @@ async function initAdminMode() {
   injectAdminToolbar();
 }
 
+const ADMIN_STATUS_LABELS = {
+  active:            'Public Active Only',
+  private_placement: 'Private Placement (Unlisted)',
+  all:               'All Properties',
+  rented:            'Rented',
+  inactive:          'Inactive',
+  maintenance:       'Maintenance',
+  draft:             'Draft',
+  paused:            'Paused',
+  archived:          'Archived',
+};
+
+function syncAdminToolbarUI() {
+  const toolbar = document.getElementById('adminListingsToolbar');
+  if (!toolbar) return;
+  const chipsCls = s => ({
+    active:'#10b981', private_placement:'#8b5cf6', rented:'#3b82f6', inactive:'#6b7280',
+    maintenance:'#f59e0b', draft:'#6366f1', paused:'#f97316', archived:'#6b7280'
+  })[s] || '#374151';
+  toolbar.querySelectorAll('[data-admin-status]').forEach(b => {
+    const s = b.dataset.adminStatus;
+    const col = chipsCls(s);
+    const active = s === adminStatusFilter;
+    b.style.border = '2px solid ' + (active ? col : '#d1d5db');
+    b.style.background = active ? col + '1a' : '#fff';
+    b.style.color = active ? col : '#374151';
+    b.classList.toggle('admin-chip-active', active);
+  });
+  const scopeLabel = document.getElementById('adminScopeLabel');
+  if (scopeLabel) {
+    scopeLabel.textContent = ADMIN_STATUS_LABELS[adminStatusFilter] || adminStatusFilter;
+  }
+}
+
 function injectAdminToolbar() {
   if (document.getElementById('adminListingsToolbar')) return;
 
   const statusOptions = [
-    { val:'all',               label:'All' },
     { val:'active',            label:'Active' },
     { val:'private_placement', label:'Private Placement' },
+    { val:'all',               label:'All' },
     { val:'rented',            label:'Rented' },
     { val:'inactive',          label:'Inactive' },
     { val:'maintenance',       label:'Maintenance' },
@@ -237,10 +278,14 @@ function injectAdminToolbar() {
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:8px">
           <span style="background:#006aff;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.05em">ADMIN</span>
-          <span style="color:#e2e8f0;font-size:13px;font-weight:500">All Properties</span>
+          <span id="adminScopeLabel" style="color:#e2e8f0;font-size:13px;font-weight:500">${ADMIN_STATUS_LABELS[adminStatusFilter] || 'Public Active Only'}</span>
           <span style="color:#64748b;font-size:12px" id="adminPropCount">Loading…</span>
         </div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <a id="adminSniperBtn" href="/admin/watermark-sniper.html${activeShareToken ? '#share=' + encodeURIComponent(activeShareToken) : ''}"
+            style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;text-decoration:none;display:flex;align-items:center;gap:6px;transition:all 150ms ease">
+            <i class="fas fa-crosshairs"></i> 🎯 Watermark Sniper${activeShareToken ? ' (Batch)' : ''}
+          </a>
           <button id="adminCsvExportBtn"
             style="background:transparent;border:1px solid #374151;color:#94a3b8;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
             <i class="fas fa-download"></i> Export CSV
@@ -294,19 +339,12 @@ function injectAdminToolbar() {
   toolbar.querySelectorAll('[data-admin-status]').forEach(btn => {
     btn.addEventListener('click', () => {
       adminStatusFilter = btn.dataset.adminStatus;
-      toolbar.querySelectorAll('[data-admin-status]').forEach(b => {
-        const s = b.dataset.adminStatus;
-        const col = chipsCls(s);
-        const active = s === adminStatusFilter;
-        b.style.border = '2px solid ' + (active ? col : '#d1d5db');
-        b.style.background = active ? col + '1a' : '#fff';
-        b.style.color = active ? col : '#374151';
-        b.classList.toggle('admin-chip-active', active);
-      });
+      syncAdminToolbarUI();
       // Clear selection when filter changes — selected set no longer matches visible cards
       _adminSelected.clear();
       _updateBulkBar();
       currentPage = 1;
+      pushURL();
       fetchAndRender();
     });
   });
@@ -846,6 +884,7 @@ async function adminCSVExport() {
     window.addEventListener('popstate', async () => {
       readURL();
       syncControls();
+      if (isAdminMode) syncAdminToolbarUI();
       await fetchAndRender();
     });
   } catch (err) {
@@ -1255,7 +1294,7 @@ function initMap(props, isBoundsUpdate = false) {
     L.control.zoom({ position: 'bottomright' }).addTo(mapInstance);
 
     mapInstance.on('moveend', async () => {
-      if (currentView !== 'map' || mapProgrammaticMove || isFetchingBounds) return;
+      if (currentView !== 'map' || mapProgrammaticMove || isFetchingBounds || activeShareToken || (activeTargetIds && activeTargetIds.length) || (isAdminMode && adminStatusFilter !== 'active')) return;
       isFetchingBounds = true;
       const b = mapInstance.getBounds();
       const result = await CP.Properties.getListings({

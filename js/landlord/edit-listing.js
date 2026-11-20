@@ -53,21 +53,14 @@
   if (!propertyId) { window.location.href = backURL; throw new Error(); }
 
   const { data: prop, error } = await supabase
-    .from('properties').select('*, property_photos(id, url, file_id, display_order)').eq('id', propertyId).single();
+    .from('properties').select('*, property_photos(url, file_id, display_order)').eq('id', propertyId).single();
 
   // Phase 3c: derive legacy photo_urls / photo_file_ids from the embedded property_photos.
-  let currentPhotos = [];
   if (prop) {
     const _photos = Array.isArray(prop.property_photos) ? prop.property_photos.slice() : [];
     _photos.sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
-    currentPhotos = _photos.filter(x => x && x.url).map((x, idx) => ({
-      id: x.id || null,
-      url: x.url,
-      file_id: x.file_id ?? null,
-      display_order: x.display_order ?? idx,
-    }));
-    prop.photo_urls     = currentPhotos.map(x => x.url);
-    prop.photo_file_ids = currentPhotos.map(x => x.file_id ?? null);
+    prop.photo_urls     = _photos.map(x => x.url).filter(Boolean);
+    prop.photo_file_ids = _photos.map(x => x.file_id ?? null);
   }
 
   if (error || !prop) {
@@ -84,7 +77,6 @@
   let currentPhotoFileIds = [...(prop.photo_file_ids || [])];
   let originalPhotoFileIds = [...currentPhotoFileIds];
   let pendingNewFiles     = [];
-  let pendingNewPreviews  = [];
 
   const chk = (arr, val) => arr && arr.includes(val) ? 'checked' : '';
   const sel = (opt, val) => opt == val ? 'selected' : '';
@@ -473,150 +465,7 @@
     });
   });
 
-  // ── Auto-save Pill Helper ───────────────────────────────
-  function setAutoSavePill(state, text) {
-    const pill = document.getElementById('autoSavePill');
-    if (!pill) return;
-    pill.className = 'auto-save-pill' + (state ? ` ${state}` : '');
-    pill.textContent = text;
-  }
-
-  // ── Full-size Swipeable Photo Lightbox ──────────────────
-  let _lbUrls = [];
-  let _lbIndex = 0;
-
-  function _ensureLightboxEl() {
-    let overlay = document.getElementById('cp-landlord-lightbox');
-    if (overlay) return overlay;
-    overlay = document.createElement('div');
-    overlay.id = 'cp-landlord-lightbox';
-    overlay.className = 'cp-lb-overlay';
-    overlay.setAttribute('role', 'dialog');
-    overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-label', 'Full-size photo viewer');
-    overlay.innerHTML = `
-      <button type="button" class="cp-lb-close" id="cpLbClose" aria-label="Close photo viewer">✕</button>
-      <div class="cp-lb-stage" id="cpLbStage">
-        <button type="button" class="cp-lb-btn cp-lb-prev" id="cpLbPrev" aria-label="Previous photo">‹</button>
-        <img class="cp-lb-img" id="cpLbImg" src="" alt="Full-size property photo">
-        <button type="button" class="cp-lb-btn cp-lb-next" id="cpLbNext" aria-label="Next photo">›</button>
-      </div>
-      <div class="cp-lb-counter" id="cpLbCounter">1 / 1</div>
-    `;
-    document.body.appendChild(overlay);
-    return overlay;
-  }
-
-  function _renderLightbox() {
-    const overlay = _ensureLightboxEl();
-    const img = overlay.querySelector('#cpLbImg');
-    const counter = overlay.querySelector('#cpLbCounter');
-    const prev = overlay.querySelector('#cpLbPrev');
-    const next = overlay.querySelector('#cpLbNext');
-    if (!_lbUrls.length) return;
-    if (_lbIndex < 0) _lbIndex = _lbUrls.length - 1;
-    if (_lbIndex >= _lbUrls.length) _lbIndex = 0;
-    img.src = _lbUrls[_lbIndex];
-    counter.textContent = `${_lbIndex + 1} / ${_lbUrls.length}`;
-    const single = _lbUrls.length <= 1;
-    if (prev) prev.style.display = single ? 'none' : '';
-    if (next) next.style.display = single ? 'none' : '';
-  }
-
-  function closeLandlordLightbox() {
-    const overlay = document.getElementById('cp-landlord-lightbox');
-    if (!overlay || !overlay.classList.contains('is-open')) return;
-    overlay.classList.remove('is-open');
-    document.body.style.overflow = '';
-    document.removeEventListener('keydown', _onLbKeydown, true);
-  }
-
-  function _onLbKeydown(e) {
-    const overlay = document.getElementById('cp-landlord-lightbox');
-    if (!overlay || !overlay.classList.contains('is-open')) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();
-      closeLandlordLightbox();
-    } else if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      _lbIndex--;
-      _renderLightbox();
-    } else if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      _lbIndex++;
-      _renderLightbox();
-    }
-  }
-
-  let _lbWired = false;
-  function openLandlordLightbox(urls, startIdx = 0) {
-    const clean = (Array.isArray(urls) ? urls : []).filter(Boolean);
-    if (!clean.length) return;
-    _lbUrls = clean;
-    _lbIndex = Math.max(0, Math.min(startIdx, clean.length - 1));
-    const overlay = _ensureLightboxEl();
-    if (!_lbWired) {
-      _lbWired = true;
-      overlay.querySelector('#cpLbClose')?.addEventListener('click', closeLandlordLightbox);
-      overlay.querySelector('#cpLbPrev')?.addEventListener('click', (e) => { e.stopPropagation(); _lbIndex--; _renderLightbox(); });
-      overlay.querySelector('#cpLbNext')?.addEventListener('click', (e) => { e.stopPropagation(); _lbIndex++; _renderLightbox(); });
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay || e.target.id === 'cpLbStage') closeLandlordLightbox();
-      });
-      let touchStartX = 0;
-      let touchStartY = 0;
-      const stage = overlay.querySelector('#cpLbStage');
-      stage?.addEventListener('touchstart', (e) => {
-        if (e.touches.length !== 1) return;
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-      }, { passive: true });
-      stage?.addEventListener('touchend', (e) => {
-        if (!touchStartX) return;
-        const t = e.changedTouches[0];
-        const dx = t.clientX - touchStartX;
-        const dy = t.clientY - touchStartY;
-        touchStartX = 0; touchStartY = 0;
-        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
-          _lbIndex += dx < 0 ? 1 : -1;
-          _renderLightbox();
-        }
-      }, { passive: true });
-    }
-    _renderLightbox();
-    overlay.classList.add('is-open');
-    document.body.style.overflow = 'hidden';
-    document.addEventListener('keydown', _onLbKeydown, true);
-  }
-
   // ── Photos ──────────────────────────────────────────────
-  function _syncPhotoArraysFromObjects() {
-    currentPhotoUrls    = currentPhotos.map(x => x.url);
-    currentPhotoFileIds = currentPhotos.map(x => x.file_id ?? null);
-    prop.property_photos = currentPhotos.slice();
-    prop.photo_urls      = [...currentPhotoUrls];
-    prop.photo_file_ids  = [...currentPhotoFileIds];
-  }
-
-  async function _refreshPhotosFromServer() {
-    const { data: freshRows } = await supabase
-      .from('property_photos')
-      .select('id, url, file_id, display_order')
-      .eq('property_id', propertyId)
-      .order('display_order', { ascending: true });
-    if (Array.isArray(freshRows)) {
-      currentPhotos = freshRows.filter(x => x && x.url).map((x, idx) => ({
-        id: x.id || null,
-        url: x.url,
-        file_id: x.file_id ?? null,
-        display_order: x.display_order ?? idx,
-      }));
-      _syncPhotoArraysFromObjects();
-      originalPhotoFileIds = [...currentPhotoFileIds];
-    }
-  }
-
   function renderExistingPhotos() {
     const grid = document.getElementById('existingPhotosGrid');
     if (!currentPhotoUrls.length) {
@@ -624,12 +473,12 @@
       return;
     }
     grid.innerHTML = currentPhotoUrls.map((url, i) => `
-      <div class="existing-photo-item ${i === 0 ? 'is-cover' : ''}" id="epItem-${i}" data-idx="${i}" title="Tap to view full size">
-        <img src="${esc(url)}" alt="Photo ${i+1}" loading="lazy">
+      <div class="existing-photo-item ${i === 0 ? 'is-cover' : ''}" id="epItem-${i}">
+        <img src="${url}" alt="Photo ${i+1}" loading="lazy">
         ${i === 0 ? '<div class="cover-label">Cover</div>' : ''}
         <div class="photo-action-bar">
-          ${i !== 0 ? `<button type="button" class="photo-action-btn cover-btn" title="Set as cover" data-action="set-cover" data-idx="${i}">★</button>` : ''}
-          <button type="button" class="photo-action-btn delete-btn" title="Remove photo" data-action="remove-photo" data-idx="${i}">✕</button>
+          ${i !== 0 ? `<button class="photo-action-btn cover-btn" title="Set as cover" data-action="set-cover" data-idx="${i}">★</button>` : ''}
+          <button class="photo-action-btn delete-btn" title="Remove photo" data-action="remove-photo" data-idx="${i}">✕</button>
         </div>
       </div>`).join('');
   }
@@ -639,86 +488,27 @@
   const _availEl = document.getElementById('availDate');
   if (_availEl) _availEl.min = new Date().toISOString().split('T')[0];
 
-  // Delegated photo actions + click-to-view full size
-  document.getElementById('existingPhotosGrid').addEventListener('click', async (e) => {
+  // Delegated photo actions
+  document.getElementById('existingPhotosGrid').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action]');
-    if (!btn) {
-      const card = e.target.closest('.existing-photo-item');
-      if (card && !e.target.closest('.photo-action-bar')) {
-        const idx = parseInt(card.dataset.idx, 10) || 0;
-        openLandlordLightbox(currentPhotoUrls, idx);
-      }
-      return;
-    }
+    if (!btn) return;
     const idx = parseInt(btn.dataset.idx, 10);
-    if (Number.isNaN(idx) || idx < 0 || idx >= currentPhotos.length) return;
-
     if (btn.dataset.action === 'set-cover') {
-      const moved = currentPhotos.splice(idx, 1)[0];
-      currentPhotos.unshift(moved);
-      currentPhotos.forEach((ph, order) => { ph.display_order = order; });
-      _syncPhotoArraysFromObjects();
+      const url    = currentPhotoUrls.splice(idx, 1)[0];
+      const fileId = currentPhotoFileIds.splice(idx, 1)[0] ?? null;
+      currentPhotoUrls.unshift(url);
+      currentPhotoFileIds.unshift(fileId);
       renderExistingPhotos();
-      setAutoSavePill('saving', 'Saving cover…');
-      try {
-        await Promise.all(
-          currentPhotos.map((ph, order) =>
-            ph.id
-              ? supabase.from('property_photos').update({ display_order: order, is_hero: order === 0 }).eq('id', ph.id)
-              : Promise.resolve()
-          )
-        );
-        setAutoSavePill('saved', 'Saved ✓');
-        CP.UI.toast('Cover photo updated and saved.', 'success');
-      } catch (err) {
-        setAutoSavePill('error', 'Cover save failed');
-        CP.UI.toast('Could not save cover order.', 'error');
-      }
+      CP.UI.toast('Cover photo updated.', 'success');
     } else if (btn.dataset.action === 'remove-photo') {
-      const removed = currentPhotos.splice(idx, 1)[0];
-      currentPhotos.forEach((ph, order) => { ph.display_order = order; });
-      _syncPhotoArraysFromObjects();
+      currentPhotoUrls.splice(idx, 1);
+      currentPhotoFileIds.splice(idx, 1);
       renderExistingPhotos();
-      setAutoSavePill('saving', 'Removing photo…');
-      try {
-        if (removed.id) {
-          const { error: delErr } = await supabase.from('property_photos').delete().eq('id', removed.id);
-          if (delErr) throw delErr;
-        } else {
-          const { error: delErr } = await supabase
-            .from('property_photos')
-            .delete()
-            .eq('property_id', propertyId)
-            .eq('url', removed.url);
-          if (delErr) throw delErr;
-        }
-        await Promise.all(
-          currentPhotos.map((ph, order) =>
-            ph.id
-              ? supabase.from('property_photos').update({ display_order: order, is_hero: order === 0 }).eq('id', ph.id)
-              : Promise.resolve()
-          )
-        );
-        setAutoSavePill('saved', 'Saved ✓');
-        CP.UI.toast('Photo removed and saved.', 'success');
-
-        if (removed.file_id && CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY) {
-          const session = await CP.getSession().catch(() => null);
-          const userToken = session?.access_token || CONFIG.SUPABASE_ANON_KEY;
-          deleteFromImageKit(removed.file_id, {
-            supabaseUrl: CONFIG.SUPABASE_URL,
-            anonKey: CONFIG.SUPABASE_ANON_KEY,
-            userToken,
-          }).catch(() => {});
-        }
-      } catch (err) {
-        setAutoSavePill('error', 'Remove failed');
-        CP.UI.toast('Failed to remove photo from listing.', 'error');
-      }
+      CP.UI.toast('Photo removed — save changes to apply.', 'info');
     }
   });
 
-  // ── New photo upload (instant preview + immediate auto-upload & live sync) ──
+  // ── New photo upload ────────────────────────────────────
   const dropzone   = document.getElementById('photoDropzone');
   const photoInput = document.getElementById('photoInput');
 
@@ -733,101 +523,8 @@
     handleNewFiles([...e.dataTransfer.files]);
   });
 
-  let _uploadQueueRunning = false;
-
-  async function _processPendingUploads() {
-    if (_uploadQueueRunning || pendingNewFiles.length === 0) return;
-    if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY) {
-      CP.UI.toast('Photo uploads are not configured yet.', 'error');
-      return;
-    }
-
-    _uploadQueueRunning = true;
-    const progressEl = document.getElementById('uploadProgress');
-    const bar        = document.getElementById('uploadBar');
-    const txt        = document.getElementById('uploadStatusText');
-    const pctLbl     = document.getElementById('uploadPct');
-
-    try {
-      const accessToken = await window.CP?.Auth?.getAccessToken?.();
-      if (!accessToken) {
-        setAutoSavePill('error', 'Session expired');
-        CP.UI.toast('Session expired — please log back in to upload photos.', 'error');
-        return;
-      }
-
-      while (pendingNewFiles.length > 0) {
-        const batchFiles = pendingNewFiles.splice(0, pendingNewFiles.length);
-        pendingNewPreviews.splice(0, pendingNewPreviews.length);
-        setAutoSavePill('saving', `Uploading ${batchFiles.length} photo${batchFiles.length > 1 ? 's' : ''}…`);
-        if (progressEl) progressEl.style.display = '';
-        if (bar) bar.style.width = '0%';
-        if (pctLbl) pctLbl.textContent = '0%';
-        if (txt) txt.textContent = `Uploading photos… (0 of ${batchFiles.length} done)`;
-
-        let doneCount = 0;
-        const results = await uploadMultipleToImageKit(batchFiles, {
-          folder:      `/properties/${propertyId}`,
-          propertyId,
-          supabaseUrl: CONFIG.SUPABASE_URL,
-          anonKey:     CONFIG.SUPABASE_ANON_KEY,
-          userToken:   accessToken,
-          onFileProgress: (i, pct) => {
-            if (pct === 100) doneCount++;
-            if (txt) txt.textContent = `Uploading photos… (${doneCount} of ${batchFiles.length} done)`;
-          },
-          onTotalProgress: (overall) => {
-            if (bar) bar.style.width = overall + '%';
-            if (pctLbl) pctLbl.textContent = overall + '%';
-          },
-        });
-
-        const failed = [];
-        for (let i = 0; i < results.length; i++) {
-          const r = results[i];
-          const f = batchFiles[i];
-          const previewEl = document.getElementById(`np-${CSS.escape(`${f.name}-${f.size}`)}`);
-          if (r?.url) {
-            if (!r.photoId) {
-              try {
-                await supabase.rpc('add_property_photo', {
-                  p_property_id: propertyId,
-                  p_url:         r.url,
-                  p_file_id:     r.fileId || '',
-                });
-              } catch (rpcErr) {
-                console.warn('add_property_photo fallback failed:', rpcErr);
-              }
-            }
-            previewEl?.remove();
-          } else {
-            failed.push(r?.fileName || f?.name || 'photo');
-          }
-        }
-
-        await _refreshPhotosFromServer();
-        renderExistingPhotos();
-
-        if (failed.length) {
-          setAutoSavePill('error', `${failed.length} upload failed`);
-          CP.UI.toast(`Could not upload: ${failed.join(', ')}`, 'error');
-        } else {
-          setAutoSavePill('saved', 'Saved ✓');
-          CP.UI.toast(`${batchFiles.length} photo${batchFiles.length > 1 ? 's' : ''} added and saved!`, 'success');
-        }
-      }
-    } catch (uploadErr) {
-      setAutoSavePill('error', 'Upload failed');
-      CP.UI.toast('Photo upload failed: ' + (uploadErr.message || uploadErr), 'error');
-    } finally {
-      _uploadQueueRunning = false;
-      if (progressEl) progressEl.style.display = 'none';
-    }
-  }
-
   function handleNewFiles(files) {
     const MAX_PHOTOS = 40;
-    let addedAny = false;
     files.forEach(file => {
       if (!file.type.startsWith('image/')) return;
       if (['image/heic','image/heif'].includes(file.type.toLowerCase()) || /\.heic$/i.test(file.name)) {
@@ -845,16 +542,11 @@
         return;
       }
       pendingNewFiles.push(file);
-      addedAny = true;
       const reader = new FileReader();
-      reader.onload = (e) => {
-        pendingNewPreviews.push(e.target.result);
-        addNewPhotoPreview(e.target.result, file);
-      };
+      reader.onload = (e) => addNewPhotoPreview(e.target.result, file);
       reader.readAsDataURL(file);
     });
     photoInput.value = '';
-    if (addedAny) _processPendingUploads();
   }
 
   function addNewPhotoPreview(src, file) {
@@ -862,216 +554,258 @@
     const item = document.createElement('div');
     item.className = 'photo-preview-item';
     item.id        = `np-${file.name}-${file.size}`;
-    item.title     = 'Tap to view full size';
-    item.innerHTML = `<img src="${src}" alt="Preview" loading="lazy"><button type="button" class="photo-remove-btn" title="Remove">✕</button>`;
-    item.querySelector('.photo-remove-btn').addEventListener('click', (e) => {
-      e.stopPropagation();
+    item.innerHTML = `<img src="${src}" alt="Preview" loading="lazy"><button class="photo-remove-btn" title="Remove">✕</button>`;
+    item.querySelector('.photo-remove-btn').addEventListener('click', () => {
       pendingNewFiles = pendingNewFiles.filter(f => !(f.name === file.name && f.size === file.size));
       item.remove();
-    });
-    item.addEventListener('click', (e) => {
-      if (e.target.closest('.photo-remove-btn')) return;
-      const urls = [...grid.querySelectorAll('.photo-preview-item img')].map(img => img.src).filter(Boolean);
-      const idx = Math.max(0, urls.indexOf(item.querySelector('img')?.src));
-      if (urls.length) openLandlordLightbox(urls, idx);
     });
     grid.appendChild(item);
   }
 
-  // ── Auto-save + live UI reflection + stay on page ───────
-  let _editDirty      = false;
-  let _autoSaveTimer  = null;
-  let _isSaving       = false;
-  let _resaveQueued   = false;
-  let _pendingManual  = false;
-
-  const formCard = document.getElementById('formCard');
-
-  function _isAutoSaveIgnoredTarget(target) {
-    if (!target) return true;
-    if (target.id === 'photoInput') return true;
-    if (['editAttestAccuracy', 'editAttestFairHousing', 'editAttestPolicy'].includes(target.id)) return true;
-    return false;
-  }
-
-  function _scheduleAutoSave() {
-    clearTimeout(_autoSaveTimer);
-    _autoSaveTimer = setTimeout(() => { saveListing({ silent: true }); }, 800);
-  }
-
-  formCard.addEventListener('input', (e) => {
-    if (_isAutoSaveIgnoredTarget(e.target)) return;
-    _editDirty = true;
-    setAutoSavePill('saving', 'Unsaved…');
-    _scheduleAutoSave();
-  });
-
-  formCard.addEventListener('change', (e) => {
-    if (_isAutoSaveIgnoredTarget(e.target)) return;
-    _editDirty = true;
-    clearTimeout(_autoSaveTimer);
-    saveListing({ silent: true });
-  });
-
+  // ── Unsaved-changes guard ───────────────────────────────
+  let _editDirty = false;
+  document.getElementById('formCard').addEventListener('input',  () => { _editDirty = true; });
+  document.getElementById('formCard').addEventListener('change', () => { _editDirty = true; });
   window.addEventListener('beforeunload', (e) => {
     if (_editDirty) { e.preventDefault(); e.returnValue = ''; }
   });
 
   // ── Save listing ────────────────────────────────────────
-  document.getElementById('saveBtn').addEventListener('click', () => {
-    clearTimeout(_autoSaveTimer);
-    saveListing({ silent: false });
-  });
+  document.getElementById('saveBtn').addEventListener('click', saveListing);
 
-  async function saveListing(opts = {}) {
-    const silent = opts && opts.silent === true;
-    if (_isSaving) {
-      _resaveQueued = true;
-      if (!silent) _pendingManual = true;
-      return;
-    }
-
+  async function saveListing() {
     const btn = document.getElementById('saveBtn');
     const v   = id => document.getElementById(id)?.value?.trim();
 
-    const failValidation = (toastMsg, pillMsg) => {
-      setAutoSavePill('error', pillMsg);
-      if (!silent) CP.UI.toast(toastMsg, 'error');
-      return false;
-    };
-
-    if (!v('title'))                          return failValidation('Please enter a listing title.', 'Title required');
-    if (v('title').length > 120)              return failValidation('Title must be 120 characters or less.', 'Title too long');
-    if (!v('propertyType'))                   return failValidation('Please select a property type.', 'Type required');
-    if (!v('address'))                        return failValidation('Please enter the property address.', 'Address required');
-    if (!v('city'))                           return failValidation('Please enter the city.', 'City required');
-    if (!v('state'))                          return failValidation('Please select a state.', 'State required');
-    if (!v('zip'))                            return failValidation('Please enter the ZIP code.', 'ZIP required');
-    if (!/^\d{5}(-\d{4})?$/.test(v('zip')))  return failValidation('Please enter a valid ZIP code (e.g. 90210).', 'Invalid ZIP');
-    if (!v('bedrooms'))                       return failValidation('Please select the number of bedrooms.', 'Beds required');
-    if (!v('bathrooms'))                      return failValidation('Please select the number of bathrooms.', 'Baths required');
-    if (!v('rent') || parseInt(v('rent')) < 1) return failValidation('Please enter a valid monthly rent.', 'Rent required');
-    if (parseInt(v('rent')) > 50000)          return failValidation('Monthly rent looks too high — please double-check.', 'Rent too high');
+    if (!v('title'))                          return CP.UI.toast('Please enter a listing title.', 'error');
+    if (v('title').length > 120)              return CP.UI.toast('Title must be 120 characters or less.', 'error');
+    if (!v('propertyType'))                   return CP.UI.toast('Please select a property type.', 'error');
+    if (!v('address'))                        return CP.UI.toast('Please enter the property address.', 'error');
+    if (!v('city'))                           return CP.UI.toast('Please enter the city.', 'error');
+    if (!v('state'))                          return CP.UI.toast('Please select a state.', 'error');
+    if (!v('zip'))                            return CP.UI.toast('Please enter the ZIP code.', 'error');
+    if (!/^\d{5}(-\d{4})?$/.test(v('zip'))) return CP.UI.toast('Please enter a valid ZIP code (e.g. 90210).', 'error');
+    if (!v('bedrooms'))                       return CP.UI.toast('Please select the number of bedrooms.', 'error');
+    if (!v('bathrooms'))                      return CP.UI.toast('Please select the number of bathrooms.', 'error');
+    if (!v('rent') || parseInt(v('rent')) < 1) return CP.UI.toast('Please enter a valid monthly rent.', 'error');
+    if (parseInt(v('rent')) > 50000)          return CP.UI.toast('Monthly rent looks too high — please double-check.', 'error');
     const totalPhotos = currentPhotoUrls.length + pendingNewFiles.length;
-    if (!silent && totalPhotos < 3)           return failValidation('Please include at least 3 photos for a complete listing.', 'Min 3 photos');
-    if (!v('description') || v('description').length < 50) return failValidation('Please write a description of at least 50 characters.', 'Description min 50 chars');
+    if (totalPhotos < 3)                      return CP.UI.toast('Please include at least 3 photos for a complete listing.', 'error');
+    if (!v('description') || v('description').length < 50) return CP.UI.toast('Please write a description of at least 50 characters.', 'error');
 
-    _isSaving = true;
-    setAutoSavePill('saving', 'Saving…');
-    if (!silent && btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    btn.disabled = true; btn.textContent = 'Saving…';
 
-    try {
-      // Geocode if address changed
-      let lat = prop.lat || null;
-      let lng = prop.lng || null;
-      const addressChanged = v('address') !== prop.address || v('city') !== prop.city || v('zip') !== prop.zip;
-      if (addressChanged || (!lat && !lng)) {
-        try {
-          const fullAddr = `${v('address')}, ${v('city')}, ${v('state')} ${v('zip')}`.trim();
-          const _geoKey = (typeof CONFIG !== 'undefined' && CONFIG.GEOAPIFY_API_KEY) || '';
-          if (_geoKey) {
-            const geoRes = await fetch(
-              `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(fullAddr)}&format=json&apiKey=${_geoKey}&filter=countrycode:us&limit=1`
-            );
-            const geoData = await geoRes.json();
-            const hit = geoData?.results?.[0];
-            if (hit) { lat = parseFloat(hit.lat); lng = parseFloat(hit.lon); }
-          }
-        } catch (e) { /* silent */ }
+    // Geocode if address changed
+    let lat = prop.lat || null;
+    let lng = prop.lng || null;
+    const addressChanged = v('address') !== prop.address || v('city') !== prop.city || v('zip') !== prop.zip;
+    if (addressChanged || (!lat && !lng)) {
+      try {
+        const fullAddr = `${v('address')}, ${v('city')}, ${v('state')} ${v('zip')}`.trim();
+        const _geoKey = (typeof CONFIG !== 'undefined' && CONFIG.GEOAPIFY_API_KEY) || '';
+        if (_geoKey) {
+          const geoRes = await fetch(
+            `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(fullAddr)}&format=json&apiKey=${_geoKey}&filter=countrycode:us&limit=1`
+          );
+          const geoData = await geoRes.json();
+          const hit = geoData?.results?.[0];
+          if (hit) { lat = parseFloat(hit.lat); lng = parseFloat(hit.lon); }
+        }
+      } catch (e) { /* silent */ }
+    }
+
+    let finalPhotoUrls    = [...currentPhotoUrls];
+    let finalPhotoFileIds = [...currentPhotoFileIds];
+
+    if (pendingNewFiles.length) {
+      if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY) {
+        CP.UI.toast('Photo uploads are not configured yet.', 'error');
+        btn.disabled = false; btn.textContent = 'Save Changes';
+        return;
       }
-
-      const getChecked = name => [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(c => c.value);
-
-      const payload = {
-        title               : v('title'),
-        property_type       : v('propertyType'),
-        address             : v('address'),
-        unit_number         : v('unitNumber') || null,
-        city                : v('city'),
-        state               : v('state') || null,
-        zip                 : v('zip') || null,
-        county              : v('county') || null,
-        neighborhood        : v('neighborhood') || null,
-        lat, lng,
-        bedrooms            : parseInt(v('bedrooms')),
-        bathrooms           : parseFloat(v('bathrooms')),
-        half_bathrooms      : v('halfBathrooms') ? parseInt(v('halfBathrooms')) : null,
-        square_footage      : parseInt(v('sqft')) || null,
-        lot_size_sqft       : v('lotSizeSqft') ? parseInt(v('lotSizeSqft')) : null,
-        floors              : v('floors') ? parseInt(v('floors')) : null,
-        year_built          : v('yearBuilt') ? parseInt(v('yearBuilt')) : null,
-        monthly_rent        : parseInt(v('rent')),
-        security_deposit    : parseInt(v('deposit')) || null,
-        last_months_rent    : v('lastMonthRent') ? parseInt(v('lastMonthRent')) : null,
-        admin_fee           : v('adminFee') ? parseInt(v('adminFee')) : null,
-        move_in_special     : v('moveInSpecial') || null,
-        available_date      : v('availDate') || null,
-        application_fee     : parseInt(v('appFee')) || 0,
-        status              : v('status'),
-        pets_allowed        : document.querySelector('input[name="pets"]:checked')?.value === 'true',
-        pet_types_allowed   : document.querySelector('input[name="pets"]:checked')?.value === 'true'
-                                ? [...document.querySelectorAll('#petTypesGroup input:checked')].map(c => c.value)
-                                : [],
-        pet_weight_limit    : v('petWeightLimit') ? parseInt(v('petWeightLimit')) : null,
-        pet_deposit         : v('petDeposit') ? parseInt(v('petDeposit')) : null,
-        pet_details         : v('petDetails') || null,
-        parking             : v('parking') || null,
-        garage_spaces       : v('garageSpaces') ? parseInt(v('garageSpaces')) : null,
-        parking_fee         : v('parkingFee') ? parseInt(v('parkingFee')) : null,
-        ev_charging         : v('evCharging') || null,
-        utilities_included  : getChecked('utilities'),
-        amenities           : getChecked('amenities'),
-        appliances          : getChecked('appliances'),
-        flooring            : getChecked('flooring'),
-        lease_terms         : getChecked('leaseTerms'),
-        laundry_type        : v('laundryType') || null,
-        heating_type        : v('heatingType') || null,
-        cooling_type        : v('coolingType') || null,
-        has_central_air     : v('hasCentralAir') === 'true' ? true : v('hasCentralAir') === 'false' ? false : null,
-        has_basement        : v('hasBasement') === 'true' ? true : v('hasBasement') === 'false' ? false : null,
-        description         : v('description'),
-        showing_instructions: v('showingInstructions') || null,
-        minimum_income_multiplier: v('minIncome') ? parseFloat(v('minIncome')) : null,
-        minimum_credit_score     : v('minCredit') ? parseInt(v('minCredit')) : null,
-        updated_at          : new Date().toISOString()
-      };
-
-      let updateQuery = supabase.from('properties').update(payload).eq('id', propertyId);
-      if (!_isAdmin && profile) updateQuery = updateQuery.eq('landlord_id', profile.id);
-      const { error } = await updateQuery;
-
-      if (error) {
-        setAutoSavePill('error', 'Save failed');
-        if (!silent) CP.UI.toast('Failed to save. Please try again.', 'error');
+      btn.textContent = 'Verifying session…';
+      const accessToken = await window.CP?.Auth?.getAccessToken?.();
+      if (!accessToken) {
+        CP.UI.toast('Session invalid — please log back in and try again.', 'error');
+        btn.disabled = false; btn.textContent = 'Save Changes';
+        setTimeout(() => { window.location.href = '/landlord/login.html'; }, 1500);
         return;
       }
 
-      // Live UI & memory reflection — stay on edit page
-      Object.assign(prop, payload);
-      const pageTitleEl = document.getElementById('pageTitle');
-      if (pageTitleEl) pageTitleEl.textContent = payload.title;
-      document.title = `${payload.title} — Edit Listing — Choice Properties`;
-      _editDirty = false;
-      setAutoSavePill('saved', 'Saved ✓');
+      btn.textContent = 'Uploading photos…';
+      const bar    = document.getElementById('uploadBar');
+      const txt    = document.getElementById('uploadStatusText');
+      const pctLbl = document.getElementById('uploadPct');
+      document.getElementById('uploadProgress').style.display = '';
 
-      if (!silent) {
-        CP.UI.toast('Listing updated successfully! <a href="/property.html?id=' + propertyId + '" target="_blank" style="color:inherit;text-decoration:underline">View listing →</a>', 'success');
-        if (btn) {
-          btn.textContent = 'Saved!';
-          setTimeout(() => { btn.disabled = false; btn.textContent = 'Save Changes'; }, 2000);
+      try {
+        let doneCount = 0;
+        // Phase 3b: pass propertyId so the edge function inserts each
+        // upload directly into the property_photos table. The Direction A
+        // trigger then mirrors the change back into the legacy
+        // photo_urls / photo_file_ids arrays for any reader still on the
+        // old contract. We therefore stop writing the arrays from this
+        // page (see the .update() below).
+        const newResults = await uploadMultipleToImageKit(pendingNewFiles, {
+          folder:      `/properties/${propertyId}`,
+          propertyId,
+          supabaseUrl: CONFIG.SUPABASE_URL,
+          anonKey:     CONFIG.SUPABASE_ANON_KEY,
+          userToken:   accessToken,
+          onFileProgress:  (i, pct) => {
+            if (pct === 100) doneCount++;
+            txt.textContent = `Uploading photos… (${doneCount} of ${pendingNewFiles.length} done)`;
+          },
+          onTotalProgress: (overall) => {
+            bar.style.width = overall + '%';
+            pctLbl.textContent = overall + '%';
+          },
+        });
+
+        const failed = newResults.filter(r => r?.error);
+        for (const r of newResults) {
+          if (r?.url) {
+            finalPhotoUrls.push(r.url);
+            finalPhotoFileIds.push(r.fileId ?? null);
+          }
         }
+
+        if (failed.length > 0 && finalPhotoUrls.length <= currentPhotoUrls.length) {
+          const firstError = failed[0]?.error || 'Unknown error';
+          const isSessionError  = /\b401\b|unauthorized|session expired|jwt/i.test(firstError);
+          const isConfigError   = /not configured/i.test(firstError);
+          const isImageKitError = /imagekit|502|credentials/i.test(firstError);
+          let reason;
+          if (isSessionError)       reason = 'Your session expired — please refresh the page, log back in, and try again.';
+          else if (isConfigError)   reason = 'The photo upload service is not fully configured.';
+          else if (isImageKitError) reason = 'Photo storage service error — please try again in a moment.';
+          else                      reason = `Upload error: ${firstError}`;
+          CP.UI.toast(`Photos could not be uploaded. ${reason}`, 'error');
+          btn.disabled = false; btn.textContent = 'Save Changes';
+          document.getElementById('uploadProgress').style.display = 'none';
+          return;
+        }
+
+        if (failed.length > 0) {
+          const names = failed.map(f => `"${f.fileName}"`).join(', ');
+          CP.UI.toast(`${failed.length} photo(s) skipped: ${names}. You can retry after saving.`, 'info');
+        }
+      } catch (uploadErr) {
+        CP.UI.toast('Photo upload failed: ' + uploadErr.message, 'error');
+        btn.disabled = false; btn.textContent = 'Save Changes';
+        document.getElementById('uploadProgress').style.display = 'none';
+        return;
       }
-    } finally {
-      _isSaving = false;
-      if (!silent && btn && btn.textContent === 'Saving…') {
-        btn.disabled = false;
-        btn.textContent = 'Save Changes';
-      }
-      if (_resaveQueued) {
-        const manualNext = _pendingManual;
-        _resaveQueued = false;
-        _pendingManual = false;
-        saveListing({ silent: !manualNext });
+      document.getElementById('uploadProgress').style.display = 'none';
+    }
+
+    const getChecked = name => [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(c => c.value);
+
+    if (finalPhotoUrls.length !== finalPhotoFileIds.length) {
+      CP.UI.toast('Internal error: photo data is corrupted. Please refresh and try again.', 'error');
+      console.error('INVARIANT VIOLATION: photo arrays out of sync', { finalPhotoUrls, finalPhotoFileIds });
+      btn.disabled = false; btn.textContent = 'Save Changes';
+      return;
+    }
+
+    // Phase 3b: photo_urls / photo_file_ids are now derived columns,
+    // synced by the property_photos triggers from the new table. We
+    // intentionally omit them from this UPDATE so that:
+    //   • Newly uploaded photos (already inserted into property_photos
+    //     by the imagekit-upload edge function) are not clobbered.
+    //   • Removed photos (deleted via the imagekit-delete edge
+    //     function, which calls delete_property_photo_by_file_id) are
+    //     reflected by the Direction A trigger automatically.
+    let updateQuery = supabase
+      .from('properties')
+      .update({
+          title               : v('title'),
+          property_type       : v('propertyType'),
+          address             : v('address'),
+          unit_number         : v('unitNumber') || null,
+          city                : v('city'),
+          state               : v('state') || null,
+          zip                 : v('zip') || null,
+          county              : v('county') || null,
+          neighborhood        : v('neighborhood') || null,
+          lat, lng,
+          bedrooms            : parseInt(v('bedrooms')),
+          bathrooms           : parseFloat(v('bathrooms')),
+          half_bathrooms      : v('halfBathrooms') ? parseInt(v('halfBathrooms')) : null,
+          square_footage      : parseInt(v('sqft')) || null,
+          lot_size_sqft       : v('lotSizeSqft') ? parseInt(v('lotSizeSqft')) : null,
+          floors              : v('floors') ? parseInt(v('floors')) : null,
+          year_built          : v('yearBuilt') ? parseInt(v('yearBuilt')) : null,
+          monthly_rent        : parseInt(v('rent')),
+          security_deposit    : parseInt(v('deposit')) || null,
+          last_months_rent    : v('lastMonthRent') ? parseInt(v('lastMonthRent')) : null,
+          admin_fee           : v('adminFee') ? parseInt(v('adminFee')) : null,
+          move_in_special     : v('moveInSpecial') || null,
+          available_date      : v('availDate') || null,
+          application_fee     : parseInt(v('appFee')) || 0,
+          status              : v('status'),
+          pets_allowed        : document.querySelector('input[name="pets"]:checked')?.value === 'true',
+          pet_types_allowed   : document.querySelector('input[name="pets"]:checked')?.value === 'true'
+                                  ? [...document.querySelectorAll('#petTypesGroup input:checked')].map(c => c.value)
+                                  : [],
+          pet_weight_limit    : v('petWeightLimit') ? parseInt(v('petWeightLimit')) : null,
+          pet_deposit         : v('petDeposit') ? parseInt(v('petDeposit')) : null,
+          pet_details         : v('petDetails') || null,
+          parking             : v('parking') || null,
+          garage_spaces       : v('garageSpaces') ? parseInt(v('garageSpaces')) : null,
+          parking_fee         : v('parkingFee') ? parseInt(v('parkingFee')) : null,
+          ev_charging         : v('evCharging') || null,
+          utilities_included  : getChecked('utilities'),
+          amenities           : getChecked('amenities'),
+          appliances          : getChecked('appliances'),
+          flooring            : getChecked('flooring'),
+          lease_terms         : getChecked('leaseTerms'),
+          laundry_type        : v('laundryType') || null,
+          heating_type        : v('heatingType') || null,
+          cooling_type        : v('coolingType') || null,
+          has_central_air     : v('hasCentralAir') === 'true' ? true : v('hasCentralAir') === 'false' ? false : null,
+          has_basement        : v('hasBasement') === 'true' ? true : v('hasBasement') === 'false' ? false : null,
+          description         : v('description'),
+          showing_instructions: v('showingInstructions') || null,
+          minimum_income_multiplier: v('minIncome') ? parseFloat(v('minIncome')) : null,
+          minimum_credit_score     : v('minCredit') ? parseInt(v('minCredit')) : null,
+          // photo_urls / photo_file_ids intentionally omitted — see Phase 3b note above.
+          updated_at          : new Date().toISOString()
+      })
+      .eq('id', propertyId);
+
+    if (!_isAdmin && profile) updateQuery = updateQuery.eq('landlord_id', profile.id);
+    const { error } = await updateQuery;
+
+    if (error) {
+      CP.UI.toast('Failed to save. Please try again.', 'error');
+      btn.disabled = false; btn.textContent = 'Save Changes';
+      return;
+    }
+
+    currentPhotoUrls    = finalPhotoUrls;
+    currentPhotoFileIds = finalPhotoFileIds;
+    originalPhotoFileIds = [...finalPhotoFileIds]; // keep in sync so re-saves don't re-fire CDN deletes
+    pendingNewFiles     = [];
+    document.getElementById('newPhotosGrid').innerHTML = '';
+    renderExistingPhotos();
+
+    _editDirty = false;
+    CP.UI.toast('Listing updated successfully! <a href="/property.html?id=' + propertyId + '" target="_blank" style="color:inherit;text-decoration:underline">View listing →</a>', 'success');
+    btn.textContent = 'Saved!';
+    setTimeout(() => { btn.disabled = false; btn.textContent = 'Save Changes'; }, 2500);
+
+    // Fire CDN deletes for removed photos
+    const removedFileIds = originalPhotoFileIds.filter(id => id && !finalPhotoFileIds.includes(id));
+    if (removedFileIds.length) {
+      const session = await CP.getSession().catch(() => null);
+      const userToken = session?.access_token || CONFIG.SUPABASE_ANON_KEY;
+      for (const fileId of removedFileIds) {
+        deleteFromImageKit(fileId, {
+          supabaseUrl: CONFIG.SUPABASE_URL,
+          anonKey: CONFIG.SUPABASE_ANON_KEY,
+          userToken,
+        });
       }
     }
   }
