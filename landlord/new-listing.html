@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-  <script src="/js/cp-error-reporter.js?v=1794849238206"></script>
+  <script src="/js/cp-error-reporter.js?v=1795197287194"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#ffffff">
@@ -18,13 +18,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@1,9..144,400;1,9..144,500&display=swap">
   <link rel="preconnect" id="sb-preconnect"><!-- set by config.js -->
-  <link rel="stylesheet" href="/css/cp-design.css?v=1794849238206">
+  <link rel="stylesheet" href="/css/cp-design.css?v=1795197287194">
   <script defer src="/config.js"></script>
-  <script defer src="/js/supabase.min.js?v=1794849238206"></script>
-  <script defer src="/js/cp-api.js?v=1794849238206" type="module"></script>
-  <script defer src="/js/cp-ui.js?v=1794849238206"></script>
-  <script defer src="/js/cp-chrome.js?v=1794849238206"></script>
-  <script defer src="/js/cp-shell.js?v=1794849238206"></script>
+  <script defer src="/js/supabase.min.js?v=1795197287194"></script>
+  <script defer src="/js/cp-api.js?v=1795197287194" type="module"></script>
+  <script defer src="/js/cp-ui.js?v=1795197287194"></script>
+  <script defer src="/js/cp-chrome.js?v=1795197287194"></script>
+  <script defer src="/js/cp-shell.js?v=1795197287194"></script>
   <!-- H-9: Convert HEIC iPhone photos to JPEG client-side so landlords can
        upload straight from the camera roll without going to Settings. -->
   <script defer src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
@@ -197,6 +197,7 @@
       background:linear-gradient(transparent, rgba(0,0,0,0.75));
       padding:20px 6px 6px;
       display:flex; gap:4px; justify-content:flex-end;
+      pointer-events:none;
     }
     .photo-action-btn {
       width:28px; height:28px; border-radius:50%;
@@ -204,6 +205,7 @@
       display:flex; align-items:center; justify-content:center;
       font-size:11px; font-weight:700;
       transition:transform .15s var(--ease);
+      pointer-events:auto;
     }
     .photo-action-btn:hover { transform:scale(1.15); }
     .new-cover-btn  { background:var(--brand); color:#fff; }
@@ -216,6 +218,66 @@
     .photo-upload-bar {
       height:100%; background:var(--brand);
       transition:width 200ms;
+    }
+
+    .photo-preview-item, .photo-preview-item img {
+      cursor:zoom-in;
+    }
+
+    /* Full-size photo lightbox */
+    .cp-lb-overlay {
+      position:fixed; inset:0; z-index:2000;
+      background:rgba(15,23,42,.94);
+      display:none; align-items:center; justify-content:center;
+      flex-direction:column; padding:16px;
+      touch-action:pan-y;
+    }
+    .cp-lb-overlay.is-open { display:flex; }
+    .cp-lb-stage {
+      position:relative; width:100%; max-width:960px; flex:1;
+      display:flex; align-items:center; justify-content:center;
+      min-height:0;
+    }
+    .cp-lb-img {
+      max-width:100%; max-height:82vh;
+      border-radius:var(--r-md); object-fit:contain;
+      box-shadow:0 20px 60px rgba(0,0,0,.5);
+      user-select:none; -webkit-user-drag:none;
+    }
+    .cp-lb-btn {
+      position:absolute; top:50%; transform:translateY(-50%);
+      width:44px; height:44px; border-radius:50%;
+      border:1px solid rgba(255,255,255,.25);
+      background:rgba(15,23,42,.72); color:#fff;
+      font-size:22px; font-weight:600; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      z-index:2;
+    }
+    .cp-lb-btn:hover { background:rgba(30,41,59,.92); }
+    .cp-lb-prev { left:8px; }
+    .cp-lb-next { right:8px; }
+    .cp-lb-close {
+      position:fixed; top:14px; right:14px;
+      width:44px; height:44px; border-radius:50%;
+      border:1px solid rgba(255,255,255,.25);
+      background:rgba(15,23,42,.82); color:#fff;
+      font-size:20px; font-weight:700; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      z-index:3;
+    }
+    .cp-lb-counter {
+      margin-top:10px; color:rgba(255,255,255,.88);
+      font:600 .82rem/1 var(--font);
+      background:rgba(15,23,42,.65); padding:6px 14px;
+      border-radius:999px;
+    }
+
+    @media (max-width: 768px) {
+      .greeting { flex-direction:column; align-items:flex-start; gap:10px; }
+      .listing-form-card { padding:var(--sp-3); }
+      .form-input, .form-select, .form-textarea { font-size:16px; }
+      .photo-action-btn { width:36px; height:36px; font-size:13px; }
+      .photo-dropzone { padding:var(--sp-4); }
     }
   </style>
 </head>
@@ -774,7 +836,18 @@
   </main>
 </div>
 
-<script type="module" src="/js/landlord/new-listing.js?v=1794849238206"></script>
+<!-- Full-size swipeable photo lightbox -->
+<div id="cp-landlord-lightbox" class="cp-lb-overlay" role="dialog" aria-modal="true" aria-label="Full-size photo viewer">
+  <button type="button" class="cp-lb-close" id="cpLbClose" aria-label="Close photo viewer">✕</button>
+  <div class="cp-lb-stage" id="cpLbStage">
+    <button type="button" class="cp-lb-btn cp-lb-prev" id="cpLbPrev" aria-label="Previous photo">‹</button>
+    <img class="cp-lb-img" id="cpLbImg" src="" alt="Full-size property photo">
+    <button type="button" class="cp-lb-btn cp-lb-next" id="cpLbNext" aria-label="Next photo">›</button>
+  </div>
+  <div class="cp-lb-counter" id="cpLbCounter">1 / 1</div>
+</div>
+
+<script type="module" src="/js/landlord/new-listing.js?v=1795197287194"></script>
 
 </body>
 </html>

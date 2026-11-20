@@ -394,15 +394,33 @@
     }
   }
 
+  // ── Proxy helper for non-ImageKit URLs in admin panel/lightbox ────────────
+  let _cachedAdminToken = '';
+  async function _getAdminToken(){
+    if (_cachedAdminToken) return _cachedAdminToken;
+    try {
+      const session = await withTimeout(CP.sb().auth.getSession(), 3000);
+      _cachedAdminToken = session?.data?.session?.access_token || '';
+    } catch(_) {}
+    return _cachedAdminToken;
+  }
+  function _proxyAdminImg(u){
+    if(!u) return '';
+    if(/^(data:|blob:)/i.test(u) || u.includes('ik.imagekit.io')) return u;
+    const supabaseUrl = (window.CONFIG?.SUPABASE_URL || '').replace(/\/+$/, '');
+    if(!_cachedAdminToken || !supabaseUrl) return u;
+    return supabaseUrl + '/functions/v1/proxy-image?url=' + encodeURIComponent(u) + '&token=' + encodeURIComponent(_cachedAdminToken);
+  }
+
   // ── Modern photo gallery carousel ─────────────────────────────────────────
   function renderGallery(urls, label){
     if(!urls.length) return '<p class="pl-photo-count">No photos available.</p>';
     const thumbs = urls.slice(0, 20).map((u, i) =>
-      `<img class="pl-gallery-thumb${i === 0 ? ' active' : ''}" src="${S.esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-idx="${i}" onclick="event.stopPropagation()">`
+      `<img class="pl-gallery-thumb${i === 0 ? ' active' : ''}" src="${S.esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-idx="${i}">`
     ).join('');
     return `
     <div class="pl-gallery" id="pl-gallery">
-      <div class="pl-gallery-main">
+      <div class="pl-gallery-main" title="Tap photo to view full size">
         <img id="pl-gallery-img" src="${S.esc(urls[0])}" alt="" referrerpolicy="no-referrer">
         ${urls.length > 1 ? `
           <button class="pl-gallery-nav prev" id="pl-gallery-prev" aria-label="Previous photo">‹</button>
@@ -411,7 +429,7 @@
         ` : ''}
       </div>
       ${urls.length > 1 ? `<div class="pl-gallery-thumbs" id="pl-gallery-thumbs">${thumbs}</div>` : ''}
-      <div class="pl-photo-count">${urls.length} photo${urls.length!==1?'s':''} ${label}</div>
+      <div class="pl-photo-count">${urls.length} photo${urls.length!==1?'s':''} ${label} · Tap photo to view full size</div>
     </div>`;
   }
 
@@ -468,8 +486,11 @@
     return `
     <div class="pl-panel-hd">
       <div class="pl-panel-hd-body">
-        <div class="pl-panel-title">${S.esc(l.address || '(no address)')}</div>
-        <div class="pl-panel-sub">${S.esc([l.city, l.state, l.zip].filter(Boolean).join(', '))}
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="pl-panel-title" id="pl-panel-title">${S.esc(l.address || '(no address)')}</div>
+          <span class="pl-save-pill" id="pl-panel-save-status">Auto-save ready</span>
+        </div>
+        <div class="pl-panel-sub" id="pl-panel-sub">${S.esc([l.city, l.state, l.zip].filter(Boolean).join(', '))}
           ${score != null ? ` · <span class="qs-badge ${qsClass(score)}">Q: ${score}/100</span>` : ''}
           ${srcType === 'ios'       ? ` · <span class="qs-badge qs-high" title="Imported from Zillow detail page via iOS Scriptable">📱 iOS import</span>` :
             srcType === 'admin-url' ? ` · <span class="qs-badge qs-high" title="Imported via admin URL import on desktop">🖥 Desktop import</span>` :
@@ -684,7 +705,7 @@
     <div class="pl-panel-ft">
       ${!isArchived && !isPublished ? `<button class="btn btn-ghost pl-arc-btn-panel" data-id="${S.esc(l.id)}">Archive</button>` : ''}
       <div style="flex:1"></div>
-      ${!isPublished ? `<button class="btn btn-outline pl-save-btn" data-id="${S.esc(l.id)}">Save changes</button>` : ''}
+      ${!isPublished ? `<button class="btn btn-outline pl-save-btn" data-id="${S.esc(l.id)}">Save now</button>` : ''}
       ${!isPublished && !isArchived ? `
         <label style="display:flex;align-items:center;gap:8px;margin-right:auto">
           <input type="checkbox" id="pf-delete-on-publish" style="width:16px;height:16px"> <span style="font-size:.78rem;color:var(--muted-2)">Delete from pipeline after publish</span>
@@ -737,6 +758,8 @@
       }
 
       if(county || neighborhood){
+        if(county && countyEl) countyEl.dispatchEvent(new Event('change', { bubbles: true }));
+        else if(neighborhood && neighEl) neighEl.dispatchEvent(new Event('change', { bubbles: true }));
         S.toast('County' + (neighborhood ? ' & neighborhood' : '') + ' auto-filled from coordinates', 'info');
       }
     } catch(e){
@@ -746,9 +769,38 @@
     }
   }
 
+  let _panelSaveTimer = null;
+  let _panelSaving = false;
+  let _panelSaveQueued = false;
+
+  function _setPanelSaveStatus(cls, text){
+    const el = document.getElementById('pl-panel-save-status');
+    if(!el) return;
+    el.className = 'pl-save-pill' + (cls ? ' ' + cls : '');
+    el.textContent = text;
+  }
+
+  async function _runPanelAutoSave(id, silent){
+    if(_panelSaving){
+      _panelSaveQueued = true;
+      return;
+    }
+    _panelSaving = true;
+    try {
+      await doSave(id, { silent });
+    } finally {
+      _panelSaving = false;
+      if(_panelSaveQueued){
+        _panelSaveQueued = false;
+        _runPanelAutoSave(id, true);
+      }
+    }
+  }
+
   function openPanel(l){
     _current = l;
     _dirty   = {};
+    clearTimeout(_panelSaveTimer);
     const panel    = document.getElementById('pl-panel');
     const backdrop = document.getElementById('pl-backdrop');
     panel.innerHTML = renderPanel(l);
@@ -757,15 +809,36 @@
       backdrop.classList.add('open');
       document.body.style.overflow = 'hidden';
       panel.querySelector('#pl-close-btn').addEventListener('click', closePanel);
-      // Focus first focusable input for accessibility
+      // Skip auto-focus on mobile/touch so virtual keyboard doesn't obscure the sheet
+      const isMobileTouch = window.innerWidth < 768 || window.matchMedia?.('(pointer: coarse)').matches;
       const firstInput = panel.querySelector('input,select,textarea,button');
-      if(firstInput) setTimeout(() => firstInput.focus(), 100);
+      if(firstInput && !isMobileTouch) setTimeout(() => firstInput.focus(), 100);
       // Auto-fill county/neighborhood from lat+lng if missing
       autoFillLocation(l);
     });
 
       const saveBtn = panel.querySelector('.pl-save-btn');
-      if(saveBtn) saveBtn.addEventListener('click', () => doSave(l.id));
+      if(saveBtn) saveBtn.addEventListener('click', () => {
+        clearTimeout(_panelSaveTimer);
+        _runPanelAutoSave(l.id, false);
+      });
+
+      // Live auto-save on panel field edits (stays open & updates card/header live)
+      if(l.status !== 'published'){
+        panel.addEventListener('input', e => {
+          const t = e.target;
+          if(!t || !t.id || !t.id.startsWith('pf-') || t.id === 'pf-delete-on-publish') return;
+          _setPanelSaveStatus('', 'Pending…');
+          clearTimeout(_panelSaveTimer);
+          _panelSaveTimer = setTimeout(() => _runPanelAutoSave(l.id, true), 750);
+        });
+        panel.addEventListener('change', e => {
+          const t = e.target;
+          if(!t || !t.id || !t.id.startsWith('pf-') || t.id === 'pf-delete-on-publish') return;
+          clearTimeout(_panelSaveTimer);
+          _runPanelAutoSave(l.id, true);
+        });
+      }
 
       const arcBtn = panel.querySelector('.pl-arc-btn-panel');
       if(arcBtn) arcBtn.addEventListener('click', () => doArchive(l.id));
@@ -854,6 +927,59 @@
     });
   }
 
+  // ── Full-size pipeline lightbox ───────────────────────────────────────────
+  function openPipelineLightbox(urls, startIdx){
+    const list = (Array.isArray(urls) ? urls : []).filter(Boolean);
+    if(!list.length) return;
+    const prevLb = document.getElementById('pl-lightbox');
+    if(prevLb) prevLb.remove();
+
+    let idx = Math.max(0, Math.min(startIdx || 0, list.length - 1));
+    const lb = document.createElement('div');
+    lb.id = 'pl-lightbox';
+    lb.innerHTML = `
+      <button type="button" class="pl-lb-btn pl-lb-close" id="pl-lb-close" aria-label="Close">✕</button>
+      ${list.length > 1 ? '<button type="button" class="pl-lb-btn pl-lb-prev" id="pl-lb-prev" aria-label="Previous">‹</button>' : ''}
+      ${list.length > 1 ? '<button type="button" class="pl-lb-btn pl-lb-next" id="pl-lb-next" aria-label="Next">›</button>' : ''}
+      <img id="pl-lightbox-img" src="${S.esc(list[idx])}" alt="Full size photo" referrerpolicy="no-referrer">
+      <div class="pl-lb-counter" id="pl-lb-counter">${idx + 1} / ${list.length}</div>
+    `;
+    document.body.appendChild(lb);
+
+    const imgEl = lb.querySelector('#pl-lightbox-img');
+    const ctrEl = lb.querySelector('#pl-lb-counter');
+    function show(i){
+      idx = ((i % list.length) + list.length) % list.length;
+      if(imgEl) imgEl.src = list[idx];
+      if(ctrEl) ctrEl.textContent = (idx + 1) + ' / ' + list.length;
+    }
+    function closeLb(){
+      document.removeEventListener('keydown', onKey, true);
+      lb.remove();
+    }
+    function onKey(e){
+      if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); closeLb(); }
+      else if(e.key === 'ArrowLeft') show(idx - 1);
+      else if(e.key === 'ArrowRight') show(idx + 1);
+    }
+    document.addEventListener('keydown', onKey, true);
+    lb.querySelector('#pl-lb-close')?.addEventListener('click', closeLb);
+    lb.querySelector('#pl-lb-prev')?.addEventListener('click', e => { e.stopPropagation(); show(idx - 1); });
+    lb.querySelector('#pl-lb-next')?.addEventListener('click', e => { e.stopPropagation(); show(idx + 1); });
+    lb.addEventListener('click', e => { if(e.target === lb) closeLb(); });
+
+    let tx = 0, ty = 0;
+    lb.addEventListener('touchstart', e => {
+      if(e.touches.length === 1){ tx = e.touches[0].clientX; ty = e.touches[0].clientY; }
+    }, { passive: true });
+    lb.addEventListener('touchend', e => {
+      if(list.length < 2) return;
+      const dx = tx - e.changedTouches[0].clientX;
+      const dy = ty - e.changedTouches[0].clientY;
+      if(Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) show(dx > 0 ? idx + 1 : idx - 1);
+    }, { passive: true });
+  }
+
   // ── Gallery navigation events ─────────────────────────────────────────────
   function wireGalleryEvents(){
     const gallery = document.getElementById('pl-gallery');
@@ -881,6 +1007,10 @@
         e.stopPropagation();
         show(parseInt(t.dataset.idx || '0', 10));
       });
+    });
+    img.addEventListener('click', e => {
+      e.stopPropagation();
+      openPipelineLightbox(urls, idx);
     });
     // Swipe support for mobile
     let startX = 0;
@@ -1251,20 +1381,48 @@ function wirePanelPhotoActions(){
     return patch;
   }
 
-  async function doSave(id){
+  async function doSave(id, opts){
+    const silent = !!(opts && opts.silent);
     const patch = collectPatch();
-    if(!Object.keys(patch).length){ S.toast('No changes to save', 'info'); return; }
+    if(!Object.keys(patch).length){
+      _setPanelSaveStatus('saved', 'Saved ✓');
+      if(!silent) S.toast('No changes to save', 'info');
+      return;
+    }
     _cClear();
+    _setPanelSaveStatus('saving', 'Saving…');
     const btn = document.querySelector('.pl-save-btn');
     if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
     const { data, error } = await CP.sb().rpc('pipeline_save', { p_id: id, p_patch: patch });
-    if(btn){ btn.disabled = false; btn.textContent = 'Save changes'; }
-    if(error){ S.toast('Save failed: ' + error.message, 'error'); return; }
+    if(btn){ btn.disabled = false; btn.textContent = 'Save now'; }
+    if(error){
+      _setPanelSaveStatus('error', 'Save failed');
+      S.toast('Save failed: ' + error.message, 'error');
+      return;
+    }
     const res = typeof data === 'string' ? JSON.parse(data) : data;
-    if(!res?.ok){ S.toast('Save failed: ' + (res?.error||'unknown'), 'error'); return; }
-    S.toast('Saved', 'success');
-    Object.assign(_current, patch);
-    if(_current.status === 'scraped') _current.status = 'edited';
+    if(!res?.ok){
+      _setPanelSaveStatus('error', 'Save failed');
+      S.toast('Save failed: ' + (res?.error||'unknown'), 'error');
+      return;
+    }
+    if(_current && String(_current.id) === String(id)){
+      Object.assign(_current, patch);
+      if(_current.status === 'scraped') _current.status = 'edited';
+    }
+    const pageItem = _pageData.find(x => String(x.id) === String(id));
+    if(pageItem && pageItem !== _current){
+      Object.assign(pageItem, patch);
+      if(pageItem.status === 'scraped') pageItem.status = 'edited';
+    }
+    const hdTitle = document.getElementById('pl-panel-title');
+    if(hdTitle && _current) hdTitle.textContent = _current.address || '(no address)';
+    const hdSub = document.getElementById('pl-panel-sub');
+    if(hdSub && _current && hdSub.firstChild){
+      hdSub.firstChild.textContent = [_current.city, _current.state, _current.zip].filter(Boolean).join(', ');
+    }
+    _setPanelSaveStatus('saved', 'Saved ✓');
+    if(!silent) S.toast('Saved', 'success');
     refreshCard(id);
     fetchCounts().catch(()=>{});
   }
@@ -1968,24 +2126,27 @@ function wirePanelPhotoActions(){
   }
 
   function openPhotoEditor(listing){
-    const imgs = imageUrls(listing.original_image_urls || '[]');
+    const imgs = imageUrls(listing.original_image_urls || '[]').slice();
     const modal = document.createElement('div');
     modal.id = 'pl-photo-editor-modal';
     modal.innerHTML = `
       <div class="pl-import-backdrop"></div>
       <div class="pl-import-dialog" role="dialog" aria-modal="true" aria-label="Edit photos">
         <div class="pl-import-hd">
-          <div style="font-size:.95rem;font-weight:700">Edit photos</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="font-size:.95rem;font-weight:700">Edit photos</div>
+            <span class="pl-save-pill" id="pl-photo-edit-status">Auto-save ready</span>
+          </div>
           <button class="pl-import-close" aria-label="Close">✕</button>
         </div>
-        <div class="pl-import-body">
-          <p style="font-size:.82rem;color:var(--muted-2);margin:0 0 14px">Reorder or remove source photos. Changes update the pipeline record's <em>original_image_urls</em>.</p>
+        <div class="pl-import-body" style="max-height:65dvh;overflow-y:auto">
+          <p style="font-size:.82rem;color:var(--muted-2);margin:0 0 14px">Tap any photo to view full size. Reorder or remove photos — changes save &amp; update live immediately.</p>
           <div id="pl-photo-edit-list" style="display:flex;flex-direction:column;gap:8px"></div>
         </div>
         <div class="pl-import-ft">
-          <button class="btn btn-ghost" id="pl-photo-edit-cancel">Cancel</button>
+          <button class="btn btn-ghost" id="pl-photo-edit-cancel" type="button">Done</button>
           <div style="flex:1"></div>
-          <button class="btn btn-primary" id="pl-photo-edit-save">Save changes</button>
+          <button class="btn btn-primary" id="pl-photo-edit-save" type="button">Save now</button>
         </div>
       </div>`;
     document.body.appendChild(modal);
@@ -1994,49 +2155,91 @@ function wirePanelPhotoActions(){
     document.getElementById('pl-photo-edit-cancel').addEventListener('click', closePhotoEditor);
 
     const listEl = document.getElementById('pl-photo-edit-list');
+    function _setPhotoEditStatus(cls, msg){
+      const el = document.getElementById('pl-photo-edit-status');
+      if(!el) return;
+      el.className = 'pl-save-pill' + (cls ? ' ' + cls : '');
+      el.textContent = msg;
+    }
+
     function renderList(){
-      listEl.innerHTML = imgs.map((u, i) => `
-        <div style="display:flex;align-items:center;gap:8px">
-          <img src="${S.esc(u)}" style="width:84px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">
-          <div style="flex:1">
-            <div style="font-size:.85rem;opacity:.85">${S.esc(u)}</div>
-            <div style="margin-top:6px;display:flex;gap:6px">
-              <button class="btn btn-sm btn-ghost" data-action="up" data-idx="${i}">Up</button>
-              <button class="btn btn-sm btn-ghost" data-action="down" data-idx="${i}">Down</button>
-              <button class="btn btn-sm btn-ghost" data-action="primary" data-idx="${i}">Make primary</button>
-              <button class="btn btn-sm btn-ghost" data-action="remove" data-idx="${i}" style="color:var(--danger)">Remove</button>
+      listEl.innerHTML = imgs.length ? imgs.map((u, i) => `
+        <div class="pl-photo-edit-item">
+          <img class="pl-photo-edit-thumb" data-photo-idx="${i}" src="${S.esc(_proxyAdminImg(u))}" alt="Photo ${i + 1}" title="Tap to view full size" referrerpolicy="no-referrer">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:.76rem;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${i === 0 ? '★ Cover · ' : '#' + (i + 1) + ' · '}${S.esc(u)}</div>
+            <div class="pl-photo-edit-actions" style="margin-top:6px">
+              <button type="button" class="btn btn-sm btn-ghost" data-action="up" data-idx="${i}" ${i === 0 ? 'disabled' : ''}>↑ Up</button>
+              <button type="button" class="btn btn-sm btn-ghost" data-action="down" data-idx="${i}" ${i === imgs.length - 1 ? 'disabled' : ''}>↓ Down</button>
+              <button type="button" class="btn btn-sm btn-ghost" data-action="primary" data-idx="${i}" ${i === 0 ? 'disabled' : ''}>★ Primary</button>
+              <button type="button" class="btn btn-sm btn-ghost" data-action="remove" data-idx="${i}" style="color:var(--danger)">Remove</button>
             </div>
           </div>
         </div>
-      `).join('');
-      listEl.querySelectorAll('button[data-action]').forEach(btn => {
-        btn.addEventListener('click', e => {
-          const action = btn.dataset.action;
-          const idx = parseInt(btn.dataset.idx, 10);
-            if(action === 'remove') imgs.splice(idx,1);
-            else if(action === 'primary' && idx !== 0){ const it = imgs.splice(idx,1)[0]; imgs.unshift(it); }
-          else if(action === 'up' && idx > 0) { const t = imgs[idx-1]; imgs[idx-1]=imgs[idx]; imgs[idx]=t; }
-          else if(action === 'down' && idx < imgs.length-1) { const t = imgs[idx+1]; imgs[idx+1]=imgs[idx]; imgs[idx]=t; }
-          renderList();
-        });
-      });
+      `).join('') : '<div style="font-size:.82rem;color:var(--muted-2);padding:16px;text-align:center">No source photos remaining.</div>';
     }
 
-    renderList();
+    // Load session token if needed so proxied Zillow images load immediately
+    _getAdminToken().then(() => renderList());
 
-    async function saveEdits(){
-      const { data, error } = await CP.sb().rpc('pipeline_save', { p_id: listing.id, p_patch: { original_image_urls: JSON.stringify(imgs) } });
-      if(error){ S.toast('Save failed: ' + error.message, 'error'); return; }
+    listEl.addEventListener('click', e => {
+      const thumb = e.target.closest('img.pl-photo-edit-thumb');
+      if(thumb){
+        const idx = parseInt(thumb.dataset.photoIdx || '0', 10) || 0;
+        const displayUrls = imgs.map(_proxyAdminImg);
+        openPipelineLightbox(displayUrls, idx);
+        return;
+      }
+      const btn = e.target.closest('button[data-action]');
+      if(!btn) return;
+      const action = btn.dataset.action;
+      const idx = parseInt(btn.dataset.idx, 10);
+      if(action === 'remove') imgs.splice(idx, 1);
+      else if(action === 'primary' && idx !== 0){ const it = imgs.splice(idx, 1)[0]; imgs.unshift(it); }
+      else if(action === 'up' && idx > 0) { const t = imgs[idx-1]; imgs[idx-1] = imgs[idx]; imgs[idx] = t; }
+      else if(action === 'down' && idx < imgs.length - 1) { const t = imgs[idx+1]; imgs[idx+1] = imgs[idx]; imgs[idx] = t; }
+      renderList();
+      saveEdits({ silent: true });
+    });
+
+    async function saveEdits(opts){
+      const silent = !!(opts && opts.silent);
+      _setPhotoEditStatus('saving', 'Saving…');
+      const nextJson = JSON.stringify(imgs);
+      const { data, error } = await CP.sb().rpc('pipeline_save', { p_id: listing.id, p_patch: { original_image_urls: nextJson } });
+      if(error){
+        _setPhotoEditStatus('error', 'Save failed');
+        S.toast('Save failed: ' + error.message, 'error');
+        return;
+      }
       const res = typeof data === 'string' ? JSON.parse(data) : data;
-      if(!res?.ok){ S.toast('Save failed: ' + (res?.error||'unknown'), 'error'); return; }
-      S.toast('Photos updated', 'success');
-      closePhotoEditor();
-      // Refresh panel photos
+      if(!res?.ok){
+        _setPhotoEditStatus('error', 'Save failed');
+        S.toast('Save failed: ' + (res?.error||'unknown'), 'error');
+        return;
+      }
+      listing.original_image_urls = nextJson;
+      if(_current && String(_current.id) === String(listing.id)){
+        _current.original_image_urls = nextJson;
+      }
+      const pageItem = _pageData.find(x => String(x.id) === String(listing.id));
+      if(pageItem) pageItem.original_image_urls = nextJson;
+      _setPhotoEditStatus('saved', 'Saved ✓');
+      if(!silent) S.toast('Photos saved!', 'success');
+      refreshCard(listing.id);
       const photoContainer = document.getElementById('panel-photos-container');
-      if(photoContainer){ panelPhotos(listing).then(html => { photoContainer.innerHTML = html; wireGalleryEvents(); wirePanelPhotoActions(); }); }
+      if(photoContainer){
+        panelPhotos(_current || listing).then(html => {
+          photoContainer.innerHTML = html;
+          wireGalleryEvents();
+          wirePanelPhotoActions();
+          const editBtn = document.getElementById('pl-edit-photos-btn');
+          if(editBtn) editBtn.addEventListener('click', ev => { ev.stopPropagation(); openPhotoEditor(_current || listing); });
+        });
+      }
     }
 
-    document.getElementById('pl-photo-edit-save').addEventListener('click', saveEdits);
+    document.getElementById('pl-photo-edit-save').addEventListener('click', () => saveEdits({ silent: false }));
 
     function closePhotoEditor(){ const m = document.getElementById('pl-photo-editor-modal'); if(m) m.remove(); }
   }

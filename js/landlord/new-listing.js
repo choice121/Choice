@@ -550,6 +550,113 @@
     return bytes >= 1_048_576 ? (bytes / 1_048_576).toFixed(1) + ' MB' : Math.round(bytes / 1024) + ' KB';
   }
 
+  let _nlLbIdx = 0;
+  let _nlLbWired = false;
+
+  function _ensureNewLightboxEl() {
+    let overlay = document.getElementById('cp-landlord-lightbox');
+    if (overlay) return overlay;
+    overlay = document.createElement('div');
+    overlay.id = 'cp-landlord-lightbox';
+    overlay.className = 'cp-lb-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Full-size photo viewer');
+    overlay.innerHTML = `
+      <button type="button" class="cp-lb-close" id="cpLbClose" aria-label="Close photo viewer">✕</button>
+      <div class="cp-lb-stage" id="cpLbStage">
+        <button type="button" class="cp-lb-btn cp-lb-prev" id="cpLbPrev" aria-label="Previous photo">‹</button>
+        <img class="cp-lb-img" id="cpLbImg" src="" alt="Full-size property photo">
+        <button type="button" class="cp-lb-btn cp-lb-next" id="cpLbNext" aria-label="Next photo">›</button>
+      </div>
+      <div class="cp-lb-counter" id="cpLbCounter">1 / 1</div>
+    `;
+    document.body.appendChild(overlay);
+    return overlay;
+  }
+
+  function _renderNewLightbox() {
+    const urls = pendingPreviews.filter(Boolean);
+    if (!urls.length) return;
+    if (_nlLbIdx < 0) _nlLbIdx = urls.length - 1;
+    if (_nlLbIdx >= urls.length) _nlLbIdx = 0;
+    const overlay = _ensureNewLightboxEl();
+    const img = overlay.querySelector('#cpLbImg');
+    const counter = overlay.querySelector('#cpLbCounter');
+    const prev = overlay.querySelector('#cpLbPrev');
+    const next = overlay.querySelector('#cpLbNext');
+    img.src = urls[_nlLbIdx];
+    counter.textContent = `${_nlLbIdx + 1} / ${urls.length}`;
+    const single = urls.length <= 1;
+    if (prev) prev.style.display = single ? 'none' : '';
+    if (next) next.style.display = single ? 'none' : '';
+  }
+
+  function closeNewListingLightbox() {
+    const overlay = document.getElementById('cp-landlord-lightbox');
+    if (!overlay || !overlay.classList.contains('is-open')) return;
+    overlay.classList.remove('is-open');
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', _onNewLbKeydown, true);
+  }
+
+  function _onNewLbKeydown(e) {
+    const overlay = document.getElementById('cp-landlord-lightbox');
+    if (!overlay || !overlay.classList.contains('is-open')) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      closeNewListingLightbox();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      _nlLbIdx--;
+      _renderNewLightbox();
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      _nlLbIdx++;
+      _renderNewLightbox();
+    }
+  }
+
+  function openNewListingLightbox(startIdx = 0) {
+    const urls = pendingPreviews.filter(Boolean);
+    if (!urls.length) return;
+    _nlLbIdx = Math.max(0, Math.min(startIdx, urls.length - 1));
+    const overlay = _ensureNewLightboxEl();
+    if (!_nlLbWired) {
+      _nlLbWired = true;
+      overlay.querySelector('#cpLbClose')?.addEventListener('click', closeNewListingLightbox);
+      overlay.querySelector('#cpLbPrev')?.addEventListener('click', (e) => { e.stopPropagation(); _nlLbIdx--; _renderNewLightbox(); });
+      overlay.querySelector('#cpLbNext')?.addEventListener('click', (e) => { e.stopPropagation(); _nlLbIdx++; _renderNewLightbox(); });
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay || e.target.id === 'cpLbStage') closeNewListingLightbox();
+      });
+      let touchStartX = 0;
+      let touchStartY = 0;
+      const stage = overlay.querySelector('#cpLbStage');
+      stage?.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }, { passive: true });
+      stage?.addEventListener('touchend', (e) => {
+        if (!touchStartX) return;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - touchStartX;
+        const dy = t.clientY - touchStartY;
+        touchStartX = 0; touchStartY = 0;
+        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+          _nlLbIdx += dx < 0 ? 1 : -1;
+          _renderNewLightbox();
+        }
+      }, { passive: true });
+    }
+    _renderNewLightbox();
+    overlay.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', _onNewLbKeydown, true);
+  }
+
   function renderPhotoGrid() {
     const grid = document.getElementById('photoPreviewGrid');
     grid.innerHTML = '';
@@ -557,13 +664,14 @@
       const u = uploads[i];
       const item = document.createElement('div');
       item.className = 'photo-preview-item' + (i === 0 ? ' is-cover' : '');
+      item.title = 'Tap to view full size';
       // Issue #14b: per-photo upload status overlay.
       let statusBadge = '';
       if (u?.status === 'uploading') {
         statusBadge =
           `<div style="position:absolute;inset:0;background:rgba(0,0,0,.45);` +
           `display:flex;align-items:center;justify-content:center;color:#fff;` +
-          `font-size:.72rem;font-weight:600;border-radius:inherit">Uploading…</div>`;
+          `font-size:.72rem;font-weight:600;border-radius:inherit;pointer-events:none">Uploading…</div>`;
       } else if (u?.status === 'error') {
         const safeErr = String(u.error || 'Upload failed').replace(/"/g, '&quot;');
         statusBadge =
@@ -577,7 +685,7 @@
           `<div title="Uploaded" style="position:absolute;top:6px;left:6px;` +
           `background:#16a34a;color:#fff;border-radius:50%;width:20px;height:20px;` +
           `display:flex;align-items:center;justify-content:center;font-size:.66rem;` +
-          `font-weight:700">✓</div>`;
+          `font-weight:700;pointer-events:none">✓</div>`;
       }
       item.innerHTML = `
         <img src="${pendingPreviews[i]}" alt="Preview" loading="lazy">
@@ -589,7 +697,8 @@
           <button class="photo-action-btn new-delete-btn" title="Remove" type="button">✕</button>
         </div>`;
       if (i !== 0) {
-        item.querySelector('.new-cover-btn').addEventListener('click', () => {
+        item.querySelector('.new-cover-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
           pendingFiles.unshift(pendingFiles.splice(i, 1)[0]);
           pendingPreviews.unshift(pendingPreviews.splice(i, 1)[0]);
           uploads.unshift(uploads.splice(i, 1)[0]);
@@ -601,9 +710,10 @@
       // Issue #14b: retry click on a failed upload re-runs kickPhotoUpload.
       const retryEl = item.querySelector('.photo-upload-retry');
       if (retryEl) {
-        retryEl.addEventListener('click', () => kickPhotoUpload(i));
+        retryEl.addEventListener('click', (e) => { e.stopPropagation(); kickPhotoUpload(i); });
       }
-      item.querySelector('.new-delete-btn').addEventListener('click', async () => {
+      item.querySelector('.new-delete-btn').addEventListener('click', async (e) => {
+        e.stopPropagation();
         // Best-effort: remove the file from ImageKit if it was already uploaded.
         if (u && u.status === 'ready' && u.fileId &&
             CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY) {
@@ -614,15 +724,19 @@
                 supabaseUrl: CONFIG.SUPABASE_URL,
                 anonKey:     CONFIG.SUPABASE_ANON_KEY,
                 userToken:   accessToken,
-              }).catch(e => console.warn('cleanup delete failed:', e));
+              }).catch(err => console.warn('cleanup delete failed:', err));
             }
-          } catch (e) { console.warn('cleanup token fetch failed:', e); }
+          } catch (err) { console.warn('cleanup token fetch failed:', err); }
         }
         pendingFiles.splice(i, 1);
         pendingPreviews.splice(i, 1);
         uploads.splice(i, 1);
         renderPhotoGrid();
         autosaveDraft();
+      });
+      item.addEventListener('click', (e) => {
+        if (e.target.closest('.photo-action-bar, button, .photo-upload-retry')) return;
+        openNewListingLightbox(i);
       });
       grid.appendChild(item);
     });
