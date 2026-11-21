@@ -1,30 +1,32 @@
 # Choice Properties — Supabase Deployed Edge Functions Inventory
 
 > **Supabase Project:** `tlfmwetmhthpyrytrcfo` (`us-east-1`)  
-> **Total Deployed Edge Functions:** `63` (`30` git-tracked in `supabase/functions/` + `33` live-deployed via CLI/Studio)  
-> **Updated:** `2026-11-21` (Phase 6 Automated Property Eligibility, Source Profile & Image Validation Engine)
+> **Total Deployed Edge Functions:** `65` (`32` git-tracked in `supabase/functions/` + `33` live-deployed via CLI/Studio)  
+> **Updated:** `2026-11-21` (Phase 7 Centralized Description Enrichment & Task-Specific Pricing Engines)
 
 ---
 
 ## 1. Deployment & `verify_jwt` Policy
 
 1. `.github/workflows/supabase-deploy.yml` parses (`deno cache --no-check`) and deploys every directory inside `supabase/functions/*/` individually whenever changes touch `supabase/functions/**`, `supabase/migrations/**`, `supabase/config.toml`, or the workflow itself.
-2. Because `.github/workflows/supabase-deploy.yml` deploys individually, **`supabase/config.toml` explicitly specifies `verify_jwt = true | false` for all 30 git-tracked Edge Functions**, preventing any unlisted function from defaulting unexpectedly to `verify_jwt = true`.
+2. Because `.github/workflows/supabase-deploy.yml` deploys individually, **`supabase/config.toml` explicitly specifies `verify_jwt = true | false` for all 32 git-tracked Edge Functions**, preventing any unlisted function from defaulting unexpectedly to `verify_jwt = true`.
 3. Live-only functions not stored inside `supabase/functions/` remain undisturbed and active in Supabase during git-triggered CI deployments.
 4. `confirm-card-payment` remains intentionally omitted from `supabase/functions/` (verified by `scripts/test-manual-payment-workflow.mjs`).
 
 ---
 
-## 2. Git-Tracked Edge Functions (`30` — Declared in `supabase/config.toml`)
+## 2. Git-Tracked Edge Functions (`32` — Declared in `supabase/config.toml`)
 
 | Function Slug | Live Version | `verify_jwt` (`config.toml` & Live) | Primary Role |
 |---|---:|:---:|---|
 | `apify-scrape-worker` | v1 | `false` | Automated Apify Zillow scraper (`start_run`, `poll_and_ingest`, `webhook_callback`, `ingest_items`, `pipeline_scrape_runs` telemetry) |
+| `calculate-pricing` | v1 | `false` | Phase 7 task-specific pricing engine (`none`, `fixed`, `individual_map`, `proportional_range`, `pricing_calculations` audit) |
 | `check-unsigned-leases` | v10 | `false` | Lease signing reminder / check job |
 | `cleanup-expired-drafts` | v38 | `false` | Expired application draft cleanup |
 | `confirm-co-applicant-screening` | v18 | `false` | Co-applicant consent & screening confirmation |
 | `countersign` | v134 | `true` | Admin/landlord lease countersignature |
 | `download-payment-receipt` | v17 | `false` | Receipt HTML/PDF retrieval |
+| `enrich-description` | v1 | `false` | Phase 7 baseline-preserving description enrichment, Choice sanitization, contradiction checks & `description_enrichment_audit` |
 | `generate-lease` | v137 | `true` | Lease generation & signing link creation |
 | `get-lease` | v98 | `false` | Tenant/co-applicant lease fetch via signing token |
 | `get-tenant-portal-app` | v20 | `false` | Tenant portal application & summary loader |

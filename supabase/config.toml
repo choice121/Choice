@@ -6,6 +6,9 @@
 [functions.apify-scrape-worker]
 verify_jwt = false
 
+[functions.calculate-pricing]
+verify_jwt = false
+
 [functions.check-unsigned-leases]
 verify_jwt = false
 
@@ -19,6 +22,9 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.download-payment-receipt]
+verify_jwt = false
+
+[functions.enrich-description]
 verify_jwt = false
 
 [functions.generate-lease]
