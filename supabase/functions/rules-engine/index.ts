@@ -92,15 +92,81 @@ function normalizeText(value: unknown): string {
     .trim();
 }
 
+function extractZillowProfileSlug(raw: string): string | null {
+  const m = String(raw || '').trim().match(/zillow\.com\/profile\/([^/?#]+)/i);
+  if (!m || !m[1]) return null;
+  try {
+    return decodeURIComponent(m[1]).trim().toLowerCase();
+  } catch {
+    return m[1].trim().toLowerCase();
+  }
+}
+
+function sanitizeZillowProfileUrls(input: unknown): string[] {
+  const arr = Array.isArray(input)
+    ? input
+    : typeof input === 'string'
+      ? input.split(/[\n,]+/)
+      : [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of arr) {
+    const raw = String(item || '').trim();
+    if (!raw) continue;
+    try {
+      const u = raw.startsWith('/') ? new URL(`https://www.zillow.com${raw}`) : new URL(raw);
+      const host = u.hostname.toLowerCase();
+      if (u.protocol === 'https:' && (host === 'zillow.com' || host === 'www.zillow.com') && u.pathname.toLowerCase().includes('/profile/')) {
+        u.search = '';
+        u.hash = '';
+        const clean = u.toString().replace(/\/+$/, '/');
+        if (!seen.has(clean.toLowerCase())) {
+          seen.add(clean.toLowerCase());
+          out.push(clean);
+        }
+      }
+    } catch {
+      // Ignore non-URL strings here; handled via aliases/canonical_name
+    }
+  }
+  return out;
+}
+
+function nameFromProfileSlug(slug: string): string {
+  return slug
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+}
+
 function matchProhibitedProfile(
   haystack: string,
-  profiles: Array<{ canonical_name: string; aliases?: string[]; match_mode?: string; enabled?: boolean }>,
+  profiles: Array<{
+    canonical_name: string;
+    aliases?: string[];
+    zillow_profile_urls?: string[];
+    match_mode?: string;
+    enabled?: boolean;
+  }>,
 ): { matched: boolean; profile?: string; matched_term?: string } {
   const norm = normalizeText(haystack);
-  if (!norm) return { matched: false };
+  const rawLower = String(haystack || '').toLowerCase();
+  if (!norm && !rawLower) return { matched: false };
 
   for (const prof of profiles) {
     if (prof.enabled === false) continue;
+    const urls = Array.isArray(prof.zillow_profile_urls) ? prof.zillow_profile_urls : [];
+    for (const u of urls) {
+      const cleanUrl = String(u || '').trim().toLowerCase().replace(/\/+$/, '');
+      if (cleanUrl && rawLower.includes(cleanUrl)) {
+        return { matched: true, profile: prof.canonical_name, matched_term: u };
+      }
+      const slug = extractZillowProfileSlug(String(u || ''));
+      if (slug && rawLower.includes(`/profile/${slug}`)) {
+        return { matched: true, profile: prof.canonical_name, matched_term: slug };
+      }
+    }
+
     const terms = [prof.canonical_name, ...(Array.isArray(prof.aliases) ? prof.aliases : [])]
       .map((t) => normalizeText(t))
       .filter(Boolean);
@@ -460,10 +526,11 @@ Deno.serve(async (req) => {
       const profiles = (eff?.prohibited_source_profiles || []) as Array<{
         canonical_name: string;
         aliases?: string[];
+        zillow_profile_urls?: string[];
         match_mode?: string;
         enabled?: boolean;
       }>;
-      const haystack = [sample.agent_name, sample.broker_name, sample.description].filter(Boolean).join(' ');
+      const haystack = [sample.agent_name, sample.broker_name, sample.source_url, sample.description].filter(Boolean).join(' ');
       const profileMatch = matchProhibitedProfile(haystack, profiles);
       const minPhotos = Number(mergedMap.min_usable_photos ?? 4);
       const photoCount = Number(sample.photo_count ?? 0);
@@ -496,7 +563,7 @@ Deno.serve(async (req) => {
     }, 200, origin);
   }
 
-  // ── 8. Prohibited Source Profiles CRUD ────────────────────────────────────
+  // ── 8. Prohibited Source Profiles CRUD (+ Unlimited Bulk & Zillow URLs) ───
   if (action === 'prohibited_profiles') {
     const sub = String(body.sub_action || 'list').trim();
 
@@ -504,6 +571,7 @@ Deno.serve(async (req) => {
       const { data, error } = await adminClient
         .from('prohibited_source_profiles')
         .select('*')
+        .order('is_immutable', { ascending: false })
         .order('canonical_name', { ascending: true });
       if (error) return jsonResp({ ok: false, error: error.message }, 500, origin);
       return jsonResp({ ok: true, profiles: data || [] }, 200, origin);
@@ -512,9 +580,25 @@ Deno.serve(async (req) => {
     if (req.method !== 'POST') return jsonResp({ ok: false, error: 'post_required' }, 405, origin);
 
     if (sub === 'create') {
-      const canonical = typeof body.canonical_name === 'string' ? body.canonical_name.trim() : '';
+      const rawUrlList = sanitizeZillowProfileUrls(body.zillow_profile_urls ?? body.profile_url ?? body.url);
+      let canonical = typeof body.canonical_name === 'string' ? body.canonical_name.trim() : '';
+      if (!canonical && rawUrlList.length > 0) {
+        const slug = extractZillowProfileSlug(rawUrlList[0]);
+        if (slug) canonical = nameFromProfileSlug(slug);
+      }
       if (!canonical) return jsonResp({ ok: false, error: 'canonical_name_required' }, 400, origin);
-      const aliases = Array.isArray(body.aliases) ? body.aliases.map((a) => String(a).trim()).filter(Boolean) : [];
+
+      const rawAliases = Array.isArray(body.aliases)
+        ? body.aliases.map((a) => String(a).trim()).filter(Boolean)
+        : typeof body.aliases === 'string'
+          ? body.aliases.split(',').map((a) => a.trim()).filter(Boolean)
+          : [];
+      const urlSlugAliases = rawUrlList
+        .map((u) => extractZillowProfileSlug(u))
+        .filter((s): s is string => Boolean(s))
+        .map((s) => nameFromProfileSlug(s))
+        .filter((s) => normalizeText(s) !== normalizeText(canonical));
+      const aliases = Array.from(new Set([...rawAliases, ...urlSlugAliases]));
       const matchMode = body.match_mode === 'normalized_exact' ? 'normalized_exact' : 'token_phrase';
 
       const { data, error } = await adminClient
@@ -522,15 +606,195 @@ Deno.serve(async (req) => {
         .insert({
           canonical_name: canonical,
           aliases,
+          zillow_profile_urls: rawUrlList,
           match_mode: matchMode,
           is_immutable: false,
           enabled: body.enabled !== false,
-          notes: typeof body.notes === 'string' ? body.notes.trim() : null,
+          notes: typeof body.notes === 'string' ? body.notes.trim() || null : null,
+          added_by: auth.actor,
         })
         .select('*')
         .single();
       if (error) return jsonResp({ ok: false, error: error.message }, 400, origin);
       return jsonResp({ ok: true, profile: data }, 201, origin);
+    }
+
+    if (sub === 'bulk_create') {
+      const itemsToProcess: Array<{
+        canonical_name: string;
+        aliases: string[];
+        zillow_profile_urls: string[];
+        match_mode: 'token_phrase' | 'normalized_exact';
+        notes: string | null;
+      }> = [];
+
+      if (typeof body.text === 'string' && body.text.trim()) {
+        const lines = body.text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+        for (const line of lines) {
+          const parts = line.split('|').map((p) => p.trim()).filter(Boolean);
+          const lineUrls: string[] = [];
+          const lineTerms: string[] = [];
+          for (const part of parts) {
+            if (/zillow\.com\/profile\//i.test(part)) {
+              lineUrls.push(...sanitizeZillowProfileUrls(part));
+            } else {
+              for (const token of part.split(',').map((t) => t.trim()).filter(Boolean)) {
+                if (/zillow\.com\/profile\//i.test(token)) {
+                  lineUrls.push(...sanitizeZillowProfileUrls(token));
+                } else {
+                  lineTerms.push(token);
+                }
+              }
+            }
+          }
+          let canonical = lineTerms[0] || '';
+          const aliases = lineTerms.slice(1);
+          if (!canonical && lineUrls.length > 0) {
+            const slug = extractZillowProfileSlug(lineUrls[0]);
+            if (slug) canonical = nameFromProfileSlug(slug);
+          }
+          if (canonical) {
+            itemsToProcess.push({
+              canonical_name: canonical,
+              aliases,
+              zillow_profile_urls: lineUrls,
+              match_mode: 'token_phrase',
+              notes: typeof body.notes === 'string' ? body.notes.trim() || null : 'Bulk added via Admin',
+            });
+          }
+        }
+      }
+
+      if (Array.isArray(body.entries)) {
+        for (const rawEntry of body.entries) {
+          if (typeof rawEntry === 'string') {
+            const trimmed = rawEntry.trim();
+            if (!trimmed) continue;
+            const urls = sanitizeZillowProfileUrls(trimmed);
+            const slug = urls[0] ? extractZillowProfileSlug(urls[0]) : null;
+            const canonical = urls.length > 0 ? (slug ? nameFromProfileSlug(slug) : trimmed) : trimmed;
+            itemsToProcess.push({
+              canonical_name: canonical,
+              aliases: [],
+              zillow_profile_urls: urls,
+              match_mode: 'token_phrase',
+              notes: null,
+            });
+          } else if (rawEntry && typeof rawEntry === 'object') {
+            const e = rawEntry as Record<string, unknown>;
+            const urls = sanitizeZillowProfileUrls(e.zillow_profile_urls ?? e.url);
+            let canonical = typeof e.canonical_name === 'string' ? e.canonical_name.trim() : '';
+            if (!canonical && urls.length > 0) {
+              const slug = extractZillowProfileSlug(urls[0]);
+              if (slug) canonical = nameFromProfileSlug(slug);
+            }
+            if (!canonical) continue;
+            const aliases = Array.isArray(e.aliases)
+              ? e.aliases.map((a) => String(a).trim()).filter(Boolean)
+              : [];
+            itemsToProcess.push({
+              canonical_name: canonical,
+              aliases,
+              zillow_profile_urls: urls,
+              match_mode: e.match_mode === 'normalized_exact' ? 'normalized_exact' : 'token_phrase',
+              notes: typeof e.notes === 'string' ? e.notes.trim() || null : null,
+            });
+          }
+        }
+      }
+
+      if (itemsToProcess.length === 0) {
+        return jsonResp({ ok: false, error: 'entries_or_text_required' }, 400, origin);
+      }
+
+      const { data: existingRows, error: exErr } = await adminClient
+        .from('prohibited_source_profiles')
+        .select('*');
+      if (exErr) return jsonResp({ ok: false, error: exErr.message }, 500, origin);
+
+      const byNormName = new Map<string, Record<string, unknown>>();
+      for (const row of existingRows || []) {
+        byNormName.set(normalizeText(row.canonical_name), row);
+      }
+
+      let createdCount = 0;
+      let updatedCount = 0;
+      let skippedCount = 0;
+      const touchedProfiles: Array<Record<string, unknown>> = [];
+
+      for (const item of itemsToProcess) {
+        const key = normalizeText(item.canonical_name);
+        if (!key) {
+          skippedCount++;
+          continue;
+        }
+        const existing = byNormName.get(key);
+        if (existing) {
+          const mergedAliases = Array.from(new Set([
+            ...(Array.isArray(existing.aliases) ? existing.aliases.map(String) : []),
+            ...item.aliases,
+          ]));
+          const mergedUrls = Array.from(new Set([
+            ...(Array.isArray(existing.zillow_profile_urls) ? existing.zillow_profile_urls.map(String) : []),
+            ...item.zillow_profile_urls,
+          ]));
+          const unchanged =
+            mergedAliases.length === (Array.isArray(existing.aliases) ? existing.aliases.length : 0) &&
+            mergedUrls.length === (Array.isArray(existing.zillow_profile_urls) ? existing.zillow_profile_urls.length : 0);
+
+          if (unchanged) {
+            skippedCount++;
+            continue;
+          }
+          const { data: upd, error: uErr } = await adminClient
+            .from('prohibited_source_profiles')
+            .update({
+              aliases: mergedAliases,
+              zillow_profile_urls: mergedUrls,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existing.id)
+            .select('*')
+            .single();
+          if (!uErr && upd) {
+            updatedCount++;
+            byNormName.set(key, upd);
+            touchedProfiles.push(upd);
+          } else {
+            skippedCount++;
+          }
+        } else {
+          const { data: ins, error: iErr } = await adminClient
+            .from('prohibited_source_profiles')
+            .insert({
+              canonical_name: item.canonical_name,
+              aliases: item.aliases,
+              zillow_profile_urls: item.zillow_profile_urls,
+              match_mode: item.match_mode,
+              is_immutable: false,
+              enabled: true,
+              notes: item.notes,
+              added_by: auth.actor,
+            })
+            .select('*')
+            .single();
+          if (!iErr && ins) {
+            createdCount++;
+            byNormName.set(key, ins);
+            touchedProfiles.push(ins);
+          } else {
+            skippedCount++;
+          }
+        }
+      }
+
+      return jsonResp({
+        ok: true,
+        created_count: createdCount,
+        updated_count: updatedCount,
+        skipped_count: skippedCount,
+        profiles: touchedProfiles,
+      }, 200, origin);
     }
 
     if (sub === 'update') {
@@ -555,7 +819,10 @@ Deno.serve(async (req) => {
 
       const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
       if (Array.isArray(body.aliases)) patch.aliases = body.aliases.map((a) => String(a).trim()).filter(Boolean);
-      if (typeof body.notes === 'string') patch.notes = body.notes.trim();
+      if (body.zillow_profile_urls !== undefined) {
+        patch.zillow_profile_urls = sanitizeZillowProfileUrls(body.zillow_profile_urls);
+      }
+      if (typeof body.notes === 'string') patch.notes = body.notes.trim() || null;
       if (typeof body.enabled === 'boolean' && !existing.is_immutable) patch.enabled = body.enabled;
       if (body.match_mode === 'normalized_exact' || body.match_mode === 'token_phrase') patch.match_mode = body.match_mode;
 

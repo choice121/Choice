@@ -104,6 +104,15 @@
     const map = { scraped:'', edited:'info', published:'success', archived:'' };
     return S.statusPill ? S.statusPill(status) : `<span class="pill ${map[status]||''}">${status}</span>`;
   }
+  function validationBadgeHtml(l){
+    const vs = l && l.validation_status;
+    if(!vs || vs === 'pending') return '';
+    const reason = l.review_reason ? ' (' + l.review_reason + ')' : '';
+    if(vs === 'passed') return `<span class="qs-badge qs-high" title="Phase 6 Validation Passed">✓ Eligible</span>`;
+    if(vs === 'needs_review') return `<span class="qs-badge qs-mid" title="Needs Review${S.esc(reason)}">⚠ Review</span>`;
+    if(vs === 'rejected') return `<span class="qs-badge qs-low" title="Rejected${S.esc(reason)}">⛔ Rejected</span>`;
+    return '';
+  }
   function imageUrls(raw){
     const imgs = parseJSON(raw) || [];
     if (!Array.isArray(imgs)) return [];
@@ -296,6 +305,7 @@
         <div class="pl-card-badges">
           ${l.source ? `<span class="src-badge src-${S.esc(l.source)}">${srcLabel}</span>` : ''}
           ${qsBadge(score)}
+          ${validationBadgeHtml(l)}
           ${folderBadge}
           ${batchBadge}
           ${srcImp === 'admin-url' ? `<span class="qs-badge qs-high" title="Imported via admin URL import">🖥 Desktop</span>` : ''}
@@ -500,10 +510,39 @@
         <div id="panel-photos-container">${photoCount ? '<span style="font-size:.75rem;color:var(--muted-2)">Loading…</span>' : ''}</div>
       </div>
 
-      <!-- Missing fields -->
+      <!-- Missing fields & Phase 6 Validation Gate -->
       <div class="pl-section">
-        <div class="pl-section-title">Data quality</div>
+        <div class="pl-section-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span>Data quality &amp; Eligibility</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${(l.broker_name || l.agent_name) ? `<button type="button" class="btn btn-ghost btn-sm" id="pl-quick-block-poster-btn" data-poster="${S.esc(l.broker_name || l.agent_name)}" style="font-size:.68rem;padding:2px 8px;color:var(--danger)" title="Add this poster to unlimited Prohibited Profiles blocklist">🚫 Block Poster</button>` : ''}
+            <button type="button" class="btn btn-outline btn-sm" id="pl-revalidate-one-btn" style="font-size:.68rem;padding:2px 8px">✓ Validate Now</button>
+          </div>
+        </div>
         ${missingTags(l)}
+        ${(() => {
+          const rep = parseJSON(l.validation_report);
+          const vs = l.validation_status || rep?.status || 'pending';
+          const checks = Array.isArray(rep?.checks) ? rep.checks : [];
+          const poster = rep?.poster_verification || {};
+          const pillCls = vs === 'passed' ? 'pl-gov-pill-ok' : vs === 'rejected' ? 'pl-gov-pill-bad' : vs === 'needs_review' ? 'pl-gov-pill-warn' : 'pl-gov-pill-info';
+          return `<div style="margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);font-size:.78rem">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+              <div><strong>Eligibility Gate:</strong> <span class="pl-gov-pill ${pillCls}">${S.esc(vs)}</span>${l.review_reason ? ` <span style="color:var(--muted-2)">· ${S.esc(l.review_reason)}</span>` : ''}</div>
+              ${vs === 'needs_review' ? `<div style="display:flex;gap:6px">
+                <button type="button" class="btn btn-sm btn-primary" id="pl-review-approve-btn" style="padding:2px 9px;font-size:.7rem">Approve</button>
+                <button type="button" class="btn btn-sm btn-outline" id="pl-review-reject-btn" style="padding:2px 9px;font-size:.7rem;color:var(--danger)">Reject</button>
+              </div>` : ''}
+            </div>
+            ${(l.agent_name || l.broker_name || poster.poster_category) ? `<div style="margin-top:6px;color:var(--muted-2);font-size:.73rem">
+              Poster: <strong>${S.esc(l.broker_name || l.agent_name || 'Unattributed')}</strong> · Proof: <strong>${poster.verified_owner_landlord ? '✓ Explicit Owner/Landlord' : S.esc(poster.poster_category || 'Unverified')}</strong>
+            </div>` : ''}
+            ${checks.length ? `<div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">${checks.map(c => `<div style="display:flex;justify-content:space-between;gap:8px;font-size:.72rem">
+              <span>${S.esc(c.label || c.key)}</span>
+              <span style="font-weight:700;color:${c.status==='passed'?'#22c55e':c.status==='rejected'?'#ef4444':'#eab308'}">${S.esc(c.status)}${c.reason ? ' ('+S.esc(c.reason)+')' : ''}</span>
+            </div>`).join('')}</div>` : ''}
+          </div>`;
+        })()}
       </div>
 
       <!-- Core fields -->
@@ -781,6 +820,61 @@
 
       const compareBtn = panel.querySelector('#pl-compare-desc-btn');
       if(compareBtn) compareBtn.addEventListener('click', () => openDescCompareModal(l));
+
+      const revalBtn = panel.querySelector('#pl-revalidate-one-btn');
+      if(revalBtn) revalBtn.addEventListener('click', async () => {
+        revalBtn.disabled = true; revalBtn.textContent = 'Validating…';
+        try {
+          const { data, error } = await CP.sb().functions.invoke('property-validator', {
+            body: { action: 'validate_property', pipeline_id: l.id, check_photo_reachability: true }
+          });
+          if(error) throw error;
+          const res = typeof data === 'string' ? JSON.parse(data) : data;
+          if(!res?.ok) throw new Error(res?.error || 'Validation failed');
+          l.validation_status = res.report.status;
+          l.needs_review = res.report.needs_review;
+          l.review_reason = res.report.primary_reason;
+          l.validation_report = res.report;
+          l.validated_at = res.report.validated_at;
+          S.toast(`Validation: ${res.report.status}${res.report.primary_reason ? ' (' + res.report.primary_reason + ')' : ''}`, res.report.status === 'passed' ? 'success' : 'info');
+          openPanel(l);
+          refreshCard(l.id);
+        } catch(err){
+          S.toast('Validation error: ' + (err.message || 'unknown'), 'error');
+          revalBtn.disabled = false; revalBtn.textContent = '✓ Validate Now';
+        }
+      });
+
+      const quickBlockBtn = panel.querySelector('#pl-quick-block-poster-btn');
+      if(quickBlockBtn) quickBlockBtn.addEventListener('click', async () => {
+        const posterName = quickBlockBtn.dataset.poster || '';
+        if(!posterName) return;
+        const ok = await S.confirm(
+          `Block "${posterName}" permanently?`,
+          'Adds this operator/profile to your Prohibited Profiles blocklist so matching Zillow listings are automatically rejected.'
+        );
+        if(!ok) return;
+        try {
+          const { data, error } = await CP.sb().functions.invoke('rules-engine', {
+            body: {
+              action: 'prohibited_profiles',
+              sub_action: 'bulk_create',
+              entries: [{ canonical_name: posterName, notes: 'Blocked directly from pipeline listing #' + l.id }]
+            }
+          });
+          if(error) throw error;
+          const res = typeof data === 'string' ? JSON.parse(data) : data;
+          if(!res?.ok) throw new Error(res?.error || 'Block failed');
+          S.toast(`Added "${posterName}" to Blocked Profiles`, 'success');
+        } catch(err){
+          S.toast('Block failed: ' + (err.message || 'unknown'), 'error');
+        }
+      });
+
+      const approveRevBtn = panel.querySelector('#pl-review-approve-btn');
+      if(approveRevBtn) approveRevBtn.addEventListener('click', () => resolvePanelReview(l, 'approve'));
+      const rejectRevBtn = panel.querySelector('#pl-review-reject-btn');
+      if(rejectRevBtn) rejectRevBtn.addEventListener('click', () => resolvePanelReview(l, 'reject'));
 
       const revertBtn = panel.querySelector('#pl-revert-desc-btn');
       if(revertBtn) revertBtn.addEventListener('click', async () => {
@@ -2803,7 +2897,324 @@ function wirePanelPhotoActions(){
     await loadRecoverable();
   }
 
+  async function resolvePanelReview(l, decision){
+    try {
+      const { data, error } = await CP.sb().functions.invoke('property-validator', {
+        body: { action: 'resolve_review', property_id: l.id, decision }
+      });
+      if(error) throw error;
+      const res = typeof data === 'string' ? JSON.parse(data) : data;
+      if(!res?.ok) throw new Error(res?.error || 'Update failed');
+      l.validation_status = res.validation_status;
+      l.needs_review = false;
+      S.toast(`Review marked: ${res.validation_status}`, 'success');
+      openPanel(l);
+      refreshCard(l.id);
+    } catch(err){
+      S.toast('Review update failed: ' + (err.message || 'unknown'), 'error');
+    }
+  }
+
+  async function runQueueValidation(){
+    const btn = document.getElementById('pl-validate-queue-btn');
+    const folder = _activeFolder ? _folders.find(f => f.id === _activeFolder) : null;
+    const activeBatchId = folder && folder.batch_id ? String(folder.batch_id) : null;
+    if(btn){ btn.disabled = true; btn.textContent = 'Validating…'; }
+    try {
+      const { data, error } = await CP.sb().functions.invoke('property-validator', {
+        body: {
+          action: 'validate_batch',
+          batch_id: activeBatchId,
+          check_photo_reachability: true,
+          limit: 100
+        }
+      });
+      if(error) throw error;
+      const res = typeof data === 'string' ? JSON.parse(data) : data;
+      if(!res?.ok) throw new Error(res?.error || 'Validation failed');
+      S.toast(
+        `Validated ${res.total}: ${res.passed_count} passed, ${res.needs_review_count} review, ${res.rejected_count} rejected`,
+        res.rejected_count > 0 || res.needs_review_count > 0 ? 'info' : 'success'
+      );
+      _cClear();
+      if(_activeFolder){
+        await selectFolder(_activeFolder);
+      } else {
+        await load(false);
+      }
+    } catch(err){
+      S.toast('Validation failed: ' + (err.message || 'unknown'), 'error');
+    } finally {
+      if(btn){ btn.disabled = false; btn.textContent = '✓ Validate'; }
+    }
+  }
+
+  async function openBlockedProfilesModal(){
+    const existing = document.getElementById('pl-blocked-profiles-modal');
+    if(existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'pl-blocked-profiles-modal';
+    modal.className = 'pl-gov-modal';
+    modal.innerHTML = `
+      <div class="pl-import-backdrop"></div>
+      <div class="pl-gov-dialog" role="dialog" aria-modal="true" aria-label="Blocked Zillow Profiles Manager">
+        <div class="pl-import-hd">
+          <div>
+            <div style="font-size:1rem;font-weight:800">🚫 Blocked Zillow Profiles &amp; Operators</div>
+            <div style="font-size:.74rem;color:var(--muted-2)">Add unlimited company names, agent handles, or Zillow /profile/ URLs anytime — Phase 6 rejects matches automatically.</div>
+          </div>
+          <button class="pl-import-close" aria-label="Close">✕</button>
+        </div>
+        <div class="pl-gov-body" style="gap:14px">
+          <div class="pl-gov-card" style="gap:10px">
+            <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+              <strong style="font-size:.86rem">Add New Blocked Profile(s)</strong>
+              <div style="display:flex;gap:6px">
+                <button type="button" class="btn btn-sm btn-primary" id="pl-bp-mode-single">Single Entry</button>
+                <button type="button" class="btn btn-sm btn-outline" id="pl-bp-mode-bulk">Unlimited Bulk Paste</button>
+              </div>
+            </div>
+            <div id="pl-bp-single-form" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div class="pl-field">
+                <label for="pl-bp-name">Profile / Company Name</label>
+                <input id="pl-bp-name" type="text" placeholder="e.g. Progress Residential" autocomplete="off">
+              </div>
+              <div class="pl-field">
+                <label for="pl-bp-url">Zillow Profile URL (optional)</label>
+                <input id="pl-bp-url" type="url" placeholder="https://www.zillow.com/profile/..." autocomplete="off">
+              </div>
+              <div class="pl-field">
+                <label for="pl-bp-aliases">Aliases / Alternate Names (comma-sep)</label>
+                <input id="pl-bp-aliases" type="text" placeholder="e.g. Progress, Progress PM" autocomplete="off">
+              </div>
+              <div class="pl-field">
+                <label for="pl-bp-notes">Note (optional)</label>
+                <input id="pl-bp-notes" type="text" placeholder="Why blocked?" autocomplete="off">
+              </div>
+              <div style="grid-column:1 / -1;display:flex;justify-content:flex-end">
+                <button type="button" class="btn btn-sm btn-primary" id="pl-bp-add-one-btn">+ Add to Blocklist</button>
+              </div>
+            </div>
+            <div id="pl-bp-bulk-form" style="display:none;flex-direction:column;gap:8px">
+              <label for="pl-bp-bulk-text" style="font-size:.72rem;color:var(--muted-2)">
+                Paste unlimited names or Zillow <code>/profile/...</code> URLs (one per line). Optional aliases/URL on the same line separated by <code>|</code> (e.g. <code>Acme Homes | Acme PM | https://www.zillow.com/profile/Acme-Homes/</code>):
+              </label>
+              <textarea id="pl-bp-bulk-text" rows="5" placeholder="https://www.zillow.com/profile/Example-Operator/&#10;Bad Operator LLC | Bad Op&#10;Another Unwanted Agent" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 10px;font-size:.82rem;color:var(--text);font-family:inherit;resize:vertical"></textarea>
+              <div style="display:flex;justify-content:flex-end">
+                <button type="button" class="btn btn-sm btn-primary" id="pl-bp-add-bulk-btn">+ Add All Lines to Blocklist</button>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="pl-bp-search" type="search" placeholder="Filter blocked profiles by name, alias, or Zillow URL…" style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:7px 11px;font-size:.82rem;color:var(--text)">
+            <span id="pl-bp-count" style="font-size:.74rem;color:var(--muted-2);white-space:nowrap">Loading…</span>
+          </div>
+          <div id="pl-bp-list" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+        <div class="pl-import-ft">
+          <span style="font-size:.74rem;color:var(--muted-2)">Unlimited custom entries · 6 core Choice institutional blocks are locked.</span>
+          <div style="flex:1"></div>
+          <button class="btn btn-ghost" id="pl-bp-close-btn">Close</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    const closeModal = () => modal.remove();
+    modal.querySelector('.pl-import-backdrop').addEventListener('click', closeModal);
+    modal.querySelector('.pl-import-close').addEventListener('click', closeModal);
+    modal.querySelector('#pl-bp-close-btn').addEventListener('click', closeModal);
+
+    const singleBtn = modal.querySelector('#pl-bp-mode-single');
+    const bulkBtn = modal.querySelector('#pl-bp-mode-bulk');
+    const singleForm = modal.querySelector('#pl-bp-single-form');
+    const bulkForm = modal.querySelector('#pl-bp-bulk-form');
+    singleBtn.addEventListener('click', () => {
+      singleForm.style.display = 'grid';
+      bulkForm.style.display = 'none';
+      singleBtn.className = 'btn btn-sm btn-primary';
+      bulkBtn.className = 'btn btn-sm btn-outline';
+    });
+    bulkBtn.addEventListener('click', () => {
+      singleForm.style.display = 'none';
+      bulkForm.style.display = 'flex';
+      bulkBtn.className = 'btn btn-sm btn-primary';
+      singleBtn.className = 'btn btn-sm btn-outline';
+    });
+
+    let _allProfiles = [];
+
+    function renderProfilesList(){
+      const q = (modal.querySelector('#pl-bp-search').value || '').trim().toLowerCase();
+      const filtered = q
+        ? _allProfiles.filter(p => {
+            const bag = [
+              p.canonical_name,
+              ...(Array.isArray(p.aliases) ? p.aliases : []),
+              ...(Array.isArray(p.zillow_profile_urls) ? p.zillow_profile_urls : []),
+              p.notes
+            ].filter(Boolean).join(' ').toLowerCase();
+            return bag.includes(q);
+          })
+        : _allProfiles;
+
+      modal.querySelector('#pl-bp-count').textContent = `${filtered.length} profile${filtered.length === 1 ? '' : 's'}`;
+      const listEl = modal.querySelector('#pl-bp-list');
+      if(!filtered.length){
+        listEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted-2);font-size:.82rem">No matching blocked profiles.</div>';
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(p => {
+        const aliases = Array.isArray(p.aliases) ? p.aliases : [];
+        const urls = Array.isArray(p.zillow_profile_urls) ? p.zillow_profile_urls : [];
+        return `<div class="pl-gov-card" style="padding:11px 13px;opacity:${p.enabled === false ? '0.6' : '1'}">
+          <div class="pl-gov-row">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <strong style="font-size:.86rem">${S.esc(p.canonical_name)}</strong>
+              ${p.is_immutable ? '<span class="pl-gov-pill pl-gov-pill-bad">🔒 Core Locked</span>' : '<span class="pl-gov-pill pl-gov-pill-info">Custom</span>'}
+              ${p.enabled === false ? '<span class="pl-gov-pill pl-gov-pill-warn">Paused</span>' : ''}
+            </div>
+            ${!p.is_immutable ? `<div style="display:flex;gap:6px">
+              <button type="button" class="btn btn-sm btn-ghost pl-bp-toggle-btn" data-id="${S.esc(p.id)}" data-enabled="${p.enabled !== false ? 'true' : 'false'}" style="font-size:.7rem;padding:2px 8px">${p.enabled !== false ? 'Pause' : 'Enable'}</button>
+              <button type="button" class="btn btn-sm btn-ghost pl-bp-del-btn" data-id="${S.esc(p.id)}" data-name="${S.esc(p.canonical_name)}" style="font-size:.7rem;padding:2px 8px;color:var(--danger)">Remove</button>
+            </div>` : ''}
+          </div>
+          ${aliases.length ? `<div style="font-size:.74rem;color:var(--muted-2)">Aliases: ${aliases.map(a => `<code style="background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px;margin-right:4px">${S.esc(a)}</code>`).join('')}</div>` : ''}
+          ${urls.length ? `<div style="font-size:.73rem;display:flex;flex-direction:column;gap:2px">${urls.map(u => `<a href="${S.esc(u)}" target="_blank" rel="noopener" style="color:var(--brand);word-break:break-all">${S.esc(u)}</a>`).join('')}</div>` : ''}
+          ${p.notes ? `<div style="font-size:.72rem;color:var(--muted-2)">${S.esc(p.notes)}</div>` : ''}
+        </div>`;
+      }).join('');
+
+      listEl.querySelectorAll('.pl-bp-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const nextEnabled = btn.dataset.enabled !== 'true';
+          try {
+            const { data, error } = await CP.sb().functions.invoke('rules-engine', {
+              body: { action: 'prohibited_profiles', sub_action: 'update', id: btn.dataset.id, enabled: nextEnabled }
+            });
+            if(error) throw error;
+            const res = typeof data === 'string' ? JSON.parse(data) : data;
+            if(!res?.ok) throw new Error(res?.error || 'Update failed');
+            await loadProfiles();
+          } catch(err){
+            S.toast('Update failed: ' + (err.message || 'unknown'), 'error');
+          }
+        });
+      });
+
+      listEl.querySelectorAll('.pl-bp-del-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const ok = await S.confirm(`Remove "${btn.dataset.name}" from blocklist?`, 'Listings matching this profile will no longer be auto-rejected unless re-added.');
+          if(!ok) return;
+          try {
+            const { data, error } = await CP.sb().functions.invoke('rules-engine', {
+              body: { action: 'prohibited_profiles', sub_action: 'delete', id: btn.dataset.id }
+            });
+            if(error) throw error;
+            const res = typeof data === 'string' ? JSON.parse(data) : data;
+            if(!res?.ok) throw new Error(res?.error || 'Delete failed');
+            S.toast('Removed from blocklist', 'success');
+            await loadProfiles();
+          } catch(err){
+            S.toast('Delete failed: ' + (err.message || 'unknown'), 'error');
+          }
+        });
+      });
+    }
+
+    async function loadProfiles(){
+      modal.querySelector('#pl-bp-list').innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted-2)">Loading…</div>';
+      try {
+        const { data, error } = await CP.sb().functions.invoke('rules-engine', {
+          body: { action: 'prohibited_profiles', sub_action: 'list' }
+        });
+        if(error) throw error;
+        const res = typeof data === 'string' ? JSON.parse(data) : data;
+        if(!res?.ok) throw new Error(res?.error || 'Failed to load profiles');
+        _allProfiles = Array.isArray(res.profiles) ? res.profiles : [];
+        renderProfilesList();
+      } catch(err){
+        modal.querySelector('#pl-bp-list').innerHTML = `<div class="pl-gov-card"><strong>Error</strong><p style="font-size:.8rem;color:var(--muted-2)">${S.esc(err.message || 'Failed to load')}</p></div>`;
+      }
+    }
+
+    modal.querySelector('#pl-bp-add-one-btn').addEventListener('click', async () => {
+      const name = modal.querySelector('#pl-bp-name').value.trim();
+      const url = modal.querySelector('#pl-bp-url').value.trim();
+      const aliases = modal.querySelector('#pl-bp-aliases').value.trim();
+      const notes = modal.querySelector('#pl-bp-notes').value.trim();
+      if(!name && !url){
+        S.toast('Enter a profile name or Zillow profile URL', 'error');
+        return;
+      }
+      const btn = modal.querySelector('#pl-bp-add-one-btn');
+      btn.disabled = true; btn.textContent = 'Adding…';
+      try {
+        const { data, error } = await CP.sb().functions.invoke('rules-engine', {
+          body: {
+            action: 'prohibited_profiles',
+            sub_action: 'create',
+            canonical_name: name,
+            aliases: aliases ? aliases.split(',').map(x => x.trim()).filter(Boolean) : [],
+            zillow_profile_urls: url ? [url] : [],
+            notes: notes || null
+          }
+        });
+        if(error) throw error;
+        const res = typeof data === 'string' ? JSON.parse(data) : data;
+        if(!res?.ok) throw new Error(res?.error || 'Failed to add profile');
+        modal.querySelector('#pl-bp-name').value = '';
+        modal.querySelector('#pl-bp-url').value = '';
+        modal.querySelector('#pl-bp-aliases').value = '';
+        modal.querySelector('#pl-bp-notes').value = '';
+        S.toast(`Added "${res.profile.canonical_name}" to blocklist ✓`, 'success');
+        await loadProfiles();
+      } catch(err){
+        S.toast('Add failed: ' + (err.message || 'unknown'), 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = '+ Add to Blocklist';
+      }
+    });
+
+    modal.querySelector('#pl-bp-add-bulk-btn').addEventListener('click', async () => {
+      const text = modal.querySelector('#pl-bp-bulk-text').value.trim();
+      if(!text){
+        S.toast('Paste one or more names or Zillow profile URLs first', 'error');
+        return;
+      }
+      const btn = modal.querySelector('#pl-bp-add-bulk-btn');
+      btn.disabled = true; btn.textContent = 'Adding all…';
+      try {
+        const { data, error } = await CP.sb().functions.invoke('rules-engine', {
+          body: {
+            action: 'prohibited_profiles',
+            sub_action: 'bulk_create',
+            text
+          }
+        });
+        if(error) throw error;
+        const res = typeof data === 'string' ? JSON.parse(data) : data;
+        if(!res?.ok) throw new Error(res?.error || 'Bulk add failed');
+        modal.querySelector('#pl-bp-bulk-text').value = '';
+        S.toast(`Blocklist updated: ${res.created_count} added, ${res.updated_count} updated`, 'success');
+        await loadProfiles();
+      } catch(err){
+        S.toast('Bulk add failed: ' + (err.message || 'unknown'), 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = '+ Add All Lines to Blocklist';
+      }
+    });
+
+    modal.querySelector('#pl-bp-search').addEventListener('input', renderProfilesList);
+    await loadProfiles();
+  }
+
   function wireHistoryAndRecoveryButtons(){
+    const bpBtn = document.getElementById('pl-blocked-profiles-btn');
+    if(bpBtn) bpBtn.addEventListener('click', openBlockedProfilesModal);
+    const valBtn = document.getElementById('pl-validate-queue-btn');
+    if(valBtn) valBtn.addEventListener('click', runQueueValidation);
     const histBtn = document.getElementById('pl-history-btn');
     if(histBtn) histBtn.addEventListener('click', openPublishingHistoryModal);
     const recBtn = document.getElementById('pl-recovery-btn');
@@ -2921,6 +3332,8 @@ function wirePanelPhotoActions(){
           if (recModal) recModal.remove();
           const batchModal = document.getElementById('pl-batch-modal');
           if (batchModal) batchModal.remove();
+          const bpModal = document.getElementById('pl-blocked-profiles-modal');
+          if (bpModal) bpModal.remove();
           return;
         }
 
@@ -2961,7 +3374,7 @@ function wirePanelPhotoActions(){
       let _lastFocusRefresh = Date.now();
       const refreshOnFocus = () => {
         if (document.hidden || _loading || _current) return;
-        const hasOpenModal = document.querySelector('#pl-import-modal, #pl-folder-modal, #pl-batch-modal, #pl-photo-editor-modal, #pl-history-modal, #pl-recovery-modal, #pl-desc-compare-modal');
+        const hasOpenModal = document.querySelector('#pl-import-modal, #pl-folder-modal, #pl-batch-modal, #pl-photo-editor-modal, #pl-history-modal, #pl-recovery-modal, #pl-desc-compare-modal, #pl-blocked-profiles-modal');
         if (hasOpenModal) return;
         const now = Date.now();
         if (now - _lastFocusRefresh < 2500) return;
