@@ -281,7 +281,7 @@ Deno.serve(async (req) => {
         token_hash: tokenHash,
         created_by: auth.userId || null,
         expires_at: expiresAt,
-        share_alias: `batch-${current.batch_id}`,
+        share_alias: `batch-${current.batch_id}-${newShareId.slice(0, 8)}`,
       });
     if (insertShareErr) {
       return jsonResp({ ok: false, error: insertShareErr.message }, 500, origin);
