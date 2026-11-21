@@ -10,10 +10,10 @@
 
 | Field | Value |
 |---|---|
-| **Active / Next Available Phase** | **`PHASE 1`** — Platform Sync, Canonical Edge Function Recovery & Baseline Stabilization |
-| **Current Baseline Commit (`main`)** | `d8602db` (`choice121/Choice`) |
-| **Overall Plan Progress** | `0 / 10 Phases Completed` (`READY FOR USER APPROVAL TO START PHASE 1`) |
-| **Last Updated** | `2026-11-20` |
+| **Active / Next Available Phase** | **`PHASE 2`** — Four-Digit Batch Identities, Disposable Folders & Legacy Batch Compatibility |
+| **Current Baseline Commit (`main`)** | `edfdb99` (`choice121/Choice`) |
+| **Overall Plan Progress** | `1 / 10 Phases Completed` (`READY FOR USER APPROVAL TO START PHASE 2`) |
+| **Last Updated** | `2026-11-21` |
 
 ---
 
@@ -71,8 +71,8 @@ You may **not** mark any phase `DONE` until ALL 5 steps below pass cleanly:
 
 | Phase | Title | Dependencies | Status | Next Action / Notes | Commit SHA |
 |---|---|---|---|---|---|
-| **Phase 1** | Platform Sync, Canonical Edge Function Recovery & Baseline Stabilization | None | `READY` | **NEXT AVAILABLE PHASE** — Awaiting approval to execute | — |
-| **Phase 2** | Four-Digit Batch Identities, Disposable Folders & Legacy Batch Compatibility | Phase 1 | `BLOCKED` | Unlocks after Phase 1 is `DONE` | — |
+| **Phase 1** | Platform Sync, Canonical Edge Function Recovery & Baseline Stabilization | None | `DONE` | Verified live across GitHub, Supabase & Cloudflare Pages (`v34.0.1` + cron + config parity) | `d1de6ce`, `edfdb99` |
+| **Phase 2** | Four-Digit Batch Identities, Disposable Folders & Legacy Batch Compatibility | Phase 1 | `READY` | **NEXT AVAILABLE PHASE** — Awaiting approval to execute | — |
 | **Phase 3** | Permanent Private-Placement Registry & Batch Link Retrieval | Phase 2 | `BLOCKED` | Unlocks after Phase 2 is `DONE` | — |
 | **Phase 4** | Centralized Rules & Policies Engine + Versioned Policy Admin | Phase 1, Phase 2 | `BLOCKED` | Unlocks after Phase 1 & 2 are `DONE` | — |
 | **Phase 5** | Apify Default Scraping Engine & Dual-Channel Worker Integration | Phase 2, Phase 4 | `BLOCKED` | Unlocks after Phase 2 & 4 are `DONE` | — |
@@ -93,3 +93,9 @@ You may **not** mark any phase `DONE` until ALL 5 steps below pass cleanly:
   - Documented coexistence of Manual Browser Extensions (`docs/MANUAL_BROWSER_EXTENSIONS_GUIDE.md`) and Apify Automated Scraping (`docs/APIFY_AUTOMATED_SCRAPING_GUIDE.md`).
   - Created `01_SYSTEM_AUDIT_REPORT.md`, `02_TARGET_ARCHITECTURE_AND_SCHEMA.md`, and `03_PHASED_IMPLEMENTATION_PLAN.md`.
   - **Next Available Phase**: `Phase 1`.
+- **Phase 1 Completed & Verified Live (`2026-11-21`, commits `d1de6ce` / `edfdb99`)**:
+  - Updated `supabase/config.toml` with explicit `verify_jwt` parity across all 26 git-tracked Edge Functions and created canonical 59-function inventory (`docs/SUPABASE_DEPLOYED_FUNCTIONS_INVENTORY.md`).
+  - Added `supabase/migrations/20261121000002_phase1_pipeline_recovery_purge_sync.sql` (`public.pipeline_recovery_health()` RPC) and scheduled hourly Stage-2 purge workflow `.github/workflows/purge-pipeline-recovery.yml` (`cron: '30 * * * *'` + `workflow_dispatch`).
+  - Aligned `MAX_PHOTOS` (`25` mobile / `50` desktop) across `chrome-extension/background.js`, `.pages-orion/background.js`, and `content.js`; bumped and rebuilt both Chrome + Orion extension packages to `v34.0.1` (`sync-and-bump-extension.mjs --patch`, updated `docs/EXTENSION_CHANGELOG.md`, `chrome-extension/README.md`, `docs/MANUAL_BROWSER_EXTENSIONS_GUIDE.md`).
+  - **Verification**: `npm run build` passed; `chrome-extension/test-extractors.js` (`34/34`), `.pages-orion/test-extractors.js` (`17/17`), `scripts/validate-extension.mjs`, and `scripts/test-manual-payment-workflow.mjs` (`6/6`) passed; GitHub Actions (`Cloudflare-Only Enforcement`, `Deploy Supabase Edge Functions & Migrations`, and `Purge Expired Pipeline Recovery Archive` dry-run returning `HTTP 200`, `expired_found=93`) passed; Cloudflare Pages deployment `0feb6f5d` live (`extension-meta.json` serves `v34.0.1`, extension ZIPs download HTTP 200, live `receive-pipeline-import` & `property-share` probes succeeded, `pipeline_recovery_health()` confirmed live).
+  - **Next Available Phase**: `Phase 2`.
