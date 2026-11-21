@@ -1,334 +1,412 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// ============================================================
+// Choice Properties — property-share Edge Function
+// Phase 8: Strictly client-safe field projection, batch-scoped
+// published_rent / published_description overlays, strict CORS,
+// and admin/service auth enforcement on both create and revoke.
+// ============================================================
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { createClient } from 'npm:@supabase/supabase-js@2';
+import { buildCorsHeaders, corsResponse } from '../_shared/cors.ts';
+import {
+  type BatchOverlaySnapshot,
+  CLIENT_SAFE_COLLECTION_SELECT,
+  CLIENT_SAFE_PHOTO_SELECT,
+  CLIENT_SAFE_PROPERTY_SELECT,
+  mintShareToken,
+  projectClientSafeProperty,
+  sha256Hex,
+} from '../_shared/batch-publishing.ts';
+
+interface AdminAuthResult {
+  ok: boolean;
+  status: number;
+  error?: string;
+  userId?: string | null;
+}
+
+function jsonResp(data: unknown, status: number, origin: string | null) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      ...buildCorsHeaders(origin),
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store',
+    },
+  });
+}
+
+async function verifyAdminOrService(
+  req: Request,
+  adminClient: ReturnType<typeof createClient>,
+  supabaseUrl: string,
+  serviceKey: string,
+): Promise<AdminAuthResult> {
+  const bearer = req.headers.get('authorization') || '';
+  const match = bearer.match(/^Bearer\s+(.+)$/i);
+  if (!match) return { ok: false, status: 401, error: 'admin_auth_required' };
+
+  const token = match[1].trim();
+  if (!token) return { ok: false, status: 401, error: 'admin_auth_required' };
+
+  if (serviceKey && token === serviceKey) {
+    return { ok: true, status: 200, userId: null };
+  }
+
+  const { data: authData, error: authErr } = await adminClient.auth.getUser(token);
+  if (!authErr && authData?.user) {
+    const { data: adminRole, error: roleErr } = await adminClient
+      .from('admin_roles')
+      .select('user_id')
+      .eq('user_id', authData.user.id)
+      .maybeSingle();
+
+    if (roleErr) return { ok: false, status: 500, error: 'admin_check_failed' };
+    if (!adminRole) return { ok: false, status: 403, error: 'admin_required' };
+    return { ok: true, status: 200, userId: authData.user.id };
+  }
+
+  if (token.startsWith('eyJ')) {
+    try {
+      const checkRes = await fetch(`${supabaseUrl}/auth/v1/admin/users?page=1&per_page=1`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: serviceKey,
+        },
+      });
+      await checkRes.body?.cancel();
+      if (checkRes.ok) {
+        return { ok: true, status: 200, userId: null };
+      }
+    } catch {
+      // Fall through to 401
+    }
+  }
+
+  return { ok: false, status: 401, error: 'admin_auth_required' };
+}
+
+async function loadBatchOverlayMap(
+  adminClient: ReturnType<typeof createClient>,
+  shareId: string,
+): Promise<Map<string, BatchOverlaySnapshot>> {
+  const map = new Map<string, BatchOverlaySnapshot>();
+  try {
+    const { data: batchRow } = await adminClient
+      .from('publishing_batches')
+      .select('id')
+      .eq('share_id', shareId)
+      .order('completed_at', { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!batchRow?.id) return map;
+
+    const { data: snapRows } = await adminClient
+      .from('publishing_batch_properties')
+      .select('property_id, published_rent, monthly_rent, published_description')
+      .eq('batch_id', batchRow.id)
+      .eq('published_status', 'published')
+      .not('property_id', 'is', null);
+
+    if (Array.isArray(snapRows)) {
+      for (const row of snapRows) {
+        if (row?.property_id) {
+          map.set(String(row.property_id), row as BatchOverlaySnapshot);
+        }
+      }
+    }
+  } catch {
+    // Non-fatal: canonical row values serve as fallback if batch overlay unavailable
+  }
+  return map;
+}
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  const origin = req.headers.get('origin');
+  if (req.method === 'OPTIONS') {
+    return corsResponse(origin);
+  }
+  if (req.method !== 'POST') {
+    return jsonResp({ error: 'method_not_allowed' }, 405, origin);
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY');
 
     if (!supabaseUrl || !serviceRoleKey) {
-      return new Response(
-        JSON.stringify({ error: "Missing environment variables" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResp({ error: 'Missing environment variables' }, 500, origin);
     }
 
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
-    const body = await req.json();
-    const action = body.action;
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
 
-    if (action === "resolve") {
-      const token = body.token;
+    let body: Record<string, unknown> = {};
+    try {
+      body = await req.json();
+    } catch {
+      return jsonResp({ error: 'invalid_json' }, 400, origin);
+    }
+    const action = typeof body.action === 'string' ? body.action.trim() : '';
+
+    if (action === 'resolve') {
+      const token = typeof body.token === 'string' ? body.token.trim() : '';
       if (!token) {
-        return new Response(
-          JSON.stringify({ error: "Missing token" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonResp({ error: 'Missing token' }, 400, origin);
       }
 
-      // Compute sha256 hash of token
-      const encoder = new TextEncoder();
-      const data = encoder.encode(token);
-      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const tokenHash = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+      const tokenHash = await sha256Hex(token);
 
-      // Find share
       const { data: shareData, error: shareError } = await supabase
-        .from("property_shares")
-        .select("id, expires_at")
-        .eq("token_hash", tokenHash)
-        .is("revoked_at", null)
-        .single();
+        .from('property_shares')
+        .select('id, expires_at, revoked_at, view_count')
+        .eq('token_hash', tokenHash)
+        .is('revoked_at', null)
+        .maybeSingle();
 
       if (shareError || !shareData) {
-        return new Response(
-          JSON.stringify({ error: "share_not_found" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonResp({ error: 'share_not_found' }, 404, origin);
       }
 
-      // Check expiry
       if (new Date(shareData.expires_at) < new Date()) {
-        return new Response(
-          JSON.stringify({ error: "share_expired" }),
-          { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonResp({ error: 'share_expired', expires_at: shareData.expires_at }, 410, origin);
       }
 
-      // Get property IDs
+      if (body.track_view !== false) {
+        supabase
+          .from('property_shares')
+          .update({
+            view_count: Number(shareData.view_count || 0) + 1,
+            last_viewed_at: new Date().toISOString(),
+          })
+          .eq('id', shareData.id)
+          .then(() => {})
+          .catch(() => {});
+      }
+
       const { data: linkData, error: linkError } = await supabase
-        .from("property_share_properties")
-        .select("property_id")
-        .eq("share_id", shareData.id);
+        .from('property_share_properties')
+        .select('property_id')
+        .eq('share_id', shareData.id);
 
       if (linkError || !linkData || linkData.length === 0) {
-        return new Response(
-          JSON.stringify({ properties: [] }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonResp({ properties: [] }, 200, origin);
       }
 
-      const propertyIds = linkData.map(l => l.property_id);
+      const propertyIds = Array.from(new Set(linkData.map((l) => String(l.property_id)).filter(Boolean)));
+      const overlayMap = await loadBatchOverlayMap(supabase, shareData.id);
 
-      // Fetch properties with landlord profile
-      const { data: properties, error: propError } = await supabase
-        .from("properties")
-        .select("*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified)")
-        .in("id", propertyIds);
+      const [{ data: properties, error: propError }, { data: photos }] = await Promise.all([
+        supabase
+          .from('properties')
+          .select(CLIENT_SAFE_PROPERTY_SELECT)
+          .in('id', propertyIds)
+          .in('status', ['active', 'private_placement']),
+        supabase
+          .from('property_photos')
+          .select(CLIENT_SAFE_PHOTO_SELECT)
+          .in('property_id', propertyIds)
+          .order('display_order', { ascending: true }),
+      ]);
 
       if (propError) {
-        return new Response(
-          JSON.stringify({ error: propError.message }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonResp({ error: propError.message }, 500, origin);
       }
-
-      // Fetch photos for these properties
-      const { data: photos, error: photoError } = await supabase
-        .from("property_photos")
-        .select("id, property_id, url, file_id, display_order, is_hero, caption, room_label, media_type, source_url")
-        .in("property_id", propertyIds)
-        .order("display_order", { ascending: true });
 
       const photoMap: Record<string, Array<Record<string, unknown>>> = {};
-      if (photos) {
-        photos.forEach(ph => {
-          photoMap[ph.property_id] = photoMap[ph.property_id] || [];
-          photoMap[ph.property_id].push(ph);
-        });
+      if (Array.isArray(photos)) {
+        for (const ph of photos) {
+          const pid = String(ph.property_id || '');
+          if (!pid) continue;
+          if (!photoMap[pid]) photoMap[pid] = [];
+          photoMap[pid].push(ph as Record<string, unknown>);
+        }
       }
 
-      const enriched = (properties || []).map(prop => ({
-        ...prop,
-        property_photos: photoMap[prop.id] || []
-      }));
+      const enriched = (properties || []).map((prop) => {
+        const rec = prop as Record<string, unknown>;
+        const pid = String(rec.id);
+        return projectClientSafeProperty(rec, overlayMap.get(pid) || null, photoMap[pid] || []);
+      });
 
-      return new Response(
-        JSON.stringify({ properties: enriched }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResp({ properties: enriched }, 200, origin);
     }
 
-    if (action === "resolve_property" || action === "resolve_single") {
+    if (action === 'resolve_property' || action === 'resolve_single') {
       const propertyId = body.property_id || body.id;
       if (!propertyId) {
-        return new Response(
-          JSON.stringify({ error: "Missing property_id" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonResp({ error: 'Missing property_id' }, 400, origin);
       }
 
       const cleanPropId = String(propertyId).toLowerCase().trim();
 
-      // Fetch property if status is active or private_placement (unlisted direct access)
       const { data: property, error: propError } = await supabase
-        .from("properties")
-        .select("*, landlords(id, user_id, business_name, contact_name, avatar_url, tagline, verified)")
-        .eq("id", cleanPropId)
-        .in("status", ["active", "private_placement"])
+        .from('properties')
+        .select(CLIENT_SAFE_PROPERTY_SELECT)
+        .eq('id', cleanPropId)
+        .in('status', ['active', 'private_placement'])
         .maybeSingle();
 
       if (propError || !property) {
-        return new Response(
-          JSON.stringify({ error: "property_not_found" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonResp({ error: 'property_not_found' }, 404, origin);
       }
 
-      // Fetch photos for this property
       const { data: photos } = await supabase
-        .from("property_photos")
-        .select("id, property_id, url, file_id, display_order, is_hero, caption, room_label, media_type, source_url")
-        .eq("property_id", property.id)
-        .order("display_order", { ascending: true });
+        .from('property_photos')
+        .select(CLIENT_SAFE_PHOTO_SELECT)
+        .eq('property_id', property.id)
+        .order('display_order', { ascending: true });
 
-      property.property_photos = photos || [];
-
-      // If a share token was provided, optionally fetch other properties from that share
+      let overlayMap = new Map<string, BatchOverlaySnapshot>();
       let collection: Array<Record<string, unknown>> = [];
-      if (body.token) {
-        try {
-          const encoder = new TextEncoder();
-          const data = encoder.encode(body.token);
-          const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-          const tokenHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
 
+      const rawToken = typeof body.token === 'string' ? body.token.trim() : '';
+      if (rawToken) {
+        try {
+          const tokenHash = await sha256Hex(rawToken);
           const { data: shareData } = await supabase
-            .from("property_shares")
-            .select("id, expires_at")
-            .eq("token_hash", tokenHash)
-            .is("revoked_at", null)
-            .gt("expires_at", new Date().toISOString())
+            .from('property_shares')
+            .select('id, expires_at')
+            .eq('token_hash', tokenHash)
+            .is('revoked_at', null)
+            .gt('expires_at', new Date().toISOString())
             .maybeSingle();
 
           if (shareData) {
+            overlayMap = await loadBatchOverlayMap(supabase, shareData.id);
             const { data: linkData } = await supabase
-              .from("property_share_properties")
-              .select("property_id")
-              .eq("share_id", shareData.id);
+              .from('property_share_properties')
+              .select('property_id')
+              .eq('share_id', shareData.id);
 
             if (linkData && linkData.length > 0) {
-              const otherIds = linkData.map(l => l.property_id).filter(id => id !== property.id);
+              const otherIds = Array.from(
+                new Set(linkData.map((l) => String(l.property_id)).filter((id) => id && id !== property.id)),
+              );
               if (otherIds.length > 0) {
-                const { data: otherProps } = await supabase
-                  .from("properties")
-                  .select("id, title, address, city, state, zip, monthly_rent, bedrooms, bathrooms, square_footage, property_type, status")
-                  .in("id", otherIds);
-
-                const { data: otherPhotos } = await supabase
-                  .from("property_photos")
-                  .select("id, property_id, url, file_id, display_order, is_hero, caption, room_label, media_type, source_url")
-                  .in("property_id", otherIds)
-                  .order("display_order", { ascending: true });
+                const [{ data: otherProps }, { data: otherPhotos }] = await Promise.all([
+                  supabase
+                    .from('properties')
+                    .select(CLIENT_SAFE_COLLECTION_SELECT)
+                    .in('id', otherIds)
+                    .in('status', ['active', 'private_placement']),
+                  supabase
+                    .from('property_photos')
+                    .select(CLIENT_SAFE_PHOTO_SELECT)
+                    .in('property_id', otherIds)
+                    .order('display_order', { ascending: true }),
+                ]);
 
                 const otherPhotoMap: Record<string, Array<Record<string, unknown>>> = {};
-                if (otherPhotos) {
-                  otherPhotos.forEach(ph => {
-                    otherPhotoMap[ph.property_id] = otherPhotoMap[ph.property_id] || [];
-                    otherPhotoMap[ph.property_id].push(ph);
-                  });
+                if (Array.isArray(otherPhotos)) {
+                  for (const ph of otherPhotos) {
+                    const pid = String(ph.property_id || '');
+                    if (!pid) continue;
+                    if (!otherPhotoMap[pid]) otherPhotoMap[pid] = [];
+                    otherPhotoMap[pid].push(ph as Record<string, unknown>);
+                  }
                 }
-                collection = (otherProps || []).map(p => ({
-                  ...p,
-                  property_photos: otherPhotoMap[p.id] || []
-                }));
+
+                collection = (otherProps || []).map((p) => {
+                  const rec = p as Record<string, unknown>;
+                  const pid = String(rec.id);
+                  return projectClientSafeProperty(rec, overlayMap.get(pid) || null, otherPhotoMap[pid] || []);
+                });
               }
             }
           }
-        } catch (_) {}
+        } catch {
+          // Non-fatal
+        }
       }
 
-      return new Response(
-        JSON.stringify({ property, collection }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      const safeProperty = projectClientSafeProperty(
+        property as Record<string, unknown>,
+        overlayMap.get(String(property.id)) || null,
+        photos || [],
       );
+
+      return jsonResp({ property: safeProperty, collection }, 200, origin);
     }
 
-    if (action === "create") {
-      const bearer = req.headers.get("authorization") || "";
-      const tokenMatch = bearer.match(/^Bearer\s+(.+)$/i);
-      if (!tokenMatch) {
-        return new Response(
-          JSON.stringify({ error: "admin_auth_required" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const { data: authData, error: authError } = await supabase.auth.getUser(tokenMatch[1]);
-      if (authError || !authData.user) {
-        return new Response(
-          JSON.stringify({ error: "admin_auth_required" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const { data: adminRole, error: adminError } = await supabase
-        .from("admin_roles")
-        .select("user_id")
-        .eq("user_id", authData.user.id)
-        .maybeSingle();
-      if (adminError) {
-        return new Response(
-          JSON.stringify({ error: "admin_check_failed" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (!adminRole) {
-        return new Response(
-          JSON.stringify({ error: "admin_required" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+    if (action === 'create') {
+      const auth = await verifyAdminOrService(req, supabase, supabaseUrl, serviceRoleKey);
+      if (!auth.ok) {
+        return jsonResp({ error: auth.error }, auth.status, origin);
       }
 
       const propertyIds = body.property_ids;
       if (!Array.isArray(propertyIds) || propertyIds.length === 0) {
-        return new Response(
-          JSON.stringify({ error: "Missing property_ids" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return jsonResp({ error: 'Missing property_ids' }, 400, origin);
       }
 
-      // Generate random token
-      const randomBytes = crypto.getRandomValues(new Uint8Array(32));
-      const rawToken = btoa(String.fromCharCode(...randomBytes))
-        .replace(/\+/g, "-")
-        .replace(/\//g, "_")
-        .replace(/=+$/, "");
+      const cleanIds = Array.from(new Set(propertyIds.map((p) => String(p).trim()).filter(Boolean)));
+      if (cleanIds.length === 0) {
+        return jsonResp({ error: 'Missing property_ids' }, 400, origin);
+      }
 
-      const encoder = new TextEncoder();
-      const hashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(rawToken));
-      const tokenHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
-
+      const ttlDays = Math.min(Math.max(Math.round(Number(body.ttl_days) || 90), 1), 365);
+      const { rawToken, tokenHash } = await mintShareToken();
       const shareId = crypto.randomUUID();
-      const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+      const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000).toISOString();
+      const shareAlias = typeof body.share_alias === 'string' && body.share_alias.trim()
+        ? body.share_alias.trim().slice(0, 80)
+        : null;
 
-      await supabase.from("property_shares").insert({
+      const { error: shareInsertErr } = await supabase.from('property_shares').insert({
         id: shareId,
         token_hash: tokenHash,
-        expires_at: expiresAt
+        created_by: auth.userId || null,
+        expires_at: expiresAt,
+        ...(shareAlias ? { share_alias: shareAlias } : {}),
       });
-
-      const shareLinks = propertyIds.map(pId => ({
-        share_id: shareId,
-        property_id: pId
-      }));
-
-      await supabase.from("property_share_properties").insert(shareLinks);
-
-      return new Response(
-        JSON.stringify({ token: rawToken }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (action === "revoke") {
-      const token = body.token;
-      if (!token) {
-        return new Response(
-          JSON.stringify({ error: "Missing token" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (shareInsertErr) {
+        return jsonResp({ error: shareInsertErr.message }, 500, origin);
       }
 
-      const encoder = new TextEncoder();
-      const hashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(token));
-      const tokenHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+      const shareLinks = cleanIds.map((pId) => ({
+        share_id: shareId,
+        property_id: pId,
+      }));
+      const { error: linksErr } = await supabase.from('property_share_properties').insert(shareLinks);
+      if (linksErr) {
+        await supabase.from('property_shares').delete().eq('id', shareId);
+        return jsonResp({ error: linksErr.message }, 500, origin);
+      }
 
+      return jsonResp({ token: rawToken, share_id: shareId, expires_at: expiresAt }, 200, origin);
+    }
+
+    if (action === 'revoke') {
+      const auth = await verifyAdminOrService(req, supabase, supabaseUrl, serviceRoleKey);
+      if (!auth.ok) {
+        return jsonResp({ error: auth.error }, auth.status, origin);
+      }
+
+      const token = typeof body.token === 'string' ? body.token.trim() : '';
+      if (!token) {
+        return jsonResp({ error: 'Missing token' }, 400, origin);
+      }
+
+      const tokenHash = await sha256Hex(token);
       const { data: shareData } = await supabase
-        .from("property_shares")
-        .select("id")
-        .eq("token_hash", tokenHash)
-        .single();
+        .from('property_shares')
+        .select('id')
+        .eq('token_hash', tokenHash)
+        .maybeSingle();
 
       if (shareData) {
-        await supabase.from("property_share_properties").delete().eq("share_id", shareData.id);
-        await supabase.from("property_shares").delete().eq("id", shareData.id);
+        await supabase.from('property_share_properties').delete().eq('share_id', shareData.id);
+        await supabase.from('property_shares').delete().eq('id', shareData.id);
       }
 
-      return new Response(
-        JSON.stringify({ revoked: true }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResp({ revoked: true }, 200, origin);
     }
 
-    return new Response(
-      JSON.stringify({ error: "Invalid action" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResp({ error: 'Invalid action' }, 400, origin);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return new Response(
-      JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResp({ error: message }, 500, origin);
   }
 });

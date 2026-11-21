@@ -2470,10 +2470,209 @@ function wirePanelPhotoActions(){
     }
   }
 
+  async function _parseEdgeError(error){
+    if(!error) return 'Unknown error';
+    try {
+      if(error.context && typeof error.context.json === 'function'){
+        const body = await error.context.json();
+        return body?.error || body?.message || error.message || 'Edge Function error';
+      }
+    } catch(_){}
+    return error.message || 'Edge Function error';
+  }
+
+  function openBatchPublishResultModal(folder, res){
+    const existing = document.getElementById('pl-batch-publish-modal');
+    if(existing) existing.remove();
+
+    const batchId = res?.batch_id || folder?.batch_id || folder?.name || '';
+    const vReport = res?.verification || {};
+    const results = Array.isArray(res?.results) ? res.results : [];
+    const magicLink = res?.magic_link_url || vReport?.magic_link_url || '';
+
+    function renderBody(currentRes, currentVer){
+      const overallStatus = String(currentRes?.status || 'published');
+      const statusPillCls = overallStatus === 'published'
+        ? 'pl-gov-pill-ok'
+        : overallStatus === 'partial'
+          ? 'pl-gov-pill-warn'
+          : 'pl-gov-pill-bad';
+      const verPass = currentVer?.verified === true;
+      const verPillCls = verPass ? 'pl-gov-pill-ok' : 'pl-gov-pill-bad';
+      const checks = currentVer?.checks && typeof currentVer.checks === 'object' ? Object.entries(currentVer.checks) : [];
+      const linkUrl = currentRes?.magic_link_url || currentVer?.magic_link_url || '';
+
+      return `
+        <div class="pl-gov-card">
+          <div class="pl-gov-row">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <strong style="font-size:.92rem">Batch #${S.esc(batchId)}</strong>
+              <span class="pl-gov-pill ${statusPillCls}">${S.esc(overallStatus)}</span>
+              <span class="pl-gov-pill ${verPillCls}">${verPass ? '✓ Link Verified' : '✕ Verification Issue'}</span>
+            </div>
+            <div style="font-size:.76rem;color:var(--muted-2)">
+              Published: <strong>${currentRes?.published_count ?? 0}</strong> ·
+              Failed: <strong>${currentRes?.failed_count ?? 0}</strong> ·
+              Skipped: <strong>${currentRes?.skipped_count ?? 0}</strong>
+            </div>
+          </div>
+          ${linkUrl ? `
+            <div style="display:flex;gap:8px;align-items:center;margin-top:4px;flex-wrap:wrap">
+              <input id="pl-bp-res-link" type="text" readonly value="${S.esc(linkUrl)}"
+                style="flex:1;min-width:240px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:.78rem;color:var(--text);font-family:monospace">
+              <button type="button" class="btn btn-sm btn-primary" id="pl-bp-res-copy">Copy Link</button>
+              <a href="${S.esc(linkUrl)}" target="_blank" rel="noopener" class="btn btn-sm btn-outline">Preview ↗</a>
+            </div>
+          ` : '<div style="font-size:.78rem;color:#ef4444;margin-top:4px">No active magic link was minted because zero eligible properties succeeded.</div>'}
+          ${checks.length ? `
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+              ${checks.map(([k, chk]) => {
+                const ok = typeof chk === 'boolean' ? chk : Boolean(chk && chk.ok === true);
+                const tip = (chk && typeof chk === 'object' && chk.detail) ? chk.detail : (ok ? 'Passed' : 'Failed');
+                return `<span class="pl-gov-pill ${ok ? 'pl-gov-pill-ok' : 'pl-gov-pill-bad'}" title="${S.esc(tip)}">${ok ? '✓' : '✕'} ${S.esc(k.replace(/_/g, ' '))}</span>`;
+              }).join('')}
+            </div>
+          ` : ''}
+        </div>
+        <div class="pl-gov-card">
+          <div class="pl-gov-row">
+            <strong style="font-size:.82rem">Per-Listing Results (${results.length})</strong>
+          </div>
+          <div class="pl-gov-props" style="margin-top:2px">
+            ${results.length ? results.map(item => {
+              const ok = item.ok === true || item.status === 'published';
+              const statusLabel = item.status || (ok ? 'published' : 'failed');
+              const labelTitle = item.title || item.address || item.pipeline_id;
+              return `<div class="pl-gov-prop-item" style="align-items:flex-start;flex-direction:column;gap:4px">
+                <div style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+                  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                    <span class="pl-gov-pill ${ok ? 'pl-gov-pill-ok' : 'pl-gov-pill-bad'}">${S.esc(statusLabel)}</span>
+                    <strong>${S.esc(labelTitle)}</strong>
+                    ${item.reused_canonical ? '<span class="pl-gov-pill pl-gov-pill-info">Canonical Reused</span>' : ''}
+                  </div>
+                  <div style="font-size:.75rem;color:var(--muted-2)">
+                    ${item.published_rent != null ? `$${Number(item.published_rent).toLocaleString()}/mo` : ''}
+                    ${item.pricing_method ? ` · ${S.esc(item.pricing_method)}` : ''}
+                  </div>
+                </div>
+                ${item.error ? `<div style="font-size:.74rem;color:#ef4444">${S.esc(item.error)}</div>` : ''}
+              </div>`;
+            }).join('') : '<div style="font-size:.78rem;color:var(--muted-2)">No eligible listings were found in this batch.</div>'}
+          </div>
+        </div>
+      `;
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'pl-batch-publish-modal';
+    modal.className = 'pl-gov-modal';
+    modal.innerHTML = `
+      <div class="pl-import-backdrop"></div>
+      <div class="pl-gov-dialog" role="dialog" aria-modal="true" aria-label="Batch Publish &amp; Verification">
+        <div class="pl-import-hd">
+          <div>
+            <div style="font-size:1rem;font-weight:800">📦 Batch #${S.esc(batchId)} Publish &amp; Verification</div>
+            <div style="font-size:.74rem;color:var(--muted-2)">Batch-scoped canonical private placement, single #share= link &amp; live privacy verification.</div>
+          </div>
+          <button class="pl-import-close" aria-label="Close">✕</button>
+        </div>
+        <div class="pl-gov-body" id="pl-bp-res-body">${renderBody(res, vReport)}</div>
+        <div class="pl-import-ft">
+          <button type="button" class="btn btn-sm btn-outline" id="pl-bp-reverify-btn">↻ Re-verify Live Link</button>
+          <div style="flex:1"></div>
+          <button type="button" class="btn btn-ghost" id="pl-bp-res-done">Close</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    const close = () => modal.remove();
+    modal.querySelector('.pl-import-backdrop').addEventListener('click', close);
+    modal.querySelector('.pl-import-close').addEventListener('click', close);
+    modal.querySelector('#pl-bp-res-done').addEventListener('click', close);
+
+    function wireDynamicButtons(){
+      const copyBtn = modal.querySelector('#pl-bp-res-copy');
+      const linkInput = modal.querySelector('#pl-bp-res-link');
+      if(copyBtn && linkInput){
+        copyBtn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(linkInput.value);
+            copyBtn.textContent = '✓ Copied';
+            setTimeout(() => { copyBtn.textContent = 'Copy Link'; }, 1800);
+          } catch(_){
+            linkInput.select();
+            document.execCommand('copy');
+          }
+        });
+      }
+    }
+    wireDynamicButtons();
+
+    const reverifyBtn = modal.querySelector('#pl-bp-reverify-btn');
+    reverifyBtn.addEventListener('click', async () => {
+      reverifyBtn.disabled = true;
+      reverifyBtn.textContent = 'Verifying…';
+      try {
+        const { data, error } = await CP.sb().functions.invoke('verify-batch-publication', {
+          body: { batch_id: String(batchId) },
+        });
+        let parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        if(error && !parsed){
+          try {
+            if(error.context && typeof error.context.json === 'function'){
+              parsed = await error.context.json();
+            }
+          } catch(_){}
+        }
+        if(!parsed) throw new Error(await _parseEdgeError(error));
+        modal.querySelector('#pl-bp-res-body').innerHTML = renderBody(res, parsed);
+        wireDynamicButtons();
+        S.toast(parsed.verified ? 'Batch link & privacy shield verified ✓' : 'Verification detected an issue', parsed.verified ? 'success' : 'error');
+      } catch(err){
+        S.toast('Verification error: ' + (err?.message || 'Unknown error'), 'error');
+      } finally {
+        reverifyBtn.disabled = false;
+        reverifyBtn.textContent = '↻ Re-verify Live Link';
+      }
+    });
+  }
+
   async function publishActiveFolder(){
     if(!_activeFolder) return;
     const folder = _folders.find(f => f.id === _activeFolder);
     if(!folder) return;
+    const isBatch = Boolean(folder.is_disposable_batch || folder.batch_id);
+    if(isBatch){
+      const batchId = String(folder.batch_id || folder.name);
+      const ok = await S.confirm(
+        `Publish Batch #${batchId}?`,
+        `This validates ${folder.property_count || 0} listing(s), applies batch pricing/descriptions, publishes canonical private placements, mints one #share= magic link, and verifies live privacy shielding.`
+      );
+      if(!ok) return;
+      const pubBtn = document.getElementById('pl-banner-publish-folder-btn');
+      if(pubBtn){ pubBtn.disabled = true; pubBtn.textContent = 'Publishing & Verifying…'; }
+      try {
+        const { data, error } = await CP.sb().functions.invoke('publish-batch', {
+          body: { batch_id: batchId, verify: true },
+        });
+        if(error) throw new Error(await _parseEdgeError(error));
+        const res = typeof data === 'string' ? JSON.parse(data) : data;
+        if(!res) throw new Error('Empty response from publish-batch');
+        S.toast(
+          `Batch #${batchId}: ${res.published_count ?? 0} published, ${res.failed_count ?? 0} failed`,
+          (res.failed_count > 0 || res.ok === false) ? 'info' : 'success'
+        );
+        openBatchPublishResultModal(folder, res);
+        await loadFolders();
+        selectFolder(_activeFolder);
+      } catch(e){
+        S.toast('Batch publish failed: ' + (e?.message || 'Unknown error'), 'error');
+      } finally {
+        if(pubBtn){ pubBtn.disabled = false; pubBtn.textContent = 'Publish batch'; }
+      }
+      return;
+    }
+
     const ok = await S.confirm(
       `Publish all in "${folder.name}"?`,
       `This will publish all ${folder.property_count || 0} properties in this folder as drafts.`
@@ -3332,6 +3531,8 @@ function wirePanelPhotoActions(){
           if (recModal) recModal.remove();
           const batchModal = document.getElementById('pl-batch-modal');
           if (batchModal) batchModal.remove();
+          const bpPubModal = document.getElementById('pl-batch-publish-modal');
+          if (bpPubModal) bpPubModal.remove();
           const bpModal = document.getElementById('pl-blocked-profiles-modal');
           if (bpModal) bpModal.remove();
           return;
@@ -3374,7 +3575,7 @@ function wirePanelPhotoActions(){
       let _lastFocusRefresh = Date.now();
       const refreshOnFocus = () => {
         if (document.hidden || _loading || _current) return;
-        const hasOpenModal = document.querySelector('#pl-import-modal, #pl-folder-modal, #pl-batch-modal, #pl-photo-editor-modal, #pl-history-modal, #pl-recovery-modal, #pl-desc-compare-modal, #pl-blocked-profiles-modal');
+        const hasOpenModal = document.querySelector('#pl-import-modal, #pl-folder-modal, #pl-batch-modal, #pl-batch-publish-modal, #pl-photo-editor-modal, #pl-history-modal, #pl-recovery-modal, #pl-desc-compare-modal, #pl-blocked-profiles-modal');
         if (hasOpenModal) return;
         const now = Date.now();
         if (now - _lastFocusRefresh < 2500) return;

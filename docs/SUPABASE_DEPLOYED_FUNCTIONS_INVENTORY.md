@@ -1,21 +1,21 @@
 # Choice Properties — Supabase Deployed Edge Functions Inventory
 
 > **Supabase Project:** `tlfmwetmhthpyrytrcfo` (`us-east-1`)  
-> **Total Deployed Edge Functions:** `65` (`32` git-tracked in `supabase/functions/` + `33` live-deployed via CLI/Studio)  
-> **Updated:** `2026-11-21` (Phase 7 Centralized Description Enrichment & Task-Specific Pricing Engines)
+> **Total Deployed Edge Functions:** `67` (`34` git-tracked in `supabase/functions/` + `33` live-deployed via CLI/Studio)  
+> **Updated:** `2026-11-21` (Phase 8 Batch-Scoped Private-Placement Publishing, Visibility Shielding & Verification)
 
 ---
 
 ## 1. Deployment & `verify_jwt` Policy
 
 1. `.github/workflows/supabase-deploy.yml` parses (`deno cache --no-check`) and deploys every directory inside `supabase/functions/*/` individually whenever changes touch `supabase/functions/**`, `supabase/migrations/**`, `supabase/config.toml`, or the workflow itself.
-2. Because `.github/workflows/supabase-deploy.yml` deploys individually, **`supabase/config.toml` explicitly specifies `verify_jwt = true | false` for all 32 git-tracked Edge Functions**, preventing any unlisted function from defaulting unexpectedly to `verify_jwt = true`.
+2. Because `.github/workflows/supabase-deploy.yml` deploys individually, **`supabase/config.toml` explicitly specifies `verify_jwt = true | false` for all 34 git-tracked Edge Functions**, preventing any unlisted function from defaulting unexpectedly to `verify_jwt = true`.
 3. Live-only functions not stored inside `supabase/functions/` remain undisturbed and active in Supabase during git-triggered CI deployments.
 4. `confirm-card-payment` remains intentionally omitted from `supabase/functions/` (verified by `scripts/test-manual-payment-workflow.mjs`).
 
 ---
 
-## 2. Git-Tracked Edge Functions (`32` — Declared in `supabase/config.toml`)
+## 2. Git-Tracked Edge Functions (`34` — Declared in `supabase/config.toml`)
 
 | Function Slug | Live Version | `verify_jwt` (`config.toml` & Live) | Primary Role |
 |---|---:|:---:|---|
@@ -36,8 +36,9 @@
 | `pipeline-recovery` | v9 | `false` | Stage 1/2 24h recovery archive listing & restore (`admin/pipeline.html`) |
 | `private-placement-registry` | v4 | `false` | Permanent Private-Placement Registry batch lookup & audited expired-link replacement |
 | `property-location` | v27 | `false` | Cached Geoapify nearby places & neighborhood lookup (`js/property.js`) |
-| `property-share` | v48 | `false` | Private-placement share link creation, token resolution & list |
+| `property-share` | v49 | `false` | Hardened client-safe private-placement share resolution (with batch snapshot overlay), admin/service link minting & revocation |
 | `property-validator` | v1 | `false` | Phase 6 eligibility, prohibited profile, owner proof, apartment & >=4 photo validator |
+| `publish-batch` | v1 | `false` | Phase 8 batch-scoped atomic per-property publishing, canonical reuse, `#share=` link minting & verification |
 | `purge-expired-pipeline-recovery` | v8 | `false` | Stage 2 permanent deletion of >24h recovery rows + raw storage blobs (hourly GitHub Actions cron) |
 | `receive-application` | v158 | `false` | Tenant rental application intake (`apply/`) |
 | `receive-pipeline-import` | v120 | `false` | Manual Chrome/Orion extension intake (`save`, `list_folders`, `create_folder`, `check_listing`) |
@@ -51,6 +52,7 @@
 | `send-message` | v96 | `false` | Admin/tenant/landlord messaging endpoint |
 | `sign-lease` | v141 | `false` | Primary tenant lease e-signature |
 | `sign-lease-co-applicant` | v118 | `false` | Co-applicant lease e-signature |
+| `verify-batch-publication` | v1 | `false` | Phase 8 post-publish batch share integrity, public/sitemap exclusion & internal-leak verifier |
 
 ---
 

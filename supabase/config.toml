@@ -60,6 +60,9 @@ verify_jwt = false
 [functions.property-validator]
 verify_jwt = false
 
+[functions.publish-batch]
+verify_jwt = false
+
 [functions.purge-expired-pipeline-recovery]
 verify_jwt = false
 
@@ -97,4 +100,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.sign-lease-co-applicant]
+verify_jwt = false
+
+[functions.verify-batch-publication]
 verify_jwt = false

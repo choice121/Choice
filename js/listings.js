@@ -108,6 +108,24 @@ function readURL() {
     const urlStatus = p.get('status');
     adminStatusFilter = urlStatus || (adminLandlordId ? 'all' : 'active');
   }
+  syncShareRobotsMeta();
+}
+
+function syncShareRobotsMeta() {
+  let meta = document.querySelector('meta[name="robots"]');
+  if (activeShareToken) {
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'robots';
+      meta.dataset.cpShareShield = '1';
+      document.head.appendChild(meta);
+    }
+    meta.content = 'noindex, nofollow';
+    const canon = document.querySelector('link[rel="canonical"]');
+    if (canon) canon.remove();
+  } else if (meta && meta.dataset.cpShareShield === '1') {
+    meta.remove();
+  }
 }
 
 // ── Write state → URL ─────────────────────────────────────────────────────

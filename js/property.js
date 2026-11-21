@@ -515,109 +515,125 @@ function renderProperty(p) {
   ['ogImage','twImage'].forEach(id => setMeta(id, ogImg));
   document.querySelector('meta[name="description"]')?.setAttribute('content', ogDesc);
 
-  // Phase C: canonical URL — always points to the keyword-rich slug URL.
-  // The slug-router edge function (functions/rent/[state]/[city]/[slug].js)
-  // injects this into the initial HTML for crawlers, but for legacy
-  // /property.html?id=… requests that bypass the redirector (e.g. backend
-  // unavailable), this client-side fallback makes sure search engines and
-  // social cards still see the canonical URL.
-  const canonicalUrl = (window.CP?.UI?.propertyUrl)
-    ? new URL(window.CP.UI.propertyUrl(p), window.location.origin).href
-    : window.location.href;
-  let canonLink = document.querySelector('link[rel="canonical"]');
-  if (!canonLink) {
-    canonLink = document.createElement('link');
-    canonLink.rel = 'canonical';
-    document.head.appendChild(canonLink);
-  }
-  canonLink.href = canonicalUrl;
-  setMeta('ogUrl', canonicalUrl);
+  const isPrivateView = p.status === 'private_placement' || Boolean(shareToken);
 
-  // ── I-059: Structured data — RealEstateListing schema for Google Rich Results ──
-  // Added: potentialAction (RentalAction), numberOfRooms, floorSize, leaseLength,
-  // amenityFeature, and BreadcrumbList. These fields are required or strongly
-  // recommended for Google's RentalListing rich result eligibility.
-  const sd = document.createElement('script');
-  sd.type = 'application/ld+json';
-  const amenities = [];
-  if (p.parking)      amenities.push({ "@type": "LocationFeatureSpecification", "name": "Parking",        "value": p.parking });
-  if (p.laundry_type) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Laundry",        "value": p.laundry_type });
-  if (p.heating_type) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Heating",        "value": p.heating_type });
-  if (p.cooling_type && p.cooling_type !== 'None' && p.cooling_type !== '')
-                      amenities.push({ "@type": "LocationFeatureSpecification", "name": "Air Conditioning","value": p.cooling_type });
-  if (p.ev_charging && p.ev_charging !== 'none')
-                      amenities.push({ "@type": "LocationFeatureSpecification", "name": "EV Charging",     "value": p.ev_charging });
-  sd.textContent = JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "RealEstateListing",
-    "name": p.title,
-    "description": p.description || undefined,
-    "url": canonicalUrl,
-    "image": p.photo_urls?.[0] ? CONFIG.img(p.photo_urls[0], 'og') : undefined,
-    "datePosted": p.created_at ? p.created_at.split('T')[0] : undefined,
-    "address": {
-      "@type": "PostalAddress",
-      "streetAddress": p.address,
-      "addressLocality": p.city,
-      "addressRegion": p.state,
-      "postalCode": p.zip || undefined,
-      "addressCountry": "US"
-    },
-    "geo": (p.lat && p.lng) ? {
-      "@type": "GeoCoordinates",
-      "latitude": p.lat,
-      "longitude": p.lng
-    } : undefined,
-    "offers": {
-      "@type": "Offer",
-      "price": p.monthly_rent,
-      "priceCurrency": "USD",
-      "availability": "https://schema.org/InStock",
-      "priceSpecification": {
-        "@type": "UnitPriceSpecification",
+  if (isPrivateView) {
+    let robotsMeta = document.querySelector('meta[name="robots"]');
+    if (!robotsMeta) {
+      robotsMeta = document.createElement('meta');
+      robotsMeta.name = 'robots';
+      document.head.appendChild(robotsMeta);
+    }
+    robotsMeta.content = 'noindex, nofollow';
+    const existingCanon = document.querySelector('link[rel="canonical"]');
+    if (existingCanon) existingCanon.remove();
+    setMeta('ogUrl', '');
+    document.querySelectorAll('script[type="application/ld+json"]').forEach(el => el.remove());
+  } else {
+    // Phase C: canonical URL — always points to the keyword-rich slug URL.
+    // The slug-router edge function (functions/rent/[state]/[city]/[slug].js)
+    // injects this into the initial HTML for crawlers, but for legacy
+    // /property.html?id=… requests that bypass the redirector (e.g. backend
+    // unavailable), this client-side fallback makes sure search engines and
+    // social cards still see the canonical URL.
+    const canonicalUrl = (window.CP?.UI?.propertyUrl)
+      ? new URL(window.CP.UI.propertyUrl(p), window.location.origin).href
+      : window.location.href;
+    let canonLink = document.querySelector('link[rel="canonical"]');
+    if (!canonLink) {
+      canonLink = document.createElement('link');
+      canonLink.rel = 'canonical';
+      document.head.appendChild(canonLink);
+    }
+    canonLink.href = canonicalUrl;
+    setMeta('ogUrl', canonicalUrl);
+
+    // ── I-059: Structured data — RealEstateListing schema for Google Rich Results ──
+    // Added: potentialAction (RentalAction), numberOfRooms, floorSize, leaseLength,
+    // amenityFeature, and BreadcrumbList. These fields are required or strongly
+    // recommended for Google's RentalListing rich result eligibility.
+    const sd = document.createElement('script');
+    sd.type = 'application/ld+json';
+    const amenities = [];
+    if (p.parking)      amenities.push({ "@type": "LocationFeatureSpecification", "name": "Parking",        "value": p.parking });
+    if (p.laundry_type) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Laundry",        "value": p.laundry_type });
+    if (p.heating_type) amenities.push({ "@type": "LocationFeatureSpecification", "name": "Heating",        "value": p.heating_type });
+    if (p.cooling_type && p.cooling_type !== 'None' && p.cooling_type !== '')
+                        amenities.push({ "@type": "LocationFeatureSpecification", "name": "Air Conditioning","value": p.cooling_type });
+    if (p.ev_charging && p.ev_charging !== 'none')
+                        amenities.push({ "@type": "LocationFeatureSpecification", "name": "EV Charging",     "value": p.ev_charging });
+    sd.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "RealEstateListing",
+      "name": p.title,
+      "description": p.description || undefined,
+      "url": canonicalUrl,
+      "image": p.photo_urls?.[0] ? CONFIG.img(p.photo_urls[0], 'og') : undefined,
+      "datePosted": p.created_at ? p.created_at.split('T')[0] : undefined,
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": p.address,
+        "addressLocality": p.city,
+        "addressRegion": p.state,
+        "postalCode": p.zip || undefined,
+        "addressCountry": "US"
+      },
+      "geo": (p.lat && p.lng) ? {
+        "@type": "GeoCoordinates",
+        "latitude": p.lat,
+        "longitude": p.lng
+      } : undefined,
+      "offers": {
+        "@type": "Offer",
         "price": p.monthly_rent,
         "priceCurrency": "USD",
-        "unitCode": "MON",
-        "referenceQuantity": { "@type": "QuantitativeValue", "value": 1, "unitCode": "MON" }
+        "availability": "https://schema.org/InStock",
+        "priceSpecification": {
+          "@type": "UnitPriceSpecification",
+          "price": p.monthly_rent,
+          "priceCurrency": "USD",
+          "unitCode": "MON",
+          "referenceQuantity": { "@type": "QuantitativeValue", "value": 1, "unitCode": "MON" }
+        }
+      },
+      "numberOfRooms": p.bedrooms,
+      "numberOfBathroomsTotal": p.bathrooms,
+      "floorSize": p.square_footage ? {
+        "@type": "QuantitativeValue",
+        "value": p.square_footage,
+        "unitCode": "FTK"
+      } : undefined,
+      "amenityFeature": amenities.length ? amenities : undefined,
+      "potentialAction": {
+        "@type": "RentAction",
+        "name": "Apply for Lease",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": applyURL,
+          "actionPlatform": [
+            "https://schema.org/DesktopWebPlatform",
+            "https://schema.org/MobileWebPlatform"
+          ]
+        }
       }
-    },
-    "numberOfRooms": p.bedrooms,
-    "numberOfBathroomsTotal": p.bathrooms,
-    "floorSize": p.square_footage ? {
-      "@type": "QuantitativeValue",
-      "value": p.square_footage,
-      "unitCode": "FTK"
-    } : undefined,
-    "amenityFeature": amenities.length ? amenities : undefined,
-    "potentialAction": {
-      "@type": "RentAction",
-      "name": "Apply for Lease",
-      "target": {
-        "@type": "EntryPoint",
-        "urlTemplate": applyURL,
-        "actionPlatform": [
-          "https://schema.org/DesktopWebPlatform",
-          "https://schema.org/MobileWebPlatform"
-        ]
-      }
-    }
-  });
-  document.head.appendChild(sd);
+    });
+    document.head.appendChild(sd);
 
-  // BreadcrumbList — separate JSON-LD block, also recommended by Google
-  const bcSd = document.createElement('script');
-  bcSd.type = 'application/ld+json';
-  bcSd.textContent = JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home",     "item": window.location.origin + "/" },
-      { "@type": "ListItem", "position": 2, "name": "Listings", "item": window.location.origin + "/listings.html" },
-      { "@type": "ListItem", "position": 3, "name": p.title,    "item": window.location.href }
-    ]
-  });
-  document.head.appendChild(bcSd);
-  // ── End I-059 ─────────────────────────────────────────────
+    // BreadcrumbList — separate JSON-LD block, also recommended by Google
+    const bcSd = document.createElement('script');
+    bcSd.type = 'application/ld+json';
+    bcSd.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home",     "item": window.location.origin + "/" },
+        { "@type": "ListItem", "position": 2, "name": "Listings", "item": window.location.origin + "/listings.html" },
+        { "@type": "ListItem", "position": 3, "name": p.title,    "item": window.location.href }
+      ]
+    });
+    document.head.appendChild(bcSd);
+    // ── End I-059 ─────────────────────────────────────────────
+  }
 
   document.getElementById('breadcrumbCity').textContent = `${p.city}, ${p.state}`;
   try {
@@ -934,7 +950,7 @@ function renderProperty(p) {
     leaseItems.push(`<div class="amenity-item"><i class="fas fa-building"></i>HOA Fee: $${Number(p.hoa_fee).toLocaleString()}${hoaFreq}</div>`);
   }
   if (p.move_in_special) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-tag icon-green"></i><span><strong>Move-in Special:</strong> ${esc(p.move_in_special)}</span></div>`);
-  if (p.showing_instructions) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-key"></i><span><strong>Showings:</strong> ${esc(p.showing_instructions)}</span></div>`);
+  if (p.showing_instructions && !isPrivateView) leaseItems.push(`<div class="amenity-item" style="grid-column:1/-1"><i class="fas fa-key"></i><span><strong>Showings:</strong> ${esc(p.showing_instructions)}</span></div>`);
   if (p.minimum_income_multiplier) leaseItems.push(`<div class="amenity-item"><i class="fas fa-coins icon-amber"></i>Min. Income: ${p.minimum_income_multiplier}× rent/mo</div>`);
   if (p.minimum_credit_score) leaseItems.push(`<div class="amenity-item"><i class="fas fa-chart-line icon-sky"></i>Min. Credit Score: ${p.minimum_credit_score}</div>`);
   if (leaseItems.length) {

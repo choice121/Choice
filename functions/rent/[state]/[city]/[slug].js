@@ -153,7 +153,7 @@ export async function onRequestGet({ env, params, request }) {
   const propRes = await fetch(
     `${SUPA}/rest/v1/properties?id=ilike.${encodeURIComponent(propertyIdLower)}` +
       `&status=eq.active` +
-      `&select=id,title,description,address,city,state,zip,lat,lng,property_type,` +
+      `&select=id,status,title,description,address,city,state,zip,lat,lng,property_type,` +
       `bedrooms,bathrooms,square_footage,monthly_rent,security_deposit,available_date,` +
       `pets_allowed,year_built,created_at,updated_at`,
     {
@@ -166,6 +166,7 @@ export async function onRequestGet({ env, params, request }) {
   const propArr = await propRes.json();
   if (!Array.isArray(propArr) || propArr.length === 0) return notFound();
   const p = propArr[0];
+  if (String(p.status || '').toLowerCase() !== 'active') return notFound();
 
   // Use the exact id from the DB row so the FK lookup always matches.
   const photosRes = await fetch(
