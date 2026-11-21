@@ -36,9 +36,9 @@
 | `pipeline-recovery` | v9 | `false` | Stage 1/2 24h recovery archive listing & restore (`admin/pipeline.html`) |
 | `private-placement-registry` | v4 | `false` | Permanent Private-Placement Registry batch lookup & audited expired-link replacement |
 | `property-location` | v27 | `false` | Cached Geoapify nearby places & neighborhood lookup (`js/property.js`) |
-| `property-share` | v49 | `false` | Hardened client-safe private-placement share resolution (with batch snapshot overlay), admin/service link minting & revocation |
+| `property-share` | v53 | `false` | Hardened client-safe private-placement share resolution (with batch snapshot overlay), admin/service link minting & revocation |
 | `property-validator` | v1 | `false` | Phase 6 eligibility, prohibited profile, owner proof, apartment & >=4 photo validator |
-| `publish-batch` | v1 | `false` | Phase 8 batch-scoped atomic per-property publishing, canonical reuse, `#share=` link minting & verification |
+| `publish-batch` | v3 | `false` | Phase 8 batch-scoped atomic per-property publishing, canonical reuse, `#share=` link minting & verification |
 | `purge-expired-pipeline-recovery` | v8 | `false` | Stage 2 permanent deletion of >24h recovery rows + raw storage blobs (hourly GitHub Actions cron) |
 | `receive-application` | v158 | `false` | Tenant rental application intake (`apply/`) |
 | `receive-pipeline-import` | v120 | `false` | Manual Chrome/Orion extension intake (`save`, `list_folders`, `create_folder`, `check_listing`) |
@@ -52,7 +52,7 @@
 | `send-message` | v96 | `false` | Admin/tenant/landlord messaging endpoint |
 | `sign-lease` | v141 | `false` | Primary tenant lease e-signature |
 | `sign-lease-co-applicant` | v118 | `false` | Co-applicant lease e-signature |
-| `verify-batch-publication` | v1 | `false` | Phase 8 post-publish batch share integrity, public/sitemap exclusion & internal-leak verifier |
+| `verify-batch-publication` | v3 | `false` | Phase 8 post-publish batch share integrity, public/sitemap exclusion & internal-leak verifier |
 
 ---
 
