@@ -17,29 +17,65 @@ function jsonResp(data: unknown, status: number, origin: string | null) {
   });
 }
 
-async function verifyAdmin(req: Request, adminClient: ReturnType<typeof createClient>) {
+function constantTimeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ab = enc.encode(a);
+  const bb = enc.encode(b);
+  if (ab.length !== bb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i];
+  return diff === 0;
+}
+
+async function verifyAdmin(
+  req: Request,
+  adminClient: ReturnType<typeof createClient>,
+  supabaseUrl: string,
+  serviceKey: string,
+) {
   const authHeader = req.headers.get('authorization') || '';
   const match = authHeader.match(/^Bearer\s+(.+)$/i);
   if (!match) return { ok: false, status: 401, error: 'admin_auth_required' };
 
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-  if (serviceKey && match[1] === serviceKey) {
+  const token = match[1].trim();
+  if (!token) return { ok: false, status: 401, error: 'admin_auth_required' };
+
+  if (serviceKey && constantTimeEqual(token, serviceKey)) {
     return { ok: true, status: 200 };
   }
 
-  const { data: userData, error: authErr } = await adminClient.auth.getUser(match[1]);
-  if (authErr || !userData?.user) {
-    return { ok: false, status: 401, error: 'invalid_session' };
+  const { data: userData, error: authErr } = await adminClient.auth.getUser(token);
+  if (!authErr && userData?.user) {
+    const { data: adminRow, error: roleErr } = await adminClient
+      .from('admin_roles')
+      .select('user_id')
+      .eq('user_id', userData.user.id)
+      .maybeSingle();
+
+    if (roleErr) return { ok: false, status: 500, error: 'admin_check_failed' };
+    if (!adminRow) return { ok: false, status: 403, error: 'admin_required' };
+    return { ok: true, status: 200 };
   }
 
-  const { data: adminRow } = await adminClient
-    .from('admin_roles')
-    .select('user_id')
-    .eq('user_id', userData.user.id)
-    .maybeSingle();
+  if (token.startsWith('eyJ')) {
+    try {
+      const checkRes = await fetch(`${supabaseUrl}/auth/v1/admin/users?page=1&per_page=1`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: serviceKey,
+        },
+        signal: AbortSignal.timeout(5000),
+      });
+      await checkRes.body?.cancel();
+      if (checkRes.ok) {
+        return { ok: true, status: 200 };
+      }
+    } catch {
+      // Fall through to 401
+    }
+  }
 
-  if (!adminRow) return { ok: false, status: 403, error: 'admin_required' };
-  return { ok: true, status: 200 };
+  return { ok: false, status: 401, error: 'invalid_session' };
 }
 
 Deno.serve(async (req) => {
@@ -57,7 +93,7 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const auth = await verifyAdmin(req, adminClient);
+  const auth = await verifyAdmin(req, adminClient, supabaseUrl, serviceKey);
   if (!auth.ok) return jsonResp({ ok: false, error: auth.error }, auth.status, origin);
 
   let body: Record<string, unknown> = {};
