@@ -10,9 +10,9 @@
 
 | Field | Value |
 |---|---|
-| **Active / Next Available Phase** | **`PHASE 5`** — Apify Default Scraping Engine & Dual-Channel Worker Integration |
-| **Current Baseline Commit (`main`)** | `57086a5` (`choice121/Choice`) |
-| **Overall Plan Progress** | `4 / 10 Phases Completed` (`READY FOR USER APPROVAL TO START PHASE 5`) |
+| **Active / Next Available Phase** | **`PHASE 6`** — Automated Property Eligibility, Source Profile & Image Validation Engine |
+| **Current Baseline Commit (`main`)** | `0fe3186` (`choice121/Choice`) |
+| **Overall Plan Progress** | `5 / 10 Phases Completed` (`READY FOR USER APPROVAL TO START PHASE 6`) |
 | **Last Updated** | `2026-11-21` |
 
 ---
@@ -75,8 +75,8 @@ You may **not** mark any phase `DONE` until ALL 5 steps below pass cleanly:
 | **Phase 2** | Four-Digit Batch Identities, Disposable Folders & Legacy Batch Compatibility | Phase 1 | `DONE` | Verified live across DB, PostgREST, Edge Functions, `v34.1.0` extensions & Cloudflare (`PGRST203` fixed in `20261121000005`) | `de51c5c`, `8adc58e` |
 | **Phase 3** | Permanent Private-Placement Registry & Batch Link Retrieval | Phase 2 | `DONE` | Verified live across DB, `private_placement_registry` view, `registry_get_batch` / `registry_list_batches`, `private-placement-registry@v4` & Cloudflare (`ad21890`) | `9ab1a5b`, `61d55fb`, `1d48b90`, `ad21890` |
 | **Phase 4** | Centralized Rules & Policies Engine + Versioned Policy Admin | Phase 1, Phase 2 | `DONE` | Verified live across DB, `rules-engine@v1`, immutable 403 guards, dry-run, versioned `v1`/`v2` pinning & Cloudflare (`2e896739`) | `a3c5b43`, `57086a5` |
-| **Phase 5** | Apify Default Scraping Engine & Dual-Channel Worker Integration | Phase 2, Phase 4 | `READY` | **NEXT AVAILABLE PHASE** — Awaiting approval to execute | — |
-| **Phase 6** | Automated Property Eligibility, Source Profile & Image Validation Engine | Phase 4, Phase 5 | `BLOCKED` | Unlocks after Phase 4 & 5 are `DONE` | — |
+| **Phase 5** | Apify Default Scraping Engine & Dual-Channel Worker Integration | Phase 2, Phase 4 | `DONE` | Verified live across DB, `apify-scrape-worker@v1`, `receive-pipeline-import` dual-channel parity, Storage archive & Cloudflare (`f55d9023`) | `0fe3186` |
+| **Phase 6** | Automated Property Eligibility, Source Profile & Image Validation Engine | Phase 4, Phase 5 | `READY` | **NEXT AVAILABLE PHASE** — Awaiting approval to execute | — |
 | **Phase 7** | Centralized Description Enrichment & Task-Specific Pricing Engines | Phase 4, Phase 6 | `BLOCKED` | Unlocks after Phase 4 & 6 are `DONE` | — |
 | **Phase 8** | Batch-Scoped Private-Placement Publishing, Visibility Shielding & Verification | Phase 3, Phase 6, Phase 7 | `BLOCKED` | Unlocks after Phase 3, 6 & 7 are `DONE` | — |
 | **Phase 9** | Concurrent Multi-AI Job Manager, Worker Isolation & Disposable Folder Cleanup | Phase 5, Phase 8 | `BLOCKED` | Unlocks after Phase 5 & 8 are `DONE` | — |
@@ -114,3 +114,8 @@ You may **not** mark any phase `DONE` until ALL 5 steps below pass cleanly:
   - Deployed `supabase/functions/rules-engine/index.ts` (`v1`, `verify_jwt = false` with internal admin/service auth) supporting `get_active_policy`, `list_versions`, `pin_policy_to_batch`, `update_rules`, `create_draft_version`, `activate_version`, `evaluate_dry_run`, `prohibited_profiles` CRUD, and `scraping_providers`.
   - **Verification**: `npm run build`, `enforce-cloudflare-only.js`, Chrome/Orion extractor tests (`34/34`, `17/17`), `validate-extension.mjs`, and `test-manual-payment-workflow.mjs` (`6/6`) passed; live Supabase & `rules-engine` verification confirmed active `v1` seed, batch `9994` auto-pinning to `v1`, HTTP `403` `immutable_rule_protected` & `immutable_profile_protected` guards, zero-mutation `evaluate_dry_run`, versioned `v2` creation with `policy_change_log` attribution while `9994` remained pinned to `v1`, prohibited profile CRUD, and clean `v1` baseline restoration; GitHub Actions (`Cloudflare-Only Enforcement` + `Deploy Supabase Edge Functions & Migrations`) & Cloudflare Pages (`470d962c`, `2e896739`) passed.
   - **Next Available Phase**: `Phase 5`.
+- **Phase 5 Completed & Verified Live (`2026-11-21`, commit `0fe3186`)**:
+  - Applied migration `20261121000011_phase5_apify_scrape_worker.sql` extending `pipeline.pipeline_scrape_runs` with `batch_id`, `batch_uuid`, `provider_key`, `actor_id`, `provider_run_id`, `dataset_id`, `status`, `cursor_offset`, `raw_archive_prefix`, `task_config_snapshot`, idempotency index, and `public.pipeline_list_scrape_runs(TEXT, INTEGER)`.
+  - Created `supabase/functions/_shared/apify-normalizer.ts` (+ `__tests__/apify-normalizer.test.ts`), updated `_shared/pipeline-record.ts` (`original_monthly_rent` preservation), deployed `supabase/functions/apify-scrape-worker/index.ts` (`v1`, `verify_jwt = false` with admin/service_role & timing-safe webhook verification, `APIFY_API_TOKEN` secret-gated with clean `503 apify_token_not_configured` guard, paginated `poll_and_ingest`, `ingest_items`, `pipeline-raw-payloads` archiving, exponential backoff), and aligned `receive-pipeline-import` & `import-from-url` (`provider_key` + `poster_profile` provenance parity).
+  - **Verification**: `AIS_BUILD=true npm run build`, `enforce-cloudflare-only.js`, Chrome/Orion extractor tests (`34/34`, `17/17`), `validate-extension.mjs` (`v34.1.0`), `test-manual-payment-workflow.mjs` (`6/6`), `compile_applet`, and `lint_applet` passed; live verification confirmed `401` auth guard, `get_provider_status` (`apify` default), clean `503 apify_token_not_configured` when unconfigured, dry-run & live `ingest_items` into 4-digit batch `9995` (fractional baths `2.5`, strict asking rent, anti-name-only owner check, per-item error isolation `partial: true`, intra-batch dedup, idempotency replay, Storage raw archive, `pipeline_scrape_runs` telemetry), dual-channel Chrome extension save of the same ZPID into sibling batch `9996` (`browser_extension_chrome` provenance & `original_monthly_rent`), clean rollback (`used_four_digit_count = 0`, `runs_cnt = 0`), GitHub Actions (`Deploy Supabase Edge Functions & Migrations` + `Cloudflare-Only Enforcement`), and Cloudflare Pages (`f55d9023`) HTTP `200` checks.
+  - **Next Available Phase**: `Phase 6`.
