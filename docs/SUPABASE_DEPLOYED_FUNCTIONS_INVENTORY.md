@@ -34,7 +34,7 @@
 | `issue-payment-receipt` | v17 | `false` | Manual payment receipt issuer |
 | `job-manager` | v1 | `false` | Phase 9 concurrent multi-AI job orchestration (`register_job`, `claim_next_or_assigned`, `heartbeat`, `report_stage`, `pause_job`, `resume_job`, `reap_stale_leases`, `cleanup_disposable_folder`) |
 | `nudge-expiring-drafts` | v48 | `false` | Draft reminder mailer |
-| `pipeline-recovery` | v9 | `false` | Stage 1/2 24h recovery archive listing & restore (`admin/pipeline.html`) |
+| `pipeline-recovery` | v20 | `false` | Stage 1/2 24h recovery archive listing, storage restore & admin/service auth (`admin/pipeline.html`) |
 | `private-placement-registry` | v4 | `false` | Permanent Private-Placement Registry batch lookup & audited expired-link replacement |
 | `property-location` | v27 | `false` | Cached Geoapify nearby places & neighborhood lookup (`js/property.js`) |
 | `property-share` | v53 | `false` | Hardened client-safe private-placement share resolution (with batch snapshot overlay), admin/service link minting & revocation |
