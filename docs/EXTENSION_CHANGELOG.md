@@ -4,6 +4,15 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v34.1.0] - 2026-11-21
+### 4-Digit Batch Folder Awareness & Intra-Batch Dedup Scoping
+- **Disposable Batch Folder Pill & Metadata Preservation (Chromium & Orion)**: Updated `chrome-extension/content.js`, `.pages-orion/live-content.js`, `chrome-extension/background.js`, and `.pages-orion/background.js` so `LIST_FOLDERS` and `CREATE_FOLDER` preserve `batch_id`, `batch_uuid`, `is_disposable_batch`, `icon`, and `color`. Batch workspaces display clearly as `📦 Batch #XXXX` in the Folder Pill and popover while regular named folders continue to work identically.
+- **Scoped Pre-Flight Checks & Session State (`@batch:XXXX` / `@inbox`)**: Scoped `savedListingsState` keys and `CHECK_LISTING` queries by active batch (`batch_id`, `folder_id`, `folder_name`), allowing a listing already saved in Batch `#4821` (or Main Inbox) to be freshly saved into a distinct batch without false cross-batch duplicate blocks or cross-batch move prompts.
+- **4-Digit ID Conflict Surfacing**: Updated `apiCreateFolder` and `CREATE_FOLDER` bridge responses so server `409 batch_id_already_used` conflicts are surfaced inline in the extension popover without silently falling back to an offline cache entry.
+- **Synchronized Packages & Regression Checks**: Rebuilt Chrome + Orion ZIP archives (`choice-properties-extension.zip`, `choice-properties-orion-extension.zip`), `extension-meta.json`, `extension-updates.xml`, and manifests as `v34.1.0` (`34/34` Chrome + `17/17` Orion extractor tests passing).
+
+---
+
 ## [v34.0.1] - 2026-11-21
 ### Worker Photo Cap Alignment (`MAX_PHOTOS`) & Parity Sync
 - **Aligned Desktop & Mobile `MAX_PHOTOS` Caps Across Chrome & Orion Workers**: Updated `chrome-extension/background.js` and `.pages-orion/background.js` from `IS_MOBILE ? 20 : 40` to `IS_MOBILE ? 25 : 50` so background queue/upload caps match `chrome-extension/content.js` and canonical Zillow Tier-1 gallery extraction (`50` desktop / `25` mobile) with zero truncation discrepancies.

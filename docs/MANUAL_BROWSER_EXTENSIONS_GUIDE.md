@@ -1,7 +1,7 @@
 # Choice Properties — Manual Browser Extensions Documentation (Chrome & Orion)
 
 > **Status:** Active, Permanent Operational Channel (Coexists Side-by-Side with Apify Automated Scraping)  
-> **Current Extension Version:** `v34.0.1`  
+> **Current Extension Version:** `v34.1.0`  
 > **Packages:**  
 > - **Desktop Chromium:** `chrome-extension/` (`choice-properties-extension.zip`)  
 > - **Mobile iOS/macOS Orion:** `.pages-orion/` (`choice-properties-orion-extension.zip`)  
@@ -85,10 +85,11 @@ src/extractors/shared-extractors.js   <-- SINGLE CANONICAL SOURCE OF TRUTH
 
 ## 5. Known Nuances & Evolution Integration Rules
 
-1. **Photo Cap Alignment (`v34.0.1`)**: `chrome-extension/background.js`, `.pages-orion/background.js`, `chrome-extension/content.js`, and canonical Zillow extraction are all aligned at `MAX_PHOTOS = 50` on desktop (`25` on mobile) so full-gallery captures flow seamlessly without worker cap discrepancies.
-2. **Batch Scope Compatibility**: As the 4-digit batch & disposable folder architecture rolls out, the extension continues to support both:
-   - Selecting an existing **4-digit Batch Folder** (e.g., `4821`) or standard folder in the Folder Pill (`folder_id` / `folder_name` + `batch_id`).
-   - Intra-batch deduplication (`(batch_id, source, source_listing_id)`), allowing a manually saved ZPID to appear in Batch `4821` even if previously used in Batch `1905`, while still warning on duplicate within the SAME active batch/folder.
+1. **Photo Cap Alignment (`v34.0.1`+)**: `chrome-extension/background.js`, `.pages-orion/background.js`, `chrome-extension/content.js`, and canonical Zillow extraction are all aligned at `MAX_PHOTOS = 50` on desktop (`25` on mobile) so full-gallery captures flow seamlessly without worker cap discrepancies.
+2. **Batch Scope Compatibility (`v34.1.0`)**: Both Chrome and Orion extensions natively handle 4-digit disposable batches alongside traditional named folders:
+   - **Folder Pill & Popover**: Disposable batch folders render as `📦 Batch #XXXX` and preserve `batch_id`, `batch_uuid`, and `is_disposable_batch` in sticky default storage (`cp_default_folder`), submitting `batch_id` + `folder_id` on `handleSave`.
+   - **Scoped Pre-Flight & Intra-Batch Dedup**: `CHECK_LISTING` and `savedListingsState` are scoped per active target (`batch:XXXX` or `inbox`) via `(COALESCE(batch_id,'__manual_inbox__'), COALESCE(source,'zillow'), source_listing_id)`. Manually saving a property into Batch `#4821` succeeds even if that listing already exists in Batch `#1905` or Main Inbox, while duplicate captures within the SAME batch still warn cleanly and honor idempotent `save_nonce` retries.
+   - **Conflict Surfacing**: Attempting to create a normal folder whose 4-digit numeric name collides with a previously used Batch ID returns `409 batch_id_already_used` and surfaces inline without silent offline caching.
 3. **Rule Preservation**: All manual captures preserve `original_description`, fractional bathrooms (Rule 6A), architectural classification (`DUPLEX`, `TOWNHOUSE`, `SINGLE_FAMILY`, `APARTMENT`), strict original photo order, Direct Source CDN URLs, and lossless `source_raw_payload` / `field_provenance` / `structural_details` / `utility_details` / `financial_details` / `location_details`.
 
 ---

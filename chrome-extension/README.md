@@ -1,4 +1,4 @@
-# Choice Properties — Universal Chrome Extension (v34.0.1)
+# Choice Properties — Universal Chrome Extension (v34.1.0)
 
 A browser extension that allows Choice Properties agents to save rental listings directly from **8 major rental portals** into the Choice Properties staging pipeline with 1 click.
 
@@ -29,8 +29,8 @@ A browser extension that allows Choice Properties agents to save rental listings
   - Detected architectural structure tag (`DUPLEX`, `SINGLE_FAMILY`, etc.) for review.
   - Complete policy overview (Deposit 1x Rent, $50 App Fee).
 - **Dual Ingestion & REST Fallback**: Dual-layer saving via Supabase Edge Function with seamless direct REST API fallback to eliminate any "unsupported source" or network interruptions.
-- **Compact Folder Pill & Auto-Collapsing Popover**: Minimal 1-line folder pill above the Save button opens an on-demand popover to switch folders or create a new folder (with any name, including numbers, and optional description) directly on Zillow, auto-collapsing immediately once configured.
-- **Sticky Default Folder Persistence**: Any folder created or selected automatically becomes the persistent default folder for all subsequent 1-click "Save to Pipeline" imports until changed.
+- **Compact Folder Pill & Auto-Collapsing Popover**: Minimal 1-line folder pill above the Save button opens an on-demand popover to switch regular folders or `📦 Batch #XXXX` disposable batch folders, or create a new folder directly on Zillow, auto-collapsing immediately once configured.
+- **Sticky Default Folder Persistence & Scoped Dedup**: Any folder or 4-digit batch selected automatically becomes the persistent default target for subsequent 1-click "Save to Pipeline" imports until changed, with intra-batch duplicate checking scoped cleanly per active batch or inbox.
 - **Global Keyboard Shortcut**: Press `Cmd+Shift+S` (or `Ctrl+Shift+S`) to save immediately from anywhere on the page.
 - **Resilient Auto-Retry Background Worker**: Automatically retries with exponential backoff on transient network drops to guarantee zero dropped listings.
 - **Rule Compliance Enforced**:

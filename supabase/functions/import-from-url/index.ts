@@ -188,12 +188,69 @@ Deno.serve(async (req) => {
   const parsedUrl = parseZillowDetailUrl(body.url);
   if (parsedUrl.ok === false) return json({ error: parsedUrl.error }, 400, origin);
 
-  const { data: existingRows, error: duplicateError } = await admin
+  const requestedFolderId = typeof body.folder_id === "string" ? body.folder_id.trim() : "";
+  const requestedBatchId = typeof body.batch_id === "string" ? body.batch_id.trim() : "";
+
+  let folderId = requestedFolderId;
+  let targetBatchId: string | null = requestedBatchId || null;
+  let targetBatchUuid: string | null = null;
+
+  if (targetBatchId) {
+    const { data: batchRow, error: batchErr } = await admin
+      .from("publishing_batches")
+      .select("id, batch_uuid, disposable_folder_id")
+      .eq("id", targetBatchId)
+      .maybeSingle();
+    if (batchErr) {
+      console.error("[import-from-url] Batch lookup failed:", batchErr.message);
+      return json({ error: "Could not verify the selected batch." }, 500, origin);
+    }
+    if (!batchRow) {
+      return json({ error: `Batch #${targetBatchId} was not found.` }, 404, origin);
+    }
+    targetBatchUuid = batchRow.batch_uuid || null;
+    if (!folderId && batchRow.disposable_folder_id) {
+      folderId = batchRow.disposable_folder_id;
+    }
+  }
+
+  if (folderId) {
+    const { data: folder, error: folderError } = await admin
+      .schema("pipeline")
+      .from("pipeline_folders")
+      .select("id, batch_id, batch_uuid, cleanup_state")
+      .eq("id", folderId)
+      .maybeSingle();
+    if (folderError) {
+      console.error("[import-from-url] Folder lookup failed:", folderError.message);
+      return json({ error: "Could not verify the selected folder." }, 500, origin);
+    }
+    if (!folder || folder.cleanup_state === "deleted") {
+      return json({ error: "The selected pipeline folder was not found." }, 404, origin);
+    }
+    if (targetBatchId && folder.batch_id && folder.batch_id !== targetBatchId) {
+      return json({ error: `Selected folder belongs to Batch #${folder.batch_id}, not Batch #${targetBatchId}.` }, 400, origin);
+    }
+    if (!targetBatchId && folder.batch_id) {
+      targetBatchId = folder.batch_id;
+      targetBatchUuid = folder.batch_uuid || null;
+    }
+  }
+
+  let dupQuery = admin
     .schema("pipeline")
     .from("pipeline_properties")
-    .select("id, title")
+    .select("id, title, batch_id")
     .eq("source", "zillow")
-    .eq("source_listing_id", parsedUrl.zpid)
+    .eq("source_listing_id", parsedUrl.zpid);
+
+  if (targetBatchId) {
+    dupQuery = dupQuery.eq("batch_id", targetBatchId);
+  } else {
+    dupQuery = dupQuery.is("batch_id", null);
+  }
+
+  const { data: existingRows, error: duplicateError } = await dupQuery
     .order("imported_at", { ascending: false })
     .limit(1);
   if (duplicateError) {
@@ -207,22 +264,8 @@ Deno.serve(async (req) => {
       duplicate: true,
       id: existing.id,
       title: existing.title,
+      batch_id: existing.batch_id || null,
     }, 200, origin);
-  }
-
-  const folderId = typeof body.folder_id === "string" ? body.folder_id.trim() : "";
-  if (folderId) {
-    const { data: folder, error: folderError } = await admin
-      .schema("pipeline")
-      .from("pipeline_folders")
-      .select("id")
-      .eq("id", folderId)
-      .maybeSingle();
-    if (folderError) {
-      console.error("[import-from-url] Folder lookup failed:", folderError.message);
-      return json({ error: "Could not verify the selected folder." }, 500, origin);
-    }
-    if (!folder) return json({ error: "The selected pipeline folder was not found." }, 404, origin);
   }
 
   const fetched = await fetchZillowListing(parsedUrl.url, parsedUrl.zpid);
@@ -259,6 +302,8 @@ Deno.serve(async (req) => {
     source_url: parsedUrl.url.toString(),
     _import: "admin-url-import-v1",
   });
+  record.batch_id = targetBatchId;
+  record.batch_uuid = targetBatchUuid;
   record.original_data = {
     source: "zillow",
     zpid: parsedUrl.zpid,
@@ -309,6 +354,7 @@ Deno.serve(async (req) => {
         ok: false,
         duplicate: true,
         title: record.title,
+        batch_id: targetBatchId,
       }, 200, origin);
     }
     console.error("[import-from-url] Pipeline insert failed:", insertError.message);
@@ -323,6 +369,9 @@ Deno.serve(async (req) => {
     id: record.id,
     title: record.title,
     city: record.city,
+    batch_id: targetBatchId,
+    batch_uuid: targetBatchUuid,
+    folder_id: folderId || null,
     score: record.data_quality_score,
     photos: photoUrls.length,
     populated_fields: populatedFields,

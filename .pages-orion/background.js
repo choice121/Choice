@@ -537,8 +537,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
             id: data.id,
             name: data.name != null ? String(data.name) : name,
             description: description,
-            icon: msg.icon || '📁',
-            color: msg.color || '#6366f1',
+            batch_id: data.batch_id || null,
+            batch_uuid: data.batch_uuid || null,
+            is_disposable_batch: Boolean(data.is_disposable_batch),
+            icon: data.icon || msg.icon || '📁',
+            color: data.color || msg.color || '#6366f1',
           };
           try {
             if (chrome.storage && chrome.storage.local) {
@@ -548,13 +551,23 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
               filtered.unshift(newFolder);
               await chrome.storage.local.set({
                 cp_folders_cache: filtered,
-                cp_default_folder: { id: newFolder.id, name: newFolder.name, description: newFolder.description }
+                cp_default_folder: {
+                  id: newFolder.id,
+                  name: newFolder.name,
+                  description: newFolder.description,
+                  batch_id: newFolder.batch_id,
+                  is_disposable_batch: newFolder.is_disposable_batch,
+                }
               });
             }
           } catch (_) {}
           sendResponse({ ok: true, folder: newFolder, id: newFolder.id, name: newFolder.name });
         } else {
-          sendResponse({ ok: false, error: (data && data.error) || 'Folder creation failed' });
+          sendResponse({
+            ok: false,
+            code: (data && data.error) || null,
+            error: (data && (data.message || data.error)) || 'Folder creation failed'
+          });
         }
       } catch (err) {
         sendResponse({ ok: false, error: String(err) });
@@ -605,11 +618,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           sendResponse({ ok: false, error: 'source_listing_id is required' });
           return;
         }
-        const checkUrl = EDGE_URL
+        let checkUrl = EDGE_URL
           + '?secret=' + encodeURIComponent(SECRET)
           + '&action=check_listing'
           + '&source=' + encodeURIComponent(source)
           + '&source_listing_id=' + encodeURIComponent(sourceId);
+        if (msg.batch_id) checkUrl += '&batch_id=' + encodeURIComponent(String(msg.batch_id));
+        if (msg.folder_id) checkUrl += '&folder_id=' + encodeURIComponent(String(msg.folder_id));
+        if (msg.folder_name) checkUrl += '&folder_name=' + encodeURIComponent(String(msg.folder_name));
         const res = await fetch(checkUrl, {
           method: 'GET',
           headers: { 'x-import-secret': SECRET },

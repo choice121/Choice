@@ -1,5 +1,5 @@
 // ============================================================
-// Choice Properties — Live Content Script v34.0.1
+// Choice Properties — Live Content Script v34.1.0
 // Universal High-Quality Browser Extension UI for eight supported portals
 //
 // Key Features:
@@ -23,7 +23,7 @@
   // ── Configuration ──────────────────────────────────────────
   var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
   var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
-  var VERSION  = '34.0.1-live';
+  var VERSION  = '34.1.0-live';
 
   var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
@@ -68,11 +68,20 @@
     }
   }
 
+  function getActiveScopeKey() {
+    var def = getDefaultFolderSync();
+    if (def && (def.is_disposable_batch || def.batch_id)) {
+      return 'batch:' + String(def.batch_id || def.name || '');
+    }
+    return 'inbox';
+  }
+
   function getListingKey(data) {
-    if (!data) return canonicalListingPath(location.href);
+    var scope = getActiveScopeKey();
+    if (!data) return canonicalListingPath(location.href) + '@' + scope;
     var src = data.source || 'listing';
-    if (data.source_listing_id) return src + '|' + String(data.source_listing_id);
-    return src + '|' + canonicalListingPath(data.source_url || data.url || location.href);
+    if (data.source_listing_id) return src + '|' + String(data.source_listing_id) + '@' + scope;
+    return src + '|' + canonicalListingPath(data.source_url || data.url || location.href) + '@' + scope;
   }
 
   function isSameListing(a, b) {
@@ -146,9 +155,13 @@
     var currentDef = getDefaultFolderSync();
     var currentFolderId = currentDef && currentDef.id ? String(currentDef.id) : '';
     var currentFolderName = currentDef && currentDef.name != null ? String(currentDef.name) : '';
+    var currentIsBatch = Boolean(currentDef && (currentDef.is_disposable_batch || currentDef.batch_id));
     var stateFolderId = state.folderId ? String(state.folderId) : '';
     var stateFolderName = state.folderName != null ? String(state.folderName) : '';
+    var stateIsBatch = Boolean(state && (state.isDisposableBatch || state.batchId));
     var folderChanged = Boolean(
+      !currentIsBatch &&
+      !stateIsBatch &&
       (currentFolderId || currentFolderName) &&
       (currentFolderId !== stateFolderId || currentFolderName !== stateFolderName)
     );
@@ -244,8 +257,17 @@
   }
 
   function setDefaultFolder(folder) {
+    var hasBatch = Boolean(folder && (folder.is_disposable_batch || folder.batch_id));
     activeDefaultFolder = folder && (folder.id || folder.name != null)
-      ? { id: folder.id || null, name: String(folder.name != null ? folder.name : ''), description: folder.description || '' }
+      ? {
+          id: folder.id || null,
+          name: String(folder.name != null ? folder.name : ''),
+          description: folder.description || '',
+          batch_id: folder.batch_id || null,
+          batch_uuid: folder.batch_uuid || null,
+          is_disposable_batch: hasBatch,
+          icon: folder.icon || (hasBatch ? '📦' : '📁')
+        }
       : null;
     try {
       if (activeDefaultFolder) {
@@ -299,7 +321,22 @@
         } catch (e) { resolve(null); }
       });
       if (bgRes && bgRes.ok && bgRes.id) {
-        return bgRes.folder || { id: bgRes.id, name: bgRes.name != null ? String(bgRes.name) : rawName, description: rawDesc };
+        return bgRes.folder || {
+          id: bgRes.id,
+          name: bgRes.name != null ? String(bgRes.name) : rawName,
+          description: rawDesc,
+          batch_id: bgRes.batch_id || null,
+          batch_uuid: bgRes.batch_uuid || null,
+          is_disposable_batch: Boolean(bgRes.is_disposable_batch || bgRes.batch_id),
+          icon: bgRes.icon || '📁',
+          color: bgRes.color || '#6366f1'
+        };
+      }
+      if (bgRes && bgRes.ok === false && bgRes.code === 'batch_id_already_used') {
+        var conflictErr = new Error(bgRes.error || 'That 4-digit Batch ID has already been used.');
+        conflictErr.noFallback = true;
+        conflictErr.code = bgRes.code;
+        throw conflictErr;
       }
     }
     var res = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
@@ -313,9 +350,23 @@
     });
     var data = await res.json();
     if (res.ok && data && data.ok && data.id) {
-      return { id: data.id, name: data.name != null ? String(data.name) : rawName, description: rawDesc };
+      return {
+        id: data.id,
+        name: data.name != null ? String(data.name) : rawName,
+        description: rawDesc,
+        batch_id: data.batch_id || null,
+        batch_uuid: data.batch_uuid || null,
+        is_disposable_batch: Boolean(data.is_disposable_batch || data.batch_id),
+        icon: data.icon || '📁',
+        color: data.color || '#6366f1'
+      };
     }
-    throw new Error((data && data.error) || 'Failed to create folder');
+    var err = new Error((data && (data.message || data.error)) || 'Failed to create folder');
+    if (res.status === 409 || (data && data.error === 'batch_id_already_used')) {
+      err.noFallback = true;
+      err.code = data && data.error;
+    }
+    throw err;
   }
 
   // ── Inject Custom Styles ────────────────────────────────────
@@ -1271,9 +1322,11 @@
     }
 
     var defaultFolder = getDefaultFolderSync();
+    var isBatchDefault = Boolean(defaultFolder && (defaultFolder.is_disposable_batch || defaultFolder.batch_id));
     var currentFolderLabel = defaultFolder && defaultFolder.name != null && String(defaultFolder.name) !== ''
-      ? String(defaultFolder.name)
+      ? (isBatchDefault ? ('Batch #' + String(defaultFolder.batch_id || defaultFolder.name)) : String(defaultFolder.name))
       : 'Main Inbox (Default)';
+    var currentFolderIcon = isBatchDefault ? '📦' : '📁';
     var isCustomFolderActive = Boolean(defaultFolder && (defaultFolder.id || (defaultFolder.name != null && String(defaultFolder.name) !== '')));
 
     container.innerHTML = `
@@ -1334,7 +1387,7 @@
           <div class="cp-folder-bar">
             <button type="button" class="cp-folder-pill-trigger ${isCustomFolderActive ? 'cp-folder-active' : ''}" id="cp-folder-pill-btn" title="Click to switch folder or create a new folder">
               <div class="cp-folder-pill-left">
-                <span class="cp-folder-pill-icon">📁</span>
+                <span class="cp-folder-pill-icon" id="cp-folder-pill-icon">${currentFolderIcon}</span>
                 <div class="cp-folder-pill-text">
                   <span class="cp-folder-pill-label">Folder:</span>
                   <span class="cp-folder-pill-name" id="cp-folder-pill-name">${escapeHtml(currentFolderLabel)}</span>
@@ -1360,6 +1413,7 @@
               <div class="cp-folder-create-form" id="cp-folder-create-form">
                 <input type="text" id="cp-new-folder-name" class="cp-folder-input" placeholder="Folder name (e.g. 1, 102, Columbus)" autocomplete="off" />
                 <input type="text" id="cp-new-folder-desc" class="cp-folder-input" placeholder="Description (optional)" autocomplete="off" />
+                <div id="cp-folder-create-err" style="display:none;font-size:11px;color:#fca5a5;background:rgba(239,68,68,0.16);border:1px solid rgba(239,68,68,0.3);border-radius:6px;padding:6px 8px;line-height:1.35"></div>
                 <div class="cp-folder-form-actions">
                   <button type="button" class="cp-folder-btn-cancel" id="cp-folder-btn-cancel">Cancel</button>
                   <button type="button" class="cp-folder-btn-submit" id="cp-folder-btn-create">Create &amp; Set Default</button>
@@ -1496,21 +1550,32 @@
     var folderBtnCancel = container.querySelector('#cp-folder-btn-cancel');
     var folderBtnCreate = container.querySelector('#cp-folder-btn-create');
 
+    var folderPillIcon = container.querySelector('#cp-folder-pill-icon');
+    var folderCreateErr = container.querySelector('#cp-folder-create-err');
+
     function closeFolderPopover() {
       if (!folderPopover) return;
       folderPopover.classList.remove('cp-open');
       if (folderCreateForm) folderCreateForm.classList.remove('cp-open');
       if (folderCreateToggle) folderCreateToggle.style.display = 'flex';
+      if (folderCreateErr) { folderCreateErr.style.display = 'none'; folderCreateErr.textContent = ''; }
       if (folderPillAction) folderPillAction.textContent = 'Change / + New ▾';
     }
 
     function updateFolderPillDisplay() {
       var def = getDefaultFolderSync();
       if (def && (def.id || (def.name != null && String(def.name) !== ''))) {
-        if (folderPillName) folderPillName.textContent = String(def.name);
+        var isBatch = Boolean(def.is_disposable_batch || def.batch_id);
+        if (folderPillName) {
+          folderPillName.textContent = isBatch
+            ? ('Batch #' + String(def.batch_id || def.name))
+            : String(def.name);
+        }
+        if (folderPillIcon) folderPillIcon.textContent = isBatch ? '📦' : '📁';
         if (folderPillBtn) folderPillBtn.classList.add('cp-folder-active');
       } else {
         if (folderPillName) folderPillName.textContent = 'Main Inbox (Default)';
+        if (folderPillIcon) folderPillIcon.textContent = '📁';
         if (folderPillBtn) folderPillBtn.classList.remove('cp-folder-active');
       }
     }
@@ -1524,7 +1589,7 @@
 
       var html = '';
       var isInboxSelected = !selectedId && !selectedName;
-      html += '<button type="button" class="cp-folder-item ' + (isInboxSelected ? 'cp-selected' : '') + '" data-folder-id="" data-folder-name="">' +
+      html += '<button type="button" class="cp-folder-item ' + (isInboxSelected ? 'cp-selected' : '') + '" data-folder-id="" data-folder-name="" data-batch-id="" data-batch-uuid="" data-is-disposable="false">' +
         '<div class="cp-folder-item-main">' +
           '<div class="cp-folder-item-name">📥 Main Inbox (Default)</div>' +
           '<div class="cp-folder-item-desc">Unassigned pipeline staging</div>' +
@@ -1537,10 +1602,16 @@
         var fId = f.id ? String(f.id) : '';
         var fName = f.name != null ? String(f.name) : '';
         var fDesc = f.description != null ? String(f.description) : '';
+        var fBatchId = f.batch_id ? String(f.batch_id) : '';
+        var fBatchUuid = f.batch_uuid ? String(f.batch_uuid) : '';
+        var fIsBatch = Boolean(f.is_disposable_batch || fBatchId);
         var isSel = (selectedId && fId === selectedId) || (!selectedId && selectedName && fName === selectedName);
-        html += '<button type="button" class="cp-folder-item ' + (isSel ? 'cp-selected' : '') + '" data-folder-id="' + escapeHtml(fId) + '" data-folder-name="' + escapeHtml(fName) + '" data-folder-desc="' + escapeHtml(fDesc) + '">' +
+        var itemIcon = f.icon || (fIsBatch ? '📦' : '📁');
+        var itemTitle = fIsBatch ? ('Batch #' + (fBatchId || fName)) : fName;
+        var batchTag = fIsBatch ? ' <span style="font-size:10px;opacity:0.8;color:#a5b4fc">(Batch)</span>' : '';
+        html += '<button type="button" class="cp-folder-item ' + (isSel ? 'cp-selected' : '') + '" data-folder-id="' + escapeHtml(fId) + '" data-folder-name="' + escapeHtml(fName) + '" data-folder-desc="' + escapeHtml(fDesc) + '" data-batch-id="' + escapeHtml(fBatchId) + '" data-batch-uuid="' + escapeHtml(fBatchUuid) + '" data-is-disposable="' + (fIsBatch ? 'true' : 'false') + '">' +
           '<div class="cp-folder-item-main">' +
-            '<div class="cp-folder-item-name">' + escapeHtml(f.icon || '📁') + ' ' + escapeHtml(fName) + '</div>' +
+            '<div class="cp-folder-item-name">' + escapeHtml(itemIcon) + ' ' + escapeHtml(itemTitle) + batchTag + '</div>' +
             (fDesc ? '<div class="cp-folder-item-desc">' + escapeHtml(fDesc) + '</div>' : '') +
           '</div>' +
           (isSel ? '<span class="cp-folder-item-check">✓</span>' : '') +
@@ -1556,15 +1627,31 @@
           var fId = btn.getAttribute('data-folder-id') || '';
           var fName = btn.getAttribute('data-folder-name') || '';
           var fDesc = btn.getAttribute('data-folder-desc') || '';
+          var fBatchId = btn.getAttribute('data-batch-id') || '';
+          var fBatchUuid = btn.getAttribute('data-batch-uuid') || '';
+          var fIsBatch = btn.getAttribute('data-is-disposable') === 'true';
           if (!fId && !fName) {
             setDefaultFolder(null);
           } else {
-            setDefaultFolder({ id: fId || null, name: fName, description: fDesc });
+            setDefaultFolder({
+              id: fId || null,
+              name: fName,
+              description: fDesc,
+              batch_id: fBatchId || null,
+              batch_uuid: fBatchUuid || null,
+              is_disposable_batch: fIsBatch,
+              icon: fIsBatch ? '📦' : '📁'
+            });
           }
           updateFolderPillDisplay();
           renderFolderList();
           closeFolderPopover();
-          if (currentExtractedData) applySavedStateToWidget(container, currentExtractedData);
+          if (currentExtractedData) {
+            applySavedStateToWidget(container, currentExtractedData, true);
+            if (!getSavedState(currentExtractedData) && currentExtractedData.source_listing_id) {
+              checkExistingInPipeline(currentExtractedData, listingGeneration);
+            }
+          }
         });
       });
     }
@@ -1596,6 +1683,7 @@
       folderCreateToggle.addEventListener('click', function (e) {
         e.stopPropagation();
         folderCreateToggle.style.display = 'none';
+        if (folderCreateErr) { folderCreateErr.style.display = 'none'; folderCreateErr.textContent = ''; }
         if (folderCreateForm) {
           folderCreateForm.classList.add('cp-open');
           if (newFolderNameInput) newFolderNameInput.focus();
@@ -1607,6 +1695,7 @@
       folderBtnCancel.addEventListener('click', function (e) {
         e.stopPropagation();
         if (folderCreateForm) folderCreateForm.classList.remove('cp-open');
+        if (folderCreateErr) { folderCreateErr.style.display = 'none'; folderCreateErr.textContent = ''; }
         if (folderCreateToggle) folderCreateToggle.style.display = 'flex';
       });
     }
@@ -1628,6 +1717,7 @@
     if (folderBtnCreate) {
       folderBtnCreate.addEventListener('click', async function (e) {
         e.stopPropagation();
+        if (folderCreateErr) { folderCreateErr.style.display = 'none'; folderCreateErr.textContent = ''; }
         var rawName = newFolderNameInput ? String(newFolderNameInput.value) : '';
         var rawDesc = newFolderDescInput ? String(newFolderDescInput.value) : '';
         if (!rawName.length) {
@@ -1641,7 +1731,10 @@
             id: created && created.id ? created.id : null,
             name: created && created.name != null ? String(created.name) : rawName,
             description: rawDesc,
-            icon: '📁'
+            batch_id: created && created.batch_id ? created.batch_id : null,
+            batch_uuid: created && created.batch_uuid ? created.batch_uuid : null,
+            is_disposable_batch: Boolean(created && (created.is_disposable_batch || created.batch_id)),
+            icon: (created && created.icon) || '📁'
           };
           var existingList = getCachedFolders().filter(function (f) {
             return f && f.id !== folderObj.id && String(f.name) !== String(folderObj.name);
@@ -1654,17 +1747,29 @@
           if (newFolderNameInput) newFolderNameInput.value = '';
           if (newFolderDescInput) newFolderDescInput.value = '';
           closeFolderPopover();
-          if (currentExtractedData) applySavedStateToWidget(container, currentExtractedData);
+          if (currentExtractedData) {
+            applySavedStateToWidget(container, currentExtractedData, true);
+            if (!getSavedState(currentExtractedData) && currentExtractedData.source_listing_id) {
+              checkExistingInPipeline(currentExtractedData, listingGeneration);
+            }
+          }
         } catch (err) {
-          var fallbackObj = { id: null, name: rawName, description: rawDesc, icon: '📁' };
-          var list = getCachedFolders();
-          list.unshift(fallbackObj);
-          setCachedFolders(list);
-          setDefaultFolder(fallbackObj);
-          updateFolderPillDisplay();
-          renderFolderList();
-          closeFolderPopover();
-          if (currentExtractedData) applySavedStateToWidget(container, currentExtractedData);
+          if (err && err.noFallback) {
+            if (folderCreateErr) {
+              folderCreateErr.textContent = err.message || 'Cannot use that folder/batch ID.';
+              folderCreateErr.style.display = 'block';
+            }
+          } else {
+            var fallbackObj = { id: null, name: rawName, description: rawDesc, batch_id: null, batch_uuid: null, is_disposable_batch: false, icon: '📁' };
+            var list = getCachedFolders();
+            list.unshift(fallbackObj);
+            setCachedFolders(list);
+            setDefaultFolder(fallbackObj);
+            updateFolderPillDisplay();
+            renderFolderList();
+            closeFolderPopover();
+            if (currentExtractedData) applySavedStateToWidget(container, currentExtractedData, true);
+          }
         } finally {
           folderBtnCreate.disabled = false;
           folderBtnCreate.textContent = 'Create & Set Default';
@@ -1707,8 +1812,12 @@
         var currentDef = getDefaultFolderSync();
         var currentFolderId = currentDef && currentDef.id ? String(currentDef.id) : '';
         var currentFolderName = currentDef && currentDef.name != null ? String(currentDef.name) : '';
+        var currentIsBatch = Boolean(currentDef && (currentDef.is_disposable_batch || currentDef.batch_id));
+        var stateIsBatch = Boolean(existingState && (existingState.isDisposableBatch || existingState.batchId));
         var folderChanged = Boolean(
           existingState &&
+          !currentIsBatch &&
+          !stateIsBatch &&
           (currentFolderId || currentFolderName) &&
           (currentFolderId !== (existingState.folderId || '') || currentFolderName !== (existingState.folderName || ''))
         );
@@ -1755,10 +1864,20 @@
         if (Array.isArray(foldersList) && foldersList.length > 0) {
           setCachedFolders(foldersList);
           var def = getDefaultFolderSync();
-          if (def && !def.id && def.name != null) {
-            var matched = foldersList.find(function (f) { return f && String(f.name) === String(def.name); });
+          if (def && (def.id || def.name != null)) {
+            var matched = foldersList.find(function (f) {
+              return f && ((def.id && String(f.id) === String(def.id)) || (def.name != null && String(f.name) === String(def.name)));
+            });
             if (matched && matched.id) {
-              setDefaultFolder({ id: matched.id, name: matched.name, description: matched.description || def.description });
+              setDefaultFolder({
+                id: matched.id,
+                name: matched.name,
+                description: matched.description || def.description,
+                batch_id: matched.batch_id || null,
+                batch_uuid: matched.batch_uuid || null,
+                is_disposable_batch: Boolean(matched.is_disposable_batch || matched.batch_id),
+                icon: matched.icon || (matched.is_disposable_batch ? '📦' : '📁')
+              });
             }
           }
           updateFolderPillDisplay();
@@ -1779,6 +1898,11 @@
   async function checkExistingInPipeline(extracted, expectedGen) {
     if (!extracted || !extracted.source_listing_id) return;
     try {
+      var defFolder = getDefaultFolderSync();
+      var reqBatchId = defFolder && defFolder.batch_id ? String(defFolder.batch_id) : '';
+      var reqFolderId = defFolder && defFolder.id ? String(defFolder.id) : '';
+      var reqFolderName = defFolder && defFolder.name != null ? String(defFolder.name) : '';
+
       var res = null;
       if (EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage) {
         res = await new Promise(function (resolve) {
@@ -1787,7 +1911,10 @@
             EXTENSION_API.runtime.sendMessage({
               type: 'CHECK_LISTING',
               source: extracted.source || 'zillow',
-              source_listing_id: extracted.source_listing_id
+              source_listing_id: extracted.source_listing_id,
+              batch_id: reqBatchId || undefined,
+              folder_id: reqFolderId || undefined,
+              folder_name: reqFolderName || undefined
             }, function (resp) {
               clearTimeout(t);
               resolve(EXTENSION_API.runtime.lastError ? null : resp);
@@ -1803,7 +1930,10 @@
           + '?secret=' + encodeURIComponent(SECRET)
           + '&action=check_listing'
           + '&source=' + encodeURIComponent(extracted.source || 'zillow')
-          + '&source_listing_id=' + encodeURIComponent(extracted.source_listing_id);
+          + '&source_listing_id=' + encodeURIComponent(extracted.source_listing_id)
+          + (reqBatchId ? '&batch_id=' + encodeURIComponent(reqBatchId) : '')
+          + (reqFolderId ? '&folder_id=' + encodeURIComponent(reqFolderId) : '')
+          + (reqFolderName ? '&folder_name=' + encodeURIComponent(reqFolderName) : '');
         var fRes = await fetch(checkUrl, {
           method: 'GET',
           headers: { 'x-import-secret': SECRET },
@@ -1815,19 +1945,25 @@
       if (expectedGen !== listingGeneration || isSaving || getSavedState(extracted)) return;
       var folderName = res.folder && res.folder.name ? String(res.folder.name) : '';
       var folderId = res.folder && res.folder.folder_id ? String(res.folder.folder_id) : '';
+      var resBatchId = res.batch_id || (res.folder && res.folder.batch_id) || '';
+      var isBatchFolder = Boolean(resBatchId || (res.folder && res.folder.is_disposable_batch));
       var serial = res.folder && res.folder.serial ? ' (#' + res.folder.serial + ')' : '';
       var statusLabel = res.status === 'published'
         ? 'Already in Pipeline (Published)'
         : res.status === 'archived'
           ? 'Already in Pipeline (Archived)'
-          : folderName
-            ? ('In Folder: ' + folderName + serial)
-            : 'Already in Choice Pipeline';
+          : isBatchFolder
+            ? ('In Batch #' + (resBatchId || folderName) + serial)
+            : folderName
+              ? ('In Folder: ' + folderName + serial)
+              : 'Already in Choice Pipeline';
       setSavedState(extracted, {
         status: 'duplicate',
         text: statusLabel,
         folderId: folderId,
         folderName: folderName,
+        batchId: resBatchId ? String(resBatchId) : '',
+        isDisposableBatch: isBatchFolder,
         duplicateStatus: res.status || 'scraped'
       });
       if (activeWidget) applySavedStateToWidget(activeWidget, extracted);
@@ -1909,12 +2045,17 @@
       var selectedFolderName = defaultFolder && defaultFolder.name != null && String(defaultFolder.name) !== ''
         ? String(defaultFolder.name)
         : null;
+      var selectedBatchId = defaultFolder && defaultFolder.batch_id ? String(defaultFolder.batch_id) : null;
 
       if (selectedFolderId || selectedFolderName) {
         setDefaultFolder({
           id: selectedFolderId,
           name: selectedFolderName || '',
-          description: (defaultFolder && defaultFolder.description) || ''
+          description: (defaultFolder && defaultFolder.description) || '',
+          batch_id: selectedBatchId,
+          batch_uuid: (defaultFolder && defaultFolder.batch_uuid) || null,
+          is_disposable_batch: Boolean(defaultFolder && (defaultFolder.is_disposable_batch || selectedBatchId)),
+          icon: (defaultFolder && defaultFolder.icon) || (selectedBatchId ? '📦' : '📁')
         });
       }
 
@@ -2006,6 +2147,7 @@
         source_status: extracted.source_status || null,
         folder_id: selectedFolderId,
         folder_name: selectedFolderName,
+        batch_id: selectedBatchId,
         original_image_urls: JSON.stringify(richPhotos),
         structural_details: extracted.structural_details || null,
         utility_details: extracted.utility_details || null,
@@ -2041,7 +2183,9 @@
           status: 'queued',
           text: 'Queued for pipeline sync',
           folderId: selectedFolderId || '',
-          folderName: selectedFolderName || ''
+          folderName: selectedFolderName || '',
+          batchId: selectedBatchId || '',
+          isDisposableBatch: Boolean(selectedBatchId)
         });
         applySavedStateToWidget(activeWidget, extracted);
         isSaving = false;
@@ -2054,6 +2198,8 @@
 
         var savedFolderName = selectedFolderName || '';
         var savedFolderId = selectedFolderId || '';
+        var savedBatchId = resp.batch_id || (resp.folder && resp.folder.batch_id) || selectedBatchId || '';
+        var savedIsBatch = Boolean(savedBatchId || (resp.folder && resp.folder.is_disposable_batch));
         var savedLabel = 'Saved to Choice Pipeline!';
         if (resp.folder && resp.folder.name != null) {
           savedFolderName = String(resp.folder.name);
@@ -2062,10 +2208,17 @@
             setDefaultFolder({
               id: resp.folder.folder_id,
               name: savedFolderName,
-              description: (defaultFolder && defaultFolder.description) || ''
+              description: (defaultFolder && defaultFolder.description) || '',
+              batch_id: savedBatchId || null,
+              batch_uuid: resp.batch_uuid || (defaultFolder && defaultFolder.batch_uuid) || null,
+              is_disposable_batch: savedIsBatch,
+              icon: savedIsBatch ? '📦' : '📁'
             });
           }
-          savedLabel = 'Saved to ' + savedFolderName + (resp.folder.serial ? ' (#' + resp.folder.serial + ')' : '');
+          var displayFolder = savedIsBatch ? ('Batch #' + (savedBatchId || savedFolderName)) : savedFolderName;
+          savedLabel = 'Saved to ' + displayFolder + (resp.folder.serial ? ' (#' + resp.folder.serial + ')' : '');
+        } else if (savedBatchId) {
+          savedLabel = 'Saved to Batch #' + savedBatchId;
         }
         if (resp.photos_queued) {
           savedLabel += ' • Photos processing';
@@ -2075,7 +2228,9 @@
           status: 'saved',
           text: savedLabel,
           folderId: savedFolderId,
-          folderName: savedFolderName
+          folderName: savedFolderName,
+          batchId: savedBatchId ? String(savedBatchId) : '',
+          isDisposableBatch: savedIsBatch
         });
         applySavedStateToWidget(activeWidget, extracted);
         isSaving = false;
@@ -2083,6 +2238,8 @@
         isSaving = false;
         var dupFolderName = '';
         var dupFolderId = '';
+        var dupBatchId = resp.batch_id || (resp.folder && resp.folder.batch_id) || '';
+        var dupIsBatch = Boolean(dupBatchId || (resp.folder && resp.folder.is_disposable_batch));
         var dupLabel = resp.message || 'Already in Pipeline';
 
         if (resp.folder && (resp.folder.folder || resp.folder.name)) {
@@ -2092,13 +2249,18 @@
             setDefaultFolder({
               id: dupFolderId,
               name: dupFolderName,
-              description: (defaultFolder && defaultFolder.description) || ''
+              description: (defaultFolder && defaultFolder.description) || '',
+              batch_id: dupBatchId || null,
+              batch_uuid: resp.batch_uuid || null,
+              is_disposable_batch: dupIsBatch,
+              icon: dupIsBatch ? '📦' : '📁'
             });
           }
+          var dupDisplay = dupIsBatch ? ('Batch #' + (dupBatchId || dupFolderName)) : dupFolderName;
           if (resp.folder_updated) {
-            dupLabel = 'Moved to ' + dupFolderName + (resp.folder.serial ? ' (#' + resp.folder.serial + ')' : '');
+            dupLabel = 'Moved to ' + dupDisplay + (resp.folder.serial ? ' (#' + resp.folder.serial + ')' : '');
           } else {
-            dupLabel = (resp.message || 'Already in Pipeline') + ' • ' + dupFolderName;
+            dupLabel = (resp.message || 'Already in Pipeline') + ' • ' + dupDisplay;
           }
         }
 
@@ -2107,6 +2269,8 @@
           text: dupLabel,
           folderId: dupFolderId,
           folderName: dupFolderName,
+          batchId: dupBatchId ? String(dupBatchId) : '',
+          isDisposableBatch: dupIsBatch,
           duplicateStatus: resp.status || 'scraped'
         });
         applySavedStateToWidget(activeWidget, extracted);

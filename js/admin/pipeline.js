@@ -276,7 +276,12 @@
     const srcLabel = l.source === 'zillow' ? 'Zillow' : l.source === 'realtor' ? 'Realtor' : (l.source ? S.esc(l.source) : '');
     const srcImp = importSource(l);
     const folderBadge = l.folder_serial ? `<span class="qs-badge" style="background:rgba(99,102,241,.15);color:var(--brand)" title="Folder serial number">#${l.folder_serial}</span>` : '';
-    const batchBadge = l.batch_id ? `<span class="qs-badge" style="background:rgba(234,179,8,.16);color:#eab308" title="Restored from batch ${S.esc(l.batch_id)}">Batch ${S.esc(l.batch_id)}</span>` : '';
+    const isFourDigitBatch = Boolean(l.batch_id && /^\d{4}$/.test(String(l.batch_id)));
+    const batchBadge = l.batch_id
+      ? (isFourDigitBatch
+          ? `<span class="qs-badge" style="background:rgba(99,102,241,.22);color:#a5b4fc;border:1px solid rgba(99,102,241,.35)" title="4-Digit Pipeline Batch #${S.esc(l.batch_id)}">Batch #${S.esc(l.batch_id)}</span>`
+          : `<span class="qs-badge" style="background:rgba(234,179,8,.16);color:#eab308" title="Legacy batch ${S.esc(l.batch_id)}">Batch ${S.esc(l.batch_id)}</span>`)
+      : '';
 
     return `<div class="pl-card${isChecked ? ' pl-card-selected' : ''}" data-pl-id="${S.esc(l.id)}" role="button" tabindex="0" aria-label="${S.esc((l.address||'Listing') + ', ' + (l.city||''))}">
       <div class="pl-thumb-wrap">
@@ -924,7 +929,9 @@ function wirePanelPhotoActions(){
     if(existing) existing.remove();
 
     const folder = _activeFolder ? _folders.find(f => f.id === _activeFolder) : null;
-    const folderNotice = folder ? `<div style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.18);font-size:.82rem;color:var(--muted-2)">This listing will be imported into the active folder: <strong>${S.esc(folder.name)}</strong>.</div>` : '';
+    const isBatchFolder = Boolean(folder && (folder.is_disposable_batch || folder.batch_id));
+    const folderLabel = folder ? (isBatchFolder ? `📦 Batch #${folder.batch_id || folder.name}` : folder.name) : '';
+    const folderNotice = folder ? `<div style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.18);font-size:.82rem;color:var(--muted-2)">This listing will be imported into the active ${isBatchFolder ? 'batch' : 'folder'}: <strong>${S.esc(folderLabel)}</strong>.</div>` : '';
 
     const modal = document.createElement('div');
     modal.id = 'pl-import-modal';
@@ -946,6 +953,7 @@ function wirePanelPhotoActions(){
             <input id="pl-import-url" type="url" placeholder="https://www.zillow.com/homedetails/…" autocomplete="off" spellcheck="false">
           </div>
           <input type="hidden" id="pl-import-folder-id" value="${folder ? S.esc(folder.id) : ''}">
+          <input type="hidden" id="pl-import-batch-id" value="${folder && folder.batch_id ? S.esc(folder.batch_id) : ''}">
           <div id="pl-import-result" style="display:none"></div>
         </div>
         <div class="pl-import-ft">
@@ -998,6 +1006,7 @@ function wirePanelPhotoActions(){
     const submitBtn = document.getElementById('pl-import-submit');
     const resultEl  = document.getElementById('pl-import-result');
     const folderId  = document.getElementById('pl-import-folder-id');
+    const batchId   = document.getElementById('pl-import-batch-id');
     if(!urlInput || !submitBtn || !resultEl) return;
 
     const url = urlInput.value.trim();
@@ -1017,6 +1026,7 @@ function wirePanelPhotoActions(){
     try {
       const payload = { url };
       if(folderId && folderId.value) payload.folder_id = folderId.value;
+      if(batchId && batchId.value) payload.batch_id = batchId.value;
       const { data, error } = await CP.sb().functions.invoke('import-from-url', {
         body: payload
       });
@@ -1044,12 +1054,17 @@ function wirePanelPhotoActions(){
         // Refresh the list in the background
         _cClear();
         fetchCounts().catch(()=>{});
+        loadFolders().catch(()=>{});
         setTimeout(async () => {
           try {
-            const [listings] = await Promise.all([fetchListings(_status, 0), Promise.resolve()]);
-            _pageData = listings;
-            renderList(visibleListings(), false);
-            wireCardEvents();
+            if (_activeFolder) {
+              await selectFolder(_activeFolder);
+            } else {
+              const [listings] = await Promise.all([fetchListings(_status, 0), Promise.resolve()]);
+              _pageData = listings;
+              renderList(visibleListings(), false);
+              wireCardEvents();
+            }
           } catch(_){}
         }, 800);
 
@@ -1786,7 +1801,7 @@ function wirePanelPhotoActions(){
   function renderFolderBanner(){
     const banner = document.getElementById('pl-folder-banner');
     const actions = document.getElementById('pl-folder-actions');
-    if(!_activeFolder || !banner || !actions){
+    if(!_activeFolder || !banner){
       if(banner) banner.classList.remove('visible');
       if(actions) actions.style.display = 'none';
       return;
@@ -1795,28 +1810,32 @@ function wirePanelPhotoActions(){
     const folder = _folders.find(f => f.id === _activeFolder);
     if(!folder){
       banner.classList.remove('visible');
-      actions.style.display = 'none';
+      if(actions) actions.style.display = 'none';
       return;
     }
 
+    const isBatch = Boolean(folder.is_disposable_batch || folder.batch_id);
     const published = folder.published_count || 0;
     const archived = folder.archived_count || 0;
     const total = folder.property_count || 0;
     const missing = _pageData.filter(l => !l.choice_property_id && l.status !== 'archived').length;
+    const titleHtml = isBatch
+      ? `Working in 📦 Batch #${S.esc(folder.batch_id || folder.name)} <span class="pl-folder-badge">Disposable Batch · ${S.esc(folder.cleanup_state || 'open')}</span>`
+      : `Working in "${S.esc(folder.name)}"`;
 
     banner.innerHTML = `
       <div>
-        <div class="pl-folder-banner-title">Working in "${S.esc(folder.name)}"</div>
-        <div class="pl-folder-banner-meta">${total} listing${total !== 1 ? 's' : ''} · ${published} published · ${archived} archived · ${missing} needs review</div>
+        <div class="pl-folder-banner-title">${titleHtml}</div>
+        <div class="pl-folder-banner-meta">${total} listing${total !== 1 ? 's' : ''} · ${published} published · ${archived} archived · ${missing} needs review${folder.description ? ' · ' + S.esc(folder.description) : ''}</div>
       </div>
       <div class="pl-folder-banner-actions">
-        <button class="btn btn-sm btn-outline" id="pl-banner-close-folder-btn">Close folder</button>
-        <button class="btn btn-sm btn-primary" id="pl-banner-publish-folder-btn">Publish folder</button>
+        <button class="btn btn-sm btn-outline" id="pl-banner-close-folder-btn">${isBatch ? 'Close batch' : 'Close folder'}</button>
+        <button class="btn btn-sm btn-primary" id="pl-banner-publish-folder-btn">${isBatch ? 'Publish batch' : 'Publish folder'}</button>
       </div>
     `;
 
     banner.classList.add('visible');
-    actions.style.display = 'flex';
+    if(actions) actions.style.display = 'flex';
 
     const closeBtn = document.getElementById('pl-banner-close-folder-btn');
     const pubBtn = document.getElementById('pl-banner-publish-folder-btn');
@@ -1828,9 +1847,14 @@ function wirePanelPhotoActions(){
     const wrap = document.getElementById('pl-folders');
     if(!wrap) return;
     if(!_folders.length){
-      wrap.innerHTML = '<div class="pl-folder-empty">No folders yet.<br><button class="btn btn-sm btn-outline" id="pl-new-folder-btn">+ New Folder</button></div>';
-      const btn = document.getElementById('pl-new-folder-btn');
-      if(btn) btn.addEventListener('click', () => openCreateFolderModal());
+      wrap.innerHTML = `
+        <div class="pl-folder-item pl-batch-new" id="pl-new-batch-item" role="button" tabindex="0">+ New Batch (4-Digit)</div>
+        <div class="pl-folder-item pl-folder-new" id="pl-new-folder-item" role="button" tabindex="0">+ New Folder</div>
+      `;
+      const newFolderBtn = document.getElementById('pl-new-folder-item');
+      if(newFolderBtn) newFolderBtn.addEventListener('click', () => openCreateFolderModal(_selected.size ? [..._selected] : null));
+      const newBatchBtn = document.getElementById('pl-new-batch-item');
+      if(newBatchBtn) newBatchBtn.addEventListener('click', () => openCreateBatchModal());
       renderFolderBanner();
       return;
     }
@@ -1842,18 +1866,29 @@ function wirePanelPhotoActions(){
       </div>
     `;
 
-    wrap.innerHTML = allItem + _folders.map(f => `
-      <div class="pl-folder-item${_activeFolder === f.id ? ' active' : ''}" data-folder-id="${S.esc(f.id)}" role="button" tabindex="0">
-        <div class="pl-folder-name">📁 ${S.esc(f.name)}</div>
-        <div class="pl-folder-count">${f.property_count || 0}</div>
-      </div>
-    `).join('') + '<div class="pl-folder-item pl-folder-new" id="pl-new-folder-item" role="button" tabindex="0">+ New Folder</div>';
+    wrap.innerHTML = allItem + _folders.map(f => {
+      const isBatch = Boolean(f.is_disposable_batch || f.batch_id);
+      const label = isBatch ? `Batch #${S.esc(f.batch_id || f.name)}` : S.esc(f.name);
+      const icon = S.esc(f.icon || (isBatch ? '📦' : '📁'));
+      const batchBadge = isBatch ? '<span class="pl-folder-badge">Batch</span>' : '';
+      return `
+        <div class="pl-folder-item${isBatch ? ' pl-folder-batch' : ''}${_activeFolder === f.id ? ' active' : ''}" data-folder-id="${S.esc(f.id)}" role="button" tabindex="0" title="${S.esc(f.description || label)}">
+          <div class="pl-folder-name">${icon} ${label}</div>
+          ${batchBadge}
+          <div class="pl-folder-count">${f.property_count || 0}</div>
+        </div>
+      `;
+    }).join('')
+      + '<div class="pl-folder-item pl-batch-new" id="pl-new-batch-item" role="button" tabindex="0">+ New Batch (4-Digit)</div>'
+      + '<div class="pl-folder-item pl-folder-new" id="pl-new-folder-item" role="button" tabindex="0">+ New Folder</div>';
 
     wrap.querySelectorAll('.pl-folder-item[data-folder-id]').forEach(el => {
       el.addEventListener('click', () => selectFolder(el.dataset.folderId || null));
     });
     const newBtn = document.getElementById('pl-new-folder-item');
     if(newBtn) newBtn.addEventListener('click', () => openCreateFolderModal(_selected.size ? [..._selected] : null));
+    const newBatchBtn = document.getElementById('pl-new-batch-item');
+    if(newBatchBtn) newBatchBtn.addEventListener('click', () => openCreateBatchModal());
     renderFolderBanner();
   }
 
@@ -1964,6 +1999,194 @@ function wirePanelPhotoActions(){
       resultEl.textContent = e.message || 'Failed to create folder';
       btn.disabled = false;
       btn.textContent = 'Create Folder →';
+    }
+  }
+
+  let _usedBatchIdsCache = new Set();
+
+  function generateUnusedFourDigitId(extraUsed){
+    const used = new Set(_usedBatchIdsCache);
+    _folders.forEach(f => {
+      if(f && f.batch_id) used.add(String(f.batch_id));
+      if(f && f.name && /^\d{4}$/.test(String(f.name).trim())) used.add(String(f.name).trim());
+    });
+    if(extraUsed){
+      extraUsed.forEach(id => used.add(String(id)));
+    }
+    for(let attempt = 0; attempt < 250; attempt++){
+      const candidate = String(1000 + Math.floor(Math.random() * 9000));
+      if(!used.has(candidate)) return candidate;
+    }
+    for(let n = 0; n <= 9999; n++){
+      const padded = String(n).padStart(4, '0');
+      if(!used.has(padded)) return padded;
+    }
+    return '';
+  }
+
+  async function openCreateBatchModal(){
+    const existing = document.getElementById('pl-batch-modal');
+    if(existing) existing.remove();
+
+    const suggestedId = generateUnusedFourDigitId();
+    const modal = document.createElement('div');
+    modal.id = 'pl-batch-modal';
+    modal.innerHTML = `
+      <div class="pl-import-backdrop"></div>
+      <div class="pl-import-dialog" role="dialog" aria-modal="true" aria-label="New 4-Digit Pipeline Batch">
+        <div class="pl-import-hd">
+          <div>
+            <div style="font-size:.95rem;font-weight:700">📦 New 4-Digit Pipeline Batch</div>
+            <div style="font-size:.72rem;color:var(--muted-2)">Creates a permanent Batch #XXXX ledger row + linked disposable pipeline folder</div>
+          </div>
+          <button class="pl-import-close" aria-label="Close">✕</button>
+        </div>
+        <div class="pl-import-body">
+          <div id="pl-batch-stats-banner" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:10px;font-size:.76rem"></div>
+          <div class="pl-field" style="margin-bottom:12px">
+            <label for="pl-batch-id">Pipeline Batch ID (Exact 4 digits, 0000–9999)</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input id="pl-batch-id" type="text" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" value="${S.esc(suggestedId)}" placeholder="e.g. 4821" autocomplete="off" style="font-weight:800;letter-spacing:.12em;flex:1">
+              <button type="button" class="btn btn-outline btn-sm" id="pl-batch-random-btn" style="white-space:nowrap">🎲 Generate Unused</button>
+            </div>
+            <span style="font-size:.7rem;color:var(--muted-2)">One-time use per 4-digit Batch ID. Existing legacy PB-* batches remain preserved automatically.</span>
+          </div>
+          <div class="pl-field" style="margin-bottom:12px">
+            <label for="pl-batch-market">Target Market / City</label>
+            <input id="pl-batch-market" type="text" placeholder="e.g. Dallas, TX" autocomplete="off">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+            <div class="pl-field">
+              <label for="pl-batch-visibility">Listing Visibility</label>
+              <select id="pl-batch-visibility">
+                <option value="private_placement" selected>Private Placement (Magic Link)</option>
+                <option value="active">Public Active Listing</option>
+              </select>
+            </div>
+            <div class="pl-field">
+              <label for="pl-batch-workflow">Workflow Mode</label>
+              <select id="pl-batch-workflow">
+                <option value="scrape_and_publish" selected>Scrape &amp; Publish</option>
+                <option value="pipeline_publish">Pipeline Publish Only</option>
+              </select>
+            </div>
+          </div>
+          <div class="pl-field" style="margin-bottom:12px">
+            <label for="pl-batch-desc">Folder Note / Description (optional)</label>
+            <input id="pl-batch-desc" type="text" placeholder="e.g. Client placement collection for Oak Cliff 3BR+" autocomplete="off">
+          </div>
+          <div id="pl-batch-result" style="display:none"></div>
+        </div>
+        <div class="pl-import-ft">
+          <button class="btn btn-ghost" id="pl-batch-cancel">Cancel</button>
+          <div style="flex:1"></div>
+          <button class="btn btn-primary" id="pl-batch-create-btn">Create Batch &amp; Folder →</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    modal.querySelector('.pl-import-backdrop').addEventListener('click', closeBatchModal);
+    modal.querySelector('.pl-import-close').addEventListener('click', closeBatchModal);
+    document.getElementById('pl-batch-cancel').addEventListener('click', closeBatchModal);
+    document.getElementById('pl-batch-create-btn').addEventListener('click', doCreateBatch);
+    document.getElementById('pl-batch-random-btn').addEventListener('click', () => {
+      const inp = document.getElementById('pl-batch-id');
+      if(inp) inp.value = generateUnusedFourDigitId();
+    });
+    document.getElementById('pl-batch-id').addEventListener('keydown', e => {
+      if(e.key === 'Enter'){ e.preventDefault(); doCreateBatch(); }
+    });
+    setTimeout(() => {
+      const inp = document.getElementById('pl-batch-id');
+      if(inp) inp.focus();
+    }, 50);
+
+    // Load live namespace stats & existing used batch IDs in background
+    try {
+      const [statsRes, listRes] = await Promise.all([
+        CP.sb().rpc('batch_namespace_stats').catch(() => ({ data: null })),
+        CP.sb().rpc('batch_list', { p_limit: 200, p_batch_format: 'four_digit' }).catch(() => ({ data: null }))
+      ]);
+      const stats = typeof statsRes.data === 'string' ? JSON.parse(statsRes.data) : statsRes.data;
+      const batches = typeof listRes.data === 'string' ? JSON.parse(listRes.data) : (listRes.data || []);
+      if(Array.isArray(batches)){
+        batches.forEach(b => { if(b && b.batch_id) _usedBatchIdsCache.add(String(b.batch_id)); });
+      }
+      const idInput = document.getElementById('pl-batch-id');
+      if(idInput && _usedBatchIdsCache.has(idInput.value.trim())){
+        idInput.value = generateUnusedFourDigitId();
+      }
+      const statsBanner = document.getElementById('pl-batch-stats-banner');
+      if(statsBanner && stats){
+        const isWarn = Boolean(stats.warning_triggered);
+        statsBanner.style.display = 'block';
+        statsBanner.style.background = isWarn ? 'rgba(234,179,8,.14)' : 'rgba(99,102,241,.08)';
+        statsBanner.style.border = isWarn ? '1px solid rgba(234,179,8,.35)' : '1px solid rgba(99,102,241,.2)';
+        statsBanner.style.color = isWarn ? '#fbbf24' : 'var(--muted-2)';
+        statsBanner.innerHTML = isWarn
+          ? `⚠ <strong>4-Digit Namespace Notice:</strong> ${stats.used_four_digit_count} / 10,000 IDs used (${stats.remaining_four_digit_count} remaining). Archive/extend namespace before exhaustion.`
+          : `4-Digit Namespace: <strong>${stats.used_four_digit_count}</strong> used · <strong>${stats.remaining_four_digit_count}</strong> available · ${stats.legacy_pb_count} legacy PB batches preserved`;
+      }
+    } catch(_){}
+  }
+
+  function closeBatchModal(){
+    const modal = document.getElementById('pl-batch-modal');
+    if(modal) modal.remove();
+  }
+
+  async function doCreateBatch(){
+    const idInput = document.getElementById('pl-batch-id');
+    const marketInput = document.getElementById('pl-batch-market');
+    const visSelect = document.getElementById('pl-batch-visibility');
+    const wfSelect = document.getElementById('pl-batch-workflow');
+    const descInput = document.getElementById('pl-batch-desc');
+    const resultEl = document.getElementById('pl-batch-result');
+    const btn = document.getElementById('pl-batch-create-btn');
+    if(!idInput || !resultEl || !btn) return;
+
+    const batchId = idInput.value.trim();
+    if(!/^\d{4}$/.test(batchId)){
+      resultEl.style.cssText = 'display:block;padding:10px 12px;border-radius:8px;background:rgba(239,68,68,.1);color:#dc2626;font-size:.8rem;margin-top:4px';
+      resultEl.textContent = 'Enter an exact 4-digit numeric Batch ID (0000–9999).';
+      idInput.focus();
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Creating Batch…';
+    resultEl.style.display = 'none';
+
+    try {
+      const { data, error } = await CP.sb().rpc('batch_create', {
+        p_batch_id: batchId,
+        p_target_market: (marketInput && marketInput.value.trim()) || 'Unspecified',
+        p_workflow_type: (wfSelect && wfSelect.value) || 'scrape_and_publish',
+        p_visibility: (visSelect && visSelect.value) || 'private_placement',
+        p_description: (descInput && descInput.value.trim()) || null
+      });
+      if(error) throw error;
+      const res = typeof data === 'string' ? JSON.parse(data) : data;
+      if(!res?.ok){
+        resultEl.style.cssText = 'display:block;padding:10px 12px;border-radius:8px;background:rgba(239,68,68,.1);color:#dc2626;font-size:.8rem;margin-top:4px';
+        resultEl.textContent = res?.message || res?.error || 'Failed to create batch';
+        btn.disabled = false;
+        btn.textContent = 'Create Batch & Folder →';
+        return;
+      }
+
+      _usedBatchIdsCache.add(res.batch_id);
+      S.toast(`Batch #${res.batch_id} & disposable folder ready ✓`, 'success');
+      closeBatchModal();
+      await loadFolders();
+      if(res.folder_id){
+        await selectFolder(res.folder_id);
+      }
+    } catch(e){
+      resultEl.style.cssText = 'display:block;padding:10px 12px;border-radius:8px;background:rgba(239,68,68,.1);color:#dc2626;font-size:.8rem;margin-top:4px';
+      resultEl.textContent = e.message || 'Failed to create batch';
+      btn.disabled = false;
+      btn.textContent = 'Create Batch & Folder →';
     }
   }
 
@@ -2109,12 +2332,16 @@ function wirePanelPhotoActions(){
       if(!_folders.length){
         listWrapper.innerHTML = '<div class="pl-folder-empty">No folders exist yet. Create one below.</div>';
       } else {
-        listWrapper.innerHTML = _folders.map(f => `
-          <button class="btn btn-ghost" type="button" data-folder-id="${S.esc(f.id)}" style="justify-content:space-between;display:flex;align-items:center">
-            <span>${S.esc(f.name)}</span>
-            <span style="opacity:.7">${f.property_count || 0}</span>
-          </button>
-        `).join('');
+        listWrapper.innerHTML = _folders.map(f => {
+          const isBatch = Boolean(f.is_disposable_batch || f.batch_id);
+          const label = isBatch ? `📦 Batch #${S.esc(f.batch_id || f.name)}` : `📁 ${S.esc(f.name)}`;
+          return `
+            <button class="btn btn-ghost" type="button" data-folder-id="${S.esc(f.id)}" style="justify-content:space-between;display:flex;align-items:center">
+              <span>${label}</span>
+              <span style="opacity:.7">${f.property_count || 0}</span>
+            </button>
+          `;
+        }).join('');
         listWrapper.querySelectorAll('button[data-folder-id]').forEach(btn => {
           btn.addEventListener('click', async () => {
             const folderId = btn.dataset.folderId;
@@ -2692,6 +2919,8 @@ function wirePanelPhotoActions(){
           if (histModal) histModal.remove();
           const recModal = document.getElementById('pl-recovery-modal');
           if (recModal) recModal.remove();
+          const batchModal = document.getElementById('pl-batch-modal');
+          if (batchModal) batchModal.remove();
           return;
         }
 
@@ -2732,7 +2961,7 @@ function wirePanelPhotoActions(){
       let _lastFocusRefresh = Date.now();
       const refreshOnFocus = () => {
         if (document.hidden || _loading || _current) return;
-        const hasOpenModal = document.querySelector('#pl-import-modal, #pl-folder-modal, #pl-photo-editor-modal, #pl-history-modal, #pl-recovery-modal, #pl-desc-compare-modal');
+        const hasOpenModal = document.querySelector('#pl-import-modal, #pl-folder-modal, #pl-batch-modal, #pl-photo-editor-modal, #pl-history-modal, #pl-recovery-modal, #pl-desc-compare-modal');
         if (hasOpenModal) return;
         const now = Date.now();
         if (now - _lastFocusRefresh < 2500) return;
