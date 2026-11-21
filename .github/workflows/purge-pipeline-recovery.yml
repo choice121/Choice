@@ -46,7 +46,7 @@ jobs:
             DRY_RUN="true"
           fi
 
-          PAYLOAD=$(python3 -c 'import json, os; print(json.dumps({"dry_run": os.environ["DRY_RUN"] == "true", "limit": min(max(int(os.environ.get("INPUT_LIMIT", "100") or "100"), 1), 500)}))' DRY_RUN="$DRY_RUN")
+          PAYLOAD=$(DRY_RUN="$DRY_RUN" python3 -c 'import json, os; print(json.dumps({"dry_run": os.environ["DRY_RUN"] == "true", "limit": min(max(int(os.environ.get("INPUT_LIMIT", "100") or "100"), 1), 500)}))')
           ENDPOINT="${SUPABASE_URL%/}/functions/v1/purge-expired-pipeline-recovery"
 
           echo "Invoking purge-expired-pipeline-recovery (dry_run=${DRY_RUN})..."
