@@ -31,7 +31,7 @@
 | `issue-payment-receipt` | v17 | `false` | Manual payment receipt issuer |
 | `nudge-expiring-drafts` | v48 | `false` | Draft reminder mailer |
 | `pipeline-recovery` | v9 | `false` | Stage 1/2 24h recovery archive listing & restore (`admin/pipeline.html`) |
-| `private-placement-registry` | v1 | `false` | Permanent Private-Placement Registry batch lookup & audited expired-link replacement |
+| `private-placement-registry` | v4 | `false` | Permanent Private-Placement Registry batch lookup & audited expired-link replacement |
 | `property-location` | v27 | `false` | Cached Geoapify nearby places & neighborhood lookup (`js/property.js`) |
 | `property-share` | v48 | `false` | Private-placement share link creation, token resolution & list |
 | `purge-expired-pipeline-recovery` | v8 | `false` | Stage 2 permanent deletion of >24h recovery rows + raw storage blobs (hourly GitHub Actions cron) |
