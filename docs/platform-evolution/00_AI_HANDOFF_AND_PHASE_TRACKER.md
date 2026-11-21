@@ -10,9 +10,9 @@
 
 | Field | Value |
 |---|---|
-| **Active / Next Available Phase** | **`PHASE 7`** — Centralized Description Enrichment & Task-Specific Pricing Engines |
-| **Current Baseline Commit (`main`)** | `77ade9f` (`choice121/Choice`) |
-| **Overall Plan Progress** | `6 / 10 Phases Completed` (`READY FOR USER APPROVAL TO START PHASE 7`) |
+| **Active / Next Available Phase** | **`PHASE 8`** — Batch-Scoped Private-Placement Publishing, Visibility Shielding & Verification |
+| **Current Baseline Commit (`main`)** | `42e654f` (`choice121/Choice`) |
+| **Overall Plan Progress** | `7 / 10 Phases Completed` (`READY FOR USER APPROVAL TO START PHASE 8`) |
 | **Last Updated** | `2026-11-21` |
 
 ---
@@ -77,8 +77,8 @@ You may **not** mark any phase `DONE` until ALL 5 steps below pass cleanly:
 | **Phase 4** | Centralized Rules & Policies Engine + Versioned Policy Admin | Phase 1, Phase 2 | `DONE` | Verified live across DB, `rules-engine@v1`, immutable 403 guards, dry-run, versioned `v1`/`v2` pinning & Cloudflare (`2e896739`) | `a3c5b43`, `57086a5` |
 | **Phase 5** | Apify Default Scraping Engine & Dual-Channel Worker Integration | Phase 2, Phase 4 | `DONE` | Verified live across DB, `apify-scrape-worker@v1`, `receive-pipeline-import` dual-channel parity, Storage archive & Cloudflare (`f55d9023`) | `0fe3186` |
 | **Phase 6** | Automated Property Eligibility, Source Profile & Image Validation Engine | Phase 4, Phase 5 | `DONE` | Verified live across DB, `property-validator@v1`, unlimited Zillow URLs in `rules-engine`, Admin UI & Cloudflare (`ca6b617e`) | `3fbff7e`, `77ade9f` |
-| **Phase 7** | Centralized Description Enrichment & Task-Specific Pricing Engines | Phase 4, Phase 6 | `READY` | **NEXT AVAILABLE PHASE** — Awaiting approval to execute | — |
-| **Phase 8** | Batch-Scoped Private-Placement Publishing, Visibility Shielding & Verification | Phase 3, Phase 6, Phase 7 | `BLOCKED` | Unlocks after Phase 3, 6 & 7 are `DONE` | — |
+| **Phase 7** | Centralized Description Enrichment & Task-Specific Pricing Engines | Phase 4, Phase 6 | `DONE` | Verified live across DB, `pricing_calculations`, `description_enrichment_audit`, `enrich-description@v1`, `calculate-pricing@v1` & Cloudflare (`6db26ac6`) | `42e654f` |
+| **Phase 8** | Batch-Scoped Private-Placement Publishing, Visibility Shielding & Verification | Phase 3, Phase 6, Phase 7 | `READY` | **NEXT AVAILABLE PHASE** — Awaiting approval to execute | — |
 | **Phase 9** | Concurrent Multi-AI Job Manager, Worker Isolation & Disposable Folder Cleanup | Phase 5, Phase 8 | `BLOCKED` | Unlocks after Phase 5 & 8 are `DONE` | — |
 | **Phase 10** | Unified Admin Control Center, Full E2E Test Suite, Live Verification & Plan Cleanup | Phase 1–9 | `BLOCKED` | Final phase — includes deletion of `docs/platform-evolution/` | — |
 
@@ -125,4 +125,9 @@ You may **not** mark any phase `DONE` until ALL 5 steps below pass cleanly:
   - Upgraded `supabase/functions/rules-engine/index.ts` (`prohibited_profiles` `create`/`update`/`bulk_create` supporting unlimited names, aliases, and `https://www.zillow.com/profile/...` URLs) and integrated a **Blocked Profiles** manager modal + **✓ Validate** queue/panel workflow + `needs_review` Approve/Reject actions directly inside `admin/pipeline.html` & `js/admin/pipeline.js`.
   - **Verification**: Chrome (`34/34`), Orion (`17/17`), `validate-extension.mjs` (`v34.1.0`), `test-manual-payment-workflow.mjs` (`6/6`), `enforce-cloudflare-only.js`, `npm run build`, `compile_applet`, and `lint_applet` passed; live end-to-end verification confirmed updated Cloudflare Pages `admin/pipeline.html` (`ca6b617e`), `401` unauth guard, idempotent unlimited `bulk_create` with Zillow `/profile/` URLs, live `validate_batch` across batch `9994` (`1` single-family owner listing `passed` with `4/4` live HTTPS `HEAD` checks, `2` rejected by core & custom Zillow URL prohibited profiles, `1` bare person name `John Doe` held in `needs_review` with `verified_owner_landlord: false`, `1` apartment complex with `floorPlans`/`priceRange` rejected, `1` watermarked gallery flagged without cropping & rejected), `resolve_review`, verified single-unit apartment dry-run pass, and clean DB/Storage rollback (`18` `PB-*` batches intact, `0` test batches, `6` baseline profiles).
   - **Next Available Phase**: `Phase 7`.
+- **Phase 7 Completed & Verified Live (`2026-11-21`, commit `42e654f`)**:
+  - Applied migration `20261121000014_phase7_enrichment_and_pricing_engines.sql` creating `public.pricing_calculations` (RLS-protected), extending `public.description_enrichment_audit` with batch/policy metadata & RLS, adding pricing tracking columns (`pricing_status`, `pricing_method`, `pricing_meta`, `priced_at`, `last_priced_hash`) on `pipeline.pipeline_properties`, updating `pipeline_list` / `pipeline_folder_properties`, and adding least-privilege RPCs `pipeline_enrich_batch`, `pipeline_record_enrichment_result`, `pipeline_price_batch`, and `pipeline_record_pricing_result`.
+  - Created shared engines `_shared/description-enrichment.ts` and `_shared/pricing-engine.ts` (+ Deno unit tests `__tests__/description-enrichment.test.ts` and `__tests__/pricing-engine.test.ts`), and deployed Edge Functions `enrich-description` (`v1`, `verify_jwt = false`) and `calculate-pricing` (`v1`, `verify_jwt = false`) registered in `supabase/config.toml` & `docs/SUPABASE_DEPLOYED_FUNCTIONS_INVENTORY.md` (`65` live / `32` git-tracked).
+  - **Verification**: Node 22 TS assertions (`description-enrichment` & `pricing-engine`), Chrome (`34/34`), Orion (`17/17`), `validate-extension.mjs` (`v34.1.0`), `test-manual-payment-workflow.mjs` (`6/6`), `enforce-cloudflare-only.js`, `npm run build`, `compile_applet`, and `lint_applet` passed; GitHub Actions (`Cloudflare-Only Enforcement` + `Deploy Supabase Edge Functions & Migrations`) and Cloudflare Pages (`6db26ac6`) passed; live verification confirmed `401` unauth guards, batch `9997` `enrich_batch` (`2` enriched with untouched `original_description`, Choice sanitization, `$50` footer, and `4` `description_enrichment_audit` rows; `2` held in `needs_review` for contradictory & incomplete source copy), `400 invalid_source_range_clarification_required` when `SourceMin === SourceMax`, `proportional_range` (`$1,400 -> $1,550`, `$1,675 -> $1,700`, `$1,950 -> $1,850`, `$2,300 -> held_out_of_range`, `4` `pricing_calculations` rows), idempotent re-run (`3` skipped, zero double adjustment), dry-run `none` / `fixed` / `individual_map`, and clean rollback (`18` `PB-*` batches intact, `0` test 4-digit batches).
+  - **Next Available Phase**: `Phase 8`.
 
