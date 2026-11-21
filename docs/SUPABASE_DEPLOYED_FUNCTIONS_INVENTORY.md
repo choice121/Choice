@@ -1,21 +1,21 @@
 # Choice Properties — Supabase Deployed Edge Functions Inventory
 
 > **Supabase Project:** `tlfmwetmhthpyrytrcfo` (`us-east-1`)  
-> **Total Deployed Edge Functions:** `59` (`26` git-tracked in `supabase/functions/` + `33` live-deployed via CLI/Studio)  
-> **Updated:** `2026-11-21` (Phase 1 Synchronization)
+> **Total Deployed Edge Functions:** `60` (`27` git-tracked in `supabase/functions/` + `33` live-deployed via CLI/Studio)  
+> **Updated:** `2026-11-21` (Phase 3 Registry Synchronization)
 
 ---
 
 ## 1. Deployment & `verify_jwt` Policy
 
 1. `.github/workflows/supabase-deploy.yml` parses (`deno cache --no-check`) and deploys every directory inside `supabase/functions/*/` individually whenever changes touch `supabase/functions/**`, `supabase/migrations/**`, `supabase/config.toml`, or the workflow itself.
-2. Because `.github/workflows/supabase-deploy.yml` deploys individually, **`supabase/config.toml` explicitly specifies `verify_jwt = true | false` for all 26 git-tracked Edge Functions**, preventing any unlisted function from defaulting unexpectedly to `verify_jwt = true`.
+2. Because `.github/workflows/supabase-deploy.yml` deploys individually, **`supabase/config.toml` explicitly specifies `verify_jwt = true | false` for all 27 git-tracked Edge Functions**, preventing any unlisted function from defaulting unexpectedly to `verify_jwt = true`.
 3. Live-only functions not stored inside `supabase/functions/` remain undisturbed and active in Supabase during git-triggered CI deployments.
 4. `confirm-card-payment` remains intentionally omitted from `supabase/functions/` (verified by `scripts/test-manual-payment-workflow.mjs`).
 
 ---
 
-## 2. Git-Tracked Edge Functions (`26` — Declared in `supabase/config.toml`)
+## 2. Git-Tracked Edge Functions (`27` — Declared in `supabase/config.toml`)
 
 | Function Slug | Live Version | `verify_jwt` (`config.toml` & Live) | Primary Role |
 |---|---:|:---:|---|
@@ -31,6 +31,7 @@
 | `issue-payment-receipt` | v17 | `false` | Manual payment receipt issuer |
 | `nudge-expiring-drafts` | v48 | `false` | Draft reminder mailer |
 | `pipeline-recovery` | v9 | `false` | Stage 1/2 24h recovery archive listing & restore (`admin/pipeline.html`) |
+| `private-placement-registry` | v1 | `false` | Permanent Private-Placement Registry batch lookup & audited expired-link replacement |
 | `property-location` | v27 | `false` | Cached Geoapify nearby places & neighborhood lookup (`js/property.js`) |
 | `property-share` | v48 | `false` | Private-placement share link creation, token resolution & list |
 | `purge-expired-pipeline-recovery` | v8 | `false` | Stage 2 permanent deletion of >24h recovery rows + raw storage blobs (hourly GitHub Actions cron) |

@@ -39,6 +39,9 @@ verify_jwt = false
 [functions.pipeline-recovery]
 verify_jwt = false
 
+[functions.private-placement-registry]
+verify_jwt = false
+
 [functions.property-location]
 verify_jwt = false
 
