@@ -1,21 +1,21 @@
 # Choice Properties — Supabase Deployed Edge Functions Inventory
 
 > **Supabase Project:** `tlfmwetmhthpyrytrcfo` (`us-east-1`)  
-> **Total Deployed Edge Functions:** `67` (`34` git-tracked in `supabase/functions/` + `33` live-deployed via CLI/Studio)  
-> **Updated:** `2026-11-21` (Phase 8 Batch-Scoped Private-Placement Publishing, Visibility Shielding & Verification)
+> **Total Deployed Edge Functions:** `68` (`35` git-tracked in `supabase/functions/` + `33` live-deployed via CLI/Studio)  
+> **Updated:** `2026-11-21` (Phase 9 Concurrent Multi-AI Job Manager, Worker Isolation & Safe Disposable Folder Cleanup)
 
 ---
 
 ## 1. Deployment & `verify_jwt` Policy
 
 1. `.github/workflows/supabase-deploy.yml` parses (`deno cache --no-check`) and deploys every directory inside `supabase/functions/*/` individually whenever changes touch `supabase/functions/**`, `supabase/migrations/**`, `supabase/config.toml`, or the workflow itself.
-2. Because `.github/workflows/supabase-deploy.yml` deploys individually, **`supabase/config.toml` explicitly specifies `verify_jwt = true | false` for all 34 git-tracked Edge Functions**, preventing any unlisted function from defaulting unexpectedly to `verify_jwt = true`.
+2. Because `.github/workflows/supabase-deploy.yml` deploys individually, **`supabase/config.toml` explicitly specifies `verify_jwt = true | false` for all 35 git-tracked Edge Functions**, preventing any unlisted function from defaulting unexpectedly to `verify_jwt = true`.
 3. Live-only functions not stored inside `supabase/functions/` remain undisturbed and active in Supabase during git-triggered CI deployments.
 4. `confirm-card-payment` remains intentionally omitted from `supabase/functions/` (verified by `scripts/test-manual-payment-workflow.mjs`).
 
 ---
 
-## 2. Git-Tracked Edge Functions (`34` — Declared in `supabase/config.toml`)
+## 2. Git-Tracked Edge Functions (`35` — Declared in `supabase/config.toml`)
 
 | Function Slug | Live Version | `verify_jwt` (`config.toml` & Live) | Primary Role |
 |---|---:|:---:|---|
@@ -32,6 +32,7 @@
 | `get-tenant-portal-app` | v20 | `false` | Tenant portal application & summary loader |
 | `import-from-url` | v95 | `false` | Admin single-URL listing importer (`admin/pipeline.html`) |
 | `issue-payment-receipt` | v17 | `false` | Manual payment receipt issuer |
+| `job-manager` | v1 | `false` | Phase 9 concurrent multi-AI job orchestration (`register_job`, `claim_next_or_assigned`, `heartbeat`, `report_stage`, `pause_job`, `resume_job`, `reap_stale_leases`, `cleanup_disposable_folder`) |
 | `nudge-expiring-drafts` | v48 | `false` | Draft reminder mailer |
 | `pipeline-recovery` | v9 | `false` | Stage 1/2 24h recovery archive listing & restore (`admin/pipeline.html`) |
 | `private-placement-registry` | v4 | `false` | Permanent Private-Placement Registry batch lookup & audited expired-link replacement |

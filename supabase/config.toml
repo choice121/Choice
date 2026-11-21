@@ -42,6 +42,9 @@ verify_jwt = false
 [functions.issue-payment-receipt]
 verify_jwt = false
 
+[functions.job-manager]
+verify_jwt = false
+
 [functions.nudge-expiring-drafts]
 verify_jwt = false
 
