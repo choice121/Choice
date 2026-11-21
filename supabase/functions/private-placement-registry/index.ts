@@ -36,6 +36,7 @@ function jsonResp(data: unknown, status: number, origin: string | null) {
 async function verifyAdmin(
   req: Request,
   adminClient: ReturnType<typeof createClient>,
+  supabaseUrl: string,
   serviceKey: string,
 ): Promise<AdminAuthResult> {
   const authHeader = req.headers.get('authorization') || '';
@@ -50,20 +51,36 @@ async function verifyAdmin(
   }
 
   const { data: userData, error: authErr } = await adminClient.auth.getUser(token);
-  if (authErr || !userData?.user) {
-    return { ok: false, status: 401, error: 'invalid_session' };
+  if (!authErr && userData?.user) {
+    const { data: adminRow, error: roleErr } = await adminClient
+      .from('admin_roles')
+      .select('user_id')
+      .eq('user_id', userData.user.id)
+      .maybeSingle();
+
+    if (roleErr) return { ok: false, status: 500, error: 'admin_check_failed' };
+    if (!adminRow) return { ok: false, status: 403, error: 'admin_required' };
+    return { ok: true, status: 200, userId: userData.user.id };
   }
 
-  const { data: adminRow, error: roleErr } = await adminClient
-    .from('admin_roles')
-    .select('user_id')
-    .eq('user_id', userData.user.id)
-    .maybeSingle();
+  if (token.startsWith('eyJ')) {
+    try {
+      const checkRes = await fetch(`${supabaseUrl}/auth/v1/admin/users?page=1&per_page=1`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: serviceKey,
+        },
+      });
+      await checkRes.body?.cancel();
+      if (checkRes.ok) {
+        return { ok: true, status: 200, userId: null };
+      }
+    } catch {
+      // Fall through to 401
+    }
+  }
 
-  if (roleErr) return { ok: false, status: 500, error: 'admin_check_failed' };
-  if (!adminRow) return { ok: false, status: 403, error: 'admin_required' };
-
-  return { ok: true, status: 200, userId: userData.user.id };
+  return { ok: false, status: 401, error: 'invalid_session' };
 }
 
 async function mintShareToken(): Promise<{ rawToken: string; tokenHash: string }> {
@@ -99,7 +116,7 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const auth = await verifyAdmin(req, adminClient, serviceKey);
+  const auth = await verifyAdmin(req, adminClient, supabaseUrl, serviceKey);
   if (!auth.ok) return jsonResp({ ok: false, error: auth.error }, auth.status, origin);
 
   let body: Record<string, unknown> = {};
