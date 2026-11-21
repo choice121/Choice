@@ -174,15 +174,15 @@ Deno.serve(async (req) => {
       }
 
       if (body.track_view !== false) {
-        supabase
-          .from('property_shares')
-          .update({
-            view_count: Number(shareData.view_count || 0) + 1,
-            last_viewed_at: new Date().toISOString(),
-          })
-          .eq('id', shareData.id)
-          .then(() => {})
-          .catch(() => {});
+        void Promise.resolve(
+          supabase
+            .from('property_shares')
+            .update({
+              view_count: Number(shareData.view_count || 0) + 1,
+              last_viewed_at: new Date().toISOString(),
+            })
+            .eq('id', shareData.id),
+        ).catch(() => {});
       }
 
       const { data: linkData, error: linkError } = await supabase

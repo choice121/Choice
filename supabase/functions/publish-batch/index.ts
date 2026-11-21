@@ -273,11 +273,15 @@ Deno.serve(async (req) => {
         title: cand.title || cand.address || pipelineId,
         error: msg,
       });
-      await adminClient.rpc('pipeline_record_publish_failure', {
-        p_batch_id: String(batchMeta.id || rawBatchId),
-        p_pipeline_id: pipelineId,
-        p_error: msg,
-      }).catch(() => {});
+      try {
+        await adminClient.rpc('pipeline_record_publish_failure', {
+          p_batch_id: String(batchMeta.id || rawBatchId),
+          p_pipeline_id: pipelineId,
+          p_error: msg,
+        });
+      } catch {
+        // Non-fatal audit update
+      }
     }
   }
 
@@ -380,21 +384,24 @@ Deno.serve(async (req) => {
   const finRes = (typeof finRaw === 'string' ? JSON.parse(finRaw) : finRaw) as Record<string, unknown>;
 
   // 5. Audit admin_actions (non-blocking)
-  await adminClient
-    .from('admin_actions')
-    .insert({
-      user_id: auth.userId || null,
-      action: 'batch.publish',
-      target_type: 'publishing_batch',
-      target_id: finalBatchId,
-      metadata: {
-        published_count: publishedCount,
-        failed_count: failedCount,
-        share_id: shareId,
-        property_ids: publishedPropertyIds,
-      },
-    })
-    .catch(() => {});
+  try {
+    await adminClient
+      .from('admin_actions')
+      .insert({
+        user_id: auth.userId || null,
+        action: 'batch.publish',
+        target_type: 'publishing_batch',
+        target_id: finalBatchId,
+        metadata: {
+          published_count: publishedCount,
+          failed_count: failedCount,
+          share_id: shareId,
+          property_ids: publishedPropertyIds,
+        },
+      });
+  } catch {
+    // Non-fatal audit logging
+  }
 
   // 6. Optional inline post-publish live verification
   let verification: unknown = null;

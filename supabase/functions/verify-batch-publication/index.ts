@@ -123,20 +123,23 @@ Deno.serve(async (req) => {
     siteBase: typeof body.site_base === 'string' && body.site_base.trim() ? body.site_base.trim() : undefined,
   });
 
-  await adminClient
-    .from('admin_actions')
-    .insert({
-      user_id: auth.userId || null,
-      action: 'batch.verify',
-      target_type: 'publishing_batch',
-      target_id: output.batch_id,
-      metadata: {
-        verified: output.verified,
-        checks: output.checks,
-        failures: output.failures,
-      },
-    })
-    .catch(() => {});
+  try {
+    await adminClient
+      .from('admin_actions')
+      .insert({
+        user_id: auth.userId || null,
+        action: 'batch.verify',
+        target_type: 'publishing_batch',
+        target_id: output.batch_id,
+        metadata: {
+          verified: output.verified,
+          checks: output.checks,
+          failures: output.failures,
+        },
+      });
+  } catch {
+    // Non-fatal audit logging
+  }
 
   return jsonResp(output, output.verified ? 200 : 422, origin);
 });
