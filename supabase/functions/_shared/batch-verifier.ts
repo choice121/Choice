@@ -187,11 +187,16 @@ export async function runBatchVerification(
             },
           },
         );
-        const rlsRows = rlsRes.ok ? await rlsRes.json() : null;
-        if (Array.isArray(rlsRows) && rlsRows.length === 0) {
+        if (rlsRes.status === 401 || rlsRes.status === 403) {
+          await rlsRes.body?.cancel();
           checks.anon_rls_excluded = true;
         } else {
-          failures.push(`anon_rls_exposed_private_properties:${JSON.stringify(rlsRows)}`);
+          const rlsRows = rlsRes.ok ? await rlsRes.json() : null;
+          if (Array.isArray(rlsRows) && rlsRows.length === 0) {
+            checks.anon_rls_excluded = true;
+          } else {
+            failures.push(`anon_rls_exposed_private_properties:${rlsRes.status}:${JSON.stringify(rlsRows)}`);
+          }
         }
 
         const rpcRes = await fetch(`${opts.supabaseUrl}/rest/v1/rpc/get_properties_by_ids`, {
@@ -203,11 +208,16 @@ export async function runBatchVerification(
           },
           body: JSON.stringify({ p_ids: expectedIds }),
         });
-        const rpcRows = rpcRes.ok ? await rpcRes.json() : null;
-        if (Array.isArray(rpcRows) && rpcRows.length === 0) {
+        if (rpcRes.status === 401 || rpcRes.status === 403) {
+          await rpcRes.body?.cancel();
           checks.anon_rpc_excluded = true;
         } else {
-          failures.push(`anon_rpc_exposed_private_properties:${JSON.stringify(rpcRows)}`);
+          const rpcRows = rpcRes.ok ? await rpcRes.json() : null;
+          if (Array.isArray(rpcRows) && rpcRows.length === 0) {
+            checks.anon_rpc_excluded = true;
+          } else {
+            failures.push(`anon_rpc_exposed_private_properties:${rpcRes.status}:${JSON.stringify(rpcRows)}`);
+          }
         }
       } catch (err) {
         failures.push(`anon_privacy_check_error:${err instanceof Error ? err.message : String(err)}`);
