@@ -25,6 +25,7 @@ import {
   BONUS_FIELDS,
   TRACKABLE_MISSING,
 } from '../_shared/pipeline-record.ts';
+import { extractPosterProfileSignal } from '../_shared/apify-normalizer.ts';
 
 type ImageEntry = string | {
   url: string;
@@ -768,6 +769,28 @@ Deno.serve(async (req) => {
   const record = buildPipelineRecord(body as unknown as Parameters<typeof buildPipelineRecord>[0]);
   record.batch_id = targetBatchId;
   record.batch_uuid = targetBatchUuid;
+
+  // Dual-channel provenance parity: normalize provider_key & poster_profile alongside Apify worker
+  const rawImportMarker = String(body._import || '').toLowerCase();
+  const inferredProviderKey = safeStr(body.provider_key) ||
+    (rawImportMarker.includes('orion') || String(req.headers.get('origin') || '').startsWith('orion-extension://')
+      ? 'browser_extension_orion'
+      : 'browser_extension_chrome');
+  const posterSignal = extractPosterProfileSignal(
+    (body.source_raw_payload && typeof body.source_raw_payload === 'object' && !Array.isArray(body.source_raw_payload))
+      ? { ...(body.source_raw_payload as Record<string, unknown>), agentName: body.agent_name, brokerName: body.broker_name }
+      : { agentName: body.agent_name, brokerName: body.broker_name, ...(reqProvenance || {}) },
+  );
+  const existingFp = (record.field_provenance && typeof record.field_provenance === 'object')
+    ? (record.field_provenance as Record<string, unknown>)
+    : {};
+  record.field_provenance = {
+    ...existingFp,
+    source,
+    provider_key: existingFp.provider_key || inferredProviderKey,
+    batch_id: targetBatchId,
+    poster_profile: existingFp.poster_profile || posterSignal,
+  };
 
   // ── Save raw payload to the Data Lake Storage Bucket (Fire & Forget) ──
   try {

@@ -288,6 +288,7 @@ export interface PipelineRecordInput {
   has_central_air?: boolean | null;
   virtual_tour_url?: string | null;
   monthly_rent?: number | null;
+  original_monthly_rent?: number | null;
   security_deposit?: number | null;
   last_months_rent?: number | null;
   application_fee?: number | null;
@@ -451,6 +452,7 @@ export function buildPipelineRecord(body: PipelineRecordInput): Record<string, u
 
     // Financials
     monthly_rent:         safeInt(body.monthly_rent),
+    original_monthly_rent: safeFloat(body.original_monthly_rent) ?? safeInt(body.monthly_rent),
     security_deposit:     safeInt(body.security_deposit),
     last_months_rent:     safeInt(body.last_months_rent),
     application_fee:      safeInt(body.application_fee),

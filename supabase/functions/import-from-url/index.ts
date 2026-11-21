@@ -12,6 +12,7 @@ import {
   extractVerifiedZillowRental,
   parseZillowDetailUrl,
 } from "../_shared/zillow-url-import.ts";
+import { extractPosterProfileSignal } from "../_shared/apify-normalizer.ts";
 
 const MAX_REQUEST_BYTES = 8_192;
 const MAX_HTML_BYTES = 5 * 1024 * 1024;
@@ -304,6 +305,19 @@ Deno.serve(async (req) => {
   });
   record.batch_id = targetBatchId;
   record.batch_uuid = targetBatchUuid;
+  const posterSignal = extractPosterProfileSignal(
+    (extracted.source_raw_payload && typeof extracted.source_raw_payload === "object")
+      ? { ...(extracted.source_raw_payload as Record<string, unknown>), agentName: extracted.agent_name, brokerName: extracted.broker_name }
+      : { agentName: extracted.agent_name, brokerName: extracted.broker_name },
+  );
+  record.field_provenance = {
+    source: "zillow",
+    provider_key: "admin_url_import",
+    import_channel: "admin-url-import-v2",
+    batch_id: targetBatchId,
+    imported_at: record.imported_at,
+    poster_profile: posterSignal,
+  };
   record.original_data = {
     source: "zillow",
     zpid: parsedUrl.zpid,

@@ -3,6 +3,9 @@
 # Keep in sync with live project tlfmwetmhthpyrytrcfo so per-function CI deploys
 # in .github/workflows/supabase-deploy.yml never alter endpoint JWT behavior unexpectedly.
 
+[functions.apify-scrape-worker]
+verify_jwt = false
+
 [functions.check-unsigned-leases]
 verify_jwt = false
 

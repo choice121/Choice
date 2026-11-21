@@ -1,24 +1,25 @@
 # Choice Properties — Supabase Deployed Edge Functions Inventory
 
 > **Supabase Project:** `tlfmwetmhthpyrytrcfo` (`us-east-1`)  
-> **Total Deployed Edge Functions:** `61` (`28` git-tracked in `supabase/functions/` + `33` live-deployed via CLI/Studio)  
-> **Updated:** `2026-11-21` (Phase 4 Rules & Policies Engine)
+> **Total Deployed Edge Functions:** `62` (`29` git-tracked in `supabase/functions/` + `33` live-deployed via CLI/Studio)  
+> **Updated:** `2026-11-21` (Phase 5 Apify Automated Scraping Engine)
 
 ---
 
 ## 1. Deployment & `verify_jwt` Policy
 
 1. `.github/workflows/supabase-deploy.yml` parses (`deno cache --no-check`) and deploys every directory inside `supabase/functions/*/` individually whenever changes touch `supabase/functions/**`, `supabase/migrations/**`, `supabase/config.toml`, or the workflow itself.
-2. Because `.github/workflows/supabase-deploy.yml` deploys individually, **`supabase/config.toml` explicitly specifies `verify_jwt = true | false` for all 28 git-tracked Edge Functions**, preventing any unlisted function from defaulting unexpectedly to `verify_jwt = true`.
+2. Because `.github/workflows/supabase-deploy.yml` deploys individually, **`supabase/config.toml` explicitly specifies `verify_jwt = true | false` for all 29 git-tracked Edge Functions**, preventing any unlisted function from defaulting unexpectedly to `verify_jwt = true`.
 3. Live-only functions not stored inside `supabase/functions/` remain undisturbed and active in Supabase during git-triggered CI deployments.
 4. `confirm-card-payment` remains intentionally omitted from `supabase/functions/` (verified by `scripts/test-manual-payment-workflow.mjs`).
 
 ---
 
-## 2. Git-Tracked Edge Functions (`28` — Declared in `supabase/config.toml`)
+## 2. Git-Tracked Edge Functions (`29` — Declared in `supabase/config.toml`)
 
 | Function Slug | Live Version | `verify_jwt` (`config.toml` & Live) | Primary Role |
 |---|---:|:---:|---|
+| `apify-scrape-worker` | v1 | `false` | Automated Apify Zillow scraper (`start_run`, `poll_and_ingest`, `webhook_callback`, `ingest_items`, `pipeline_scrape_runs` telemetry) |
 | `check-unsigned-leases` | v10 | `false` | Lease signing reminder / check job |
 | `cleanup-expired-drafts` | v38 | `false` | Expired application draft cleanup |
 | `confirm-co-applicant-screening` | v18 | `false` | Co-applicant consent & screening confirmation |
