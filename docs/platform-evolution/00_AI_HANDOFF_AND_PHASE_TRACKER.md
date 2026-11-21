@@ -10,9 +10,9 @@
 
 | Field | Value |
 |---|---|
-| **Active / Next Available Phase** | **`PHASE 2`** — Four-Digit Batch Identities, Disposable Folders & Legacy Batch Compatibility |
-| **Current Baseline Commit (`main`)** | `edfdb99` (`choice121/Choice`) |
-| **Overall Plan Progress** | `1 / 10 Phases Completed` (`READY FOR USER APPROVAL TO START PHASE 2`) |
+| **Active / Next Available Phase** | **`PHASE 3`** — Permanent Private-Placement Registry & Batch Link Retrieval |
+| **Current Baseline Commit (`main`)** | `8adc58e` + Phase 2 close-out (`choice121/Choice`) |
+| **Overall Plan Progress** | `2 / 10 Phases Completed` (`READY FOR USER APPROVAL TO START PHASE 3`) |
 | **Last Updated** | `2026-11-21` |
 
 ---
@@ -72,8 +72,8 @@ You may **not** mark any phase `DONE` until ALL 5 steps below pass cleanly:
 | Phase | Title | Dependencies | Status | Next Action / Notes | Commit SHA |
 |---|---|---|---|---|---|
 | **Phase 1** | Platform Sync, Canonical Edge Function Recovery & Baseline Stabilization | None | `DONE` | Verified live across GitHub, Supabase & Cloudflare Pages (`v34.0.1` + cron + config parity) | `d1de6ce`, `edfdb99` |
-| **Phase 2** | Four-Digit Batch Identities, Disposable Folders & Legacy Batch Compatibility | Phase 1 | `READY` | **NEXT AVAILABLE PHASE** — Awaiting approval to execute | — |
-| **Phase 3** | Permanent Private-Placement Registry & Batch Link Retrieval | Phase 2 | `BLOCKED` | Unlocks after Phase 2 is `DONE` | — |
+| **Phase 2** | Four-Digit Batch Identities, Disposable Folders & Legacy Batch Compatibility | Phase 1 | `DONE` | Verified live across DB, PostgREST, Edge Functions, `v34.1.0` extensions & Cloudflare (`PGRST203` fixed in `20261121000005`) | `de51c5c`, `8adc58e` |
+| **Phase 3** | Permanent Private-Placement Registry & Batch Link Retrieval | Phase 2 | `READY` | **NEXT AVAILABLE PHASE** — Awaiting approval to execute | — |
 | **Phase 4** | Centralized Rules & Policies Engine + Versioned Policy Admin | Phase 1, Phase 2 | `BLOCKED` | Unlocks after Phase 1 & 2 are `DONE` | — |
 | **Phase 5** | Apify Default Scraping Engine & Dual-Channel Worker Integration | Phase 2, Phase 4 | `BLOCKED` | Unlocks after Phase 2 & 4 are `DONE` | — |
 | **Phase 6** | Automated Property Eligibility, Source Profile & Image Validation Engine | Phase 4, Phase 5 | `BLOCKED` | Unlocks after Phase 4 & 5 are `DONE` | — |
@@ -99,3 +99,8 @@ You may **not** mark any phase `DONE` until ALL 5 steps below pass cleanly:
   - Aligned `MAX_PHOTOS` (`25` mobile / `50` desktop) across `chrome-extension/background.js`, `.pages-orion/background.js`, and `content.js`; bumped and rebuilt both Chrome + Orion extension packages to `v34.0.1` (`sync-and-bump-extension.mjs --patch`, updated `docs/EXTENSION_CHANGELOG.md`, `chrome-extension/README.md`, `docs/MANUAL_BROWSER_EXTENSIONS_GUIDE.md`).
   - **Verification**: `npm run build` passed; `chrome-extension/test-extractors.js` (`34/34`), `.pages-orion/test-extractors.js` (`17/17`), `scripts/validate-extension.mjs`, and `scripts/test-manual-payment-workflow.mjs` (`6/6`) passed; GitHub Actions (`Cloudflare-Only Enforcement`, `Deploy Supabase Edge Functions & Migrations`, and `Purge Expired Pipeline Recovery Archive` dry-run returning `HTTP 200`, `expired_found=93`) passed; Cloudflare Pages deployment `0feb6f5d` live (`extension-meta.json` serves `v34.0.1`, extension ZIPs download HTTP 200, live `receive-pipeline-import` & `property-share` probes succeeded, `pipeline_recovery_health()` confirmed live).
   - **Next Available Phase**: `Phase 2`.
+- **Phase 2 Completed & Verified Live (`2026-11-21`, commits `de51c5c`, `8adc58e` + close-out patch)**:
+  - Applied migrations `20261121000003_phase2_four_digit_batches_and_disposable_folders.sql`, `20261121000004_phase2_pipeline_folders_service_grants_and_guard.sql`, and `20261121000005_phase2_drop_ambiguous_folder_overloads.sql` (removing the redundant 2-arg `pipeline_folder_create` / `pipeline_folder_rename` overloads that caused PostgREST HTTP 300 `PGRST203` ambiguity and locking disposable batch folder renames).
+  - Preserved all `18` existing `PB-*` batches (`batch_format = 'legacy_pb'`, `batch_uuid` populated); added `batch_create`, `batch_lookup`, `batch_list`, `batch_namespace_stats`, intra-batch dedup `(COALESCE(batch_id,'__manual_inbox__'), COALESCE(source,'zillow'), source_listing_id)`, updated `receive-pipeline-import`, `import-from-url`, `admin/pipeline.html`, `js/admin/pipeline.js`, and bumped Chrome + Orion extensions to `v34.1.0`.
+  - **Verification**: `npm run build`, `chrome-extension/test-extractors.js` (`34/34`), `.pages-orion/test-extractors.js` (`17/17`), `scripts/validate-extension.mjs`, `scripts/enforce-cloudflare-only.js`, and `node --check js/admin/pipeline.js` passed; live Supabase & PostgREST functional tests verified 4-digit `batch_create`, `batch_lookup`, duplicate 4-digit batch & `pipeline_folder_create` / `pipeline_folder_rename` collision guards, disposable batch rename lock, same-ZPID staging across distinct 4-digit batches (`9991` & `9992`), intra-batch duplicate rejection, clean test rollback (`used_four_digit_count = 0`), and live Cloudflare Pages (`extension-meta.json` `v34.1.0`, `admin/pipeline.html`, extension ZIPs).
+  - **Next Available Phase**: `Phase 3`.
