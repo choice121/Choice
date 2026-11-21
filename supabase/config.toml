@@ -66,6 +66,9 @@ verify_jwt = true
 [functions.reveal-applicant-ssn]
 verify_jwt = true
 
+[functions.rules-engine]
+verify_jwt = false
+
 [functions.save-draft]
 verify_jwt = false
 

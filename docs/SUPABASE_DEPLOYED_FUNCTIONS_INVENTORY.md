@@ -1,21 +1,21 @@
 # Choice Properties — Supabase Deployed Edge Functions Inventory
 
 > **Supabase Project:** `tlfmwetmhthpyrytrcfo` (`us-east-1`)  
-> **Total Deployed Edge Functions:** `60` (`27` git-tracked in `supabase/functions/` + `33` live-deployed via CLI/Studio)  
-> **Updated:** `2026-11-21` (Phase 3 Registry Synchronization)
+> **Total Deployed Edge Functions:** `61` (`28` git-tracked in `supabase/functions/` + `33` live-deployed via CLI/Studio)  
+> **Updated:** `2026-11-21` (Phase 4 Rules & Policies Engine)
 
 ---
 
 ## 1. Deployment & `verify_jwt` Policy
 
 1. `.github/workflows/supabase-deploy.yml` parses (`deno cache --no-check`) and deploys every directory inside `supabase/functions/*/` individually whenever changes touch `supabase/functions/**`, `supabase/migrations/**`, `supabase/config.toml`, or the workflow itself.
-2. Because `.github/workflows/supabase-deploy.yml` deploys individually, **`supabase/config.toml` explicitly specifies `verify_jwt = true | false` for all 27 git-tracked Edge Functions**, preventing any unlisted function from defaulting unexpectedly to `verify_jwt = true`.
+2. Because `.github/workflows/supabase-deploy.yml` deploys individually, **`supabase/config.toml` explicitly specifies `verify_jwt = true | false` for all 28 git-tracked Edge Functions**, preventing any unlisted function from defaulting unexpectedly to `verify_jwt = true`.
 3. Live-only functions not stored inside `supabase/functions/` remain undisturbed and active in Supabase during git-triggered CI deployments.
 4. `confirm-card-payment` remains intentionally omitted from `supabase/functions/` (verified by `scripts/test-manual-payment-workflow.mjs`).
 
 ---
 
-## 2. Git-Tracked Edge Functions (`27` — Declared in `supabase/config.toml`)
+## 2. Git-Tracked Edge Functions (`28` — Declared in `supabase/config.toml`)
 
 | Function Slug | Live Version | `verify_jwt` (`config.toml` & Live) | Primary Role |
 |---|---:|:---:|---|
@@ -40,6 +40,7 @@
 | `request-upload-url` | v82 | `false` | Signed upload URL generator for applicant/inspection media |
 | `resend-signing-link` | v96 | `true` | Resend tenant/co-applicant lease signing invite |
 | `reveal-applicant-ssn` | v5 | `true` | Admin audited SSN reveal (`admin/applications.html`) |
+| `rules-engine` | v1 | `false` | Centralized versioned policy & rules engine (`policy_sets`, `prohibited_source_profiles`, `scraping_providers`, dry-run & pinning) |
 | `save-draft` | v94 | `false` | Application draft persistence (`apply/`) |
 | `send-co-applicant-consent` | v19 | `false` | Dispatch co-applicant screening invite |
 | `send-email` | v132 | `true` | Central email relay wrapper (`GAS_EMAIL_URL`) |

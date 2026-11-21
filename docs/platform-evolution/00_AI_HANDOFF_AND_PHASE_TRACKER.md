@@ -10,9 +10,9 @@
 
 | Field | Value |
 |---|---|
-| **Active / Next Available Phase** | **`PHASE 3`** — Permanent Private-Placement Registry & Batch Link Retrieval |
-| **Current Baseline Commit (`main`)** | `8adc58e` + Phase 2 close-out (`choice121/Choice`) |
-| **Overall Plan Progress** | `2 / 10 Phases Completed` (`READY FOR USER APPROVAL TO START PHASE 3`) |
+| **Active / Next Available Phase** | **`PHASE 4`** — Centralized Rules & Policies Engine + Versioned Policy Admin |
+| **Current Baseline Commit (`main`)** | `ad21890` (`choice121/Choice`) |
+| **Overall Plan Progress** | `3 / 10 Phases Completed` (`EXECUTING PHASE 4`) |
 | **Last Updated** | `2026-11-21` |
 
 ---
@@ -73,8 +73,8 @@ You may **not** mark any phase `DONE` until ALL 5 steps below pass cleanly:
 |---|---|---|---|---|---|
 | **Phase 1** | Platform Sync, Canonical Edge Function Recovery & Baseline Stabilization | None | `DONE` | Verified live across GitHub, Supabase & Cloudflare Pages (`v34.0.1` + cron + config parity) | `d1de6ce`, `edfdb99` |
 | **Phase 2** | Four-Digit Batch Identities, Disposable Folders & Legacy Batch Compatibility | Phase 1 | `DONE` | Verified live across DB, PostgREST, Edge Functions, `v34.1.0` extensions & Cloudflare (`PGRST203` fixed in `20261121000005`) | `de51c5c`, `8adc58e` |
-| **Phase 3** | Permanent Private-Placement Registry & Batch Link Retrieval | Phase 2 | `READY` | **NEXT AVAILABLE PHASE** — Awaiting approval to execute | — |
-| **Phase 4** | Centralized Rules & Policies Engine + Versioned Policy Admin | Phase 1, Phase 2 | `BLOCKED` | Unlocks after Phase 1 & 2 are `DONE` | — |
+| **Phase 3** | Permanent Private-Placement Registry & Batch Link Retrieval | Phase 2 | `DONE` | Verified live across DB, `private_placement_registry` view, `registry_get_batch` / `registry_list_batches`, `private-placement-registry@v4` & Cloudflare (`ad21890`) | `9ab1a5b`, `61d55fb`, `1d48b90`, `ad21890` |
+| **Phase 4** | Centralized Rules & Policies Engine + Versioned Policy Admin | Phase 1, Phase 2 | `READY` | **NEXT AVAILABLE PHASE** — Executing per user approval | — |
 | **Phase 5** | Apify Default Scraping Engine & Dual-Channel Worker Integration | Phase 2, Phase 4 | `BLOCKED` | Unlocks after Phase 2 & 4 are `DONE` | — |
 | **Phase 6** | Automated Property Eligibility, Source Profile & Image Validation Engine | Phase 4, Phase 5 | `BLOCKED` | Unlocks after Phase 4 & 5 are `DONE` | — |
 | **Phase 7** | Centralized Description Enrichment & Task-Specific Pricing Engines | Phase 4, Phase 6 | `BLOCKED` | Unlocks after Phase 4 & 6 are `DONE` | — |
@@ -104,3 +104,7 @@ You may **not** mark any phase `DONE` until ALL 5 steps below pass cleanly:
   - Preserved all `18` existing `PB-*` batches (`batch_format = 'legacy_pb'`, `batch_uuid` populated); added `batch_create`, `batch_lookup`, `batch_list`, `batch_namespace_stats`, intra-batch dedup `(COALESCE(batch_id,'__manual_inbox__'), COALESCE(source,'zillow'), source_listing_id)`, updated `receive-pipeline-import`, `import-from-url`, `admin/pipeline.html`, `js/admin/pipeline.js`, and bumped Chrome + Orion extensions to `v34.1.0`.
   - **Verification**: `npm run build`, `chrome-extension/test-extractors.js` (`34/34`), `.pages-orion/test-extractors.js` (`17/17`), `scripts/validate-extension.mjs`, `scripts/enforce-cloudflare-only.js`, and `node --check js/admin/pipeline.js` passed; live Supabase & PostgREST functional tests verified 4-digit `batch_create`, `batch_lookup`, duplicate 4-digit batch & `pipeline_folder_create` / `pipeline_folder_rename` collision guards, disposable batch rename lock, same-ZPID staging across distinct 4-digit batches (`9991` & `9992`), intra-batch duplicate rejection, clean test rollback (`used_four_digit_count = 0`), and live Cloudflare Pages (`extension-meta.json` `v34.1.0`, `admin/pipeline.html`, extension ZIPs).
   - **Next Available Phase**: `Phase 3`.
+- **Phase 3 Completed & Verified Live (`2026-11-21`, commits `9ab1a5b`, `61d55fb`, `1d48b90`, `ad21890`)**:
+  - Applied migrations `20261121000006_phase3_private_placement_registry.sql`, `20261121000007_phase3_registry_get_batch_fix.sql`, and `20261121000008_phase3_registry_jsonb_concat_fix.sql`; added `public.private_placement_registry` view, `public.registry_get_batch`, `public.registry_list_batches`, `public.compute_batch_registry_summaries`, summary refresh trigger, and `supabase/functions/private-placement-registry/index.ts` (including unique `share_alias` generation on `replace_expired_link` in `ad21890`).
+  - **Verification**: Live tests verified all `18` legacy `PB-*` batches present with `magic_link_url`, summaries, and property lists; verified post-folder-deletion (`folder_exists=false`) exact `#share={token}` retrieval for batch `9993` without re-scraping or minting a new token; verified expired link status (`effective_share_status='expired'`) without silent regeneration; verified `replace_expired_link` reason requirement (`400`), active-link guard (`409`), `admin_actions` audit logging, and clean test rollback (`used_four_digit_count = 0`); GitHub Actions & Cloudflare Pages (`a6173380`) passed.
+  - **Next Available Phase**: `Phase 4`.
