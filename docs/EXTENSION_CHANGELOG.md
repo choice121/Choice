@@ -4,6 +4,13 @@ All modifications, extractor enhancements, and UI upgrades to the Choice Propert
 
 ---
 
+## [v34.0.1] - 2026-11-21
+### Worker Photo Cap Alignment (`MAX_PHOTOS`) & Parity Sync
+- **Aligned Desktop & Mobile `MAX_PHOTOS` Caps Across Chrome & Orion Workers**: Updated `chrome-extension/background.js` and `.pages-orion/background.js` from `IS_MOBILE ? 20 : 40` to `IS_MOBILE ? 25 : 50` so background queue/upload caps match `chrome-extension/content.js` and canonical Zillow Tier-1 gallery extraction (`50` desktop / `25` mobile) with zero truncation discrepancies.
+- **Synchronized Packages & Regression Checks**: Rebuilt Chrome + Orion ZIP archives (`choice-properties-extension.zip`, `choice-properties-orion-extension.zip`), `extension-meta.json`, and `extension-updates.xml` as `v34.0.1`, preserving all 1-click capture, folder selection, and `save_nonce` retry behaviors.
+
+---
+
 ## [v34.0.0] - 2026-11-14
 ### Reliable Save Confirmation, Idempotent Retries & Instant Pipeline Visibility
 - **Eliminated Double-POST "Already in Pipeline" False Duplicates**: Fixed the 8s bridge timeout race where a slow Geoapify reverse-geocode could cause the extension to fire a duplicate fallback `POST` right after the first request succeeded. Added a 2.5s timeout on Geoapify calls in `receive-pipeline-import`, raised the extension bridge wait to 18s (22s worker fetch timeout), and introduced a per-tap `save_nonce` matched against `field_provenance.save_nonce` so retried/fallback requests for the same save tap return `{ ok: true, deduped_retry: true }` cleanly instead of flagging `duplicate: true`.

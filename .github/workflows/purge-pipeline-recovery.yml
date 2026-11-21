@@ -1,0 +1,76 @@
+name: Purge Expired Pipeline Recovery Archive
+
+on:
+  schedule:
+    # Runs every hour at :30 UTC, 15 minutes after pg_cron job #7
+    # (mark-expired-pipeline-recovery at :15) transitions >24h rows to 'expired'.
+    - cron: '30 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview expired items without deleting Storage blobs or snapshots'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      limit:
+        description: 'Maximum expired archive records to process in this run (1-500)'
+        required: false
+        default: '100'
+        type: string
+
+concurrency:
+  group: purge-expired-pipeline-recovery
+  cancel-in-progress: false
+
+jobs:
+  purge-recovery-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger purge-expired-pipeline-recovery Edge Function
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          INPUT_LIMIT: ${{ github.event.inputs.limit || '100' }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::error::SUPABASE_URL and CRON_SECRET repository secrets must be configured."
+            exit 1
+          fi
+
+          DRY_RUN="false"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "$INPUT_DRY_RUN" = "true" ]; then
+            DRY_RUN="true"
+          fi
+
+          PAYLOAD=$(python3 -c 'import json, os; print(json.dumps({"dry_run": os.environ["DRY_RUN"] == "true", "limit": min(max(int(os.environ.get("INPUT_LIMIT", "100") or "100"), 1), 500)}))' DRY_RUN="$DRY_RUN")
+          ENDPOINT="${SUPABASE_URL%/}/functions/v1/purge-expired-pipeline-recovery"
+
+          echo "Invoking purge-expired-pipeline-recovery (dry_run=${DRY_RUN})..."
+          HTTP_CODE=$(curl -sS -o /tmp/purge_resp.json -w "%{http_code}" \
+            -X POST "$ENDPOINT" \
+            -H "Content-Type: application/json" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -d "$PAYLOAD")
+
+          cat /tmp/purge_resp.json
+          echo ""
+          echo "HTTP status: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            echo "::error::purge-expired-pipeline-recovery returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json, sys
+          with open('/tmp/purge_resp.json') as f:
+              data = json.load(f)
+          if not data.get('ok'):
+              print('Unexpected response:', data, file=sys.stderr)
+              sys.exit(1)
+          print(f"Verified purge run: dry_run={data.get('dry_run')} expired_found={data.get('expired_found')} purged_count={data.get('purged_count', 0)} storage_deleted_count={data.get('storage_deleted_count', 0)}")
+          PY

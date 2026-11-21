@@ -31,7 +31,7 @@ const DOWNLOAD_TIMEOUT = 8000;
 // Mobile detection: reduce concurrency and caps on mobile networks
 const IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 const PHOTO_BATCH_SIZE = IS_MOBILE ? 4 : 12;
-const MAX_PHOTOS = IS_MOBILE ? 20 : 40;
+const MAX_PHOTOS = IS_MOBILE ? 25 : 50;
 const DOWNLOAD_RETRIES = 3;
 const DOWNLOAD_BACKOFF_BASE = 1000;
 const QUEUE_FLUSH_CONCURRENCY = IS_MOBILE ? 2 : 4;

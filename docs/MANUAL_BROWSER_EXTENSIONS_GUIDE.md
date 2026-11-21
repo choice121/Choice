@@ -1,7 +1,7 @@
 # Choice Properties — Manual Browser Extensions Documentation (Chrome & Orion)
 
 > **Status:** Active, Permanent Operational Channel (Coexists Side-by-Side with Apify Automated Scraping)  
-> **Current Extension Version:** `v34.0.0`  
+> **Current Extension Version:** `v34.0.1`  
 > **Packages:**  
 > - **Desktop Chromium:** `chrome-extension/` (`choice-properties-extension.zip`)  
 > - **Mobile iOS/macOS Orion:** `.pages-orion/` (`choice-properties-orion-extension.zip`)  
@@ -85,7 +85,7 @@ src/extractors/shared-extractors.js   <-- SINGLE CANONICAL SOURCE OF TRUTH
 
 ## 5. Known Nuances & Evolution Integration Rules
 
-1. **Photo Cap Alignment**: `chrome-extension/background.js` sets desktop `MAX_PHOTOS = 40` while `chrome-extension/content.js` and canonical Zillow extraction support `50` on desktop (`25` on mobile). Align these constants cleanly without shrinking Zillow full-gallery capture.
+1. **Photo Cap Alignment (`v34.0.1`)**: `chrome-extension/background.js`, `.pages-orion/background.js`, `chrome-extension/content.js`, and canonical Zillow extraction are all aligned at `MAX_PHOTOS = 50` on desktop (`25` on mobile) so full-gallery captures flow seamlessly without worker cap discrepancies.
 2. **Batch Scope Compatibility**: As the 4-digit batch & disposable folder architecture rolls out, the extension continues to support both:
    - Selecting an existing **4-digit Batch Folder** (e.g., `4821`) or standard folder in the Folder Pill (`folder_id` / `folder_name` + `batch_id`).
    - Intra-batch deduplication (`(batch_id, source, source_listing_id)`), allowing a manually saved ZPID to appear in Batch `4821` even if previously used in Batch `1905`, while still warning on duplicate within the SAME active batch/folder.

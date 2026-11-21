@@ -1,26 +1,82 @@
-[functions.property-location]
+# Choice Properties — Supabase Edge Functions Configuration
+# Explicit verify_jwt parity for every git-tracked Edge Function in supabase/functions/
+# Keep in sync with live project tlfmwetmhthpyrytrcfo so per-function CI deploys
+# in .github/workflows/supabase-deploy.yml never alter endpoint JWT behavior unexpectedly.
+
+[functions.check-unsigned-leases]
 verify_jwt = false
 
-[functions.receive-pipeline-import]
+[functions.cleanup-expired-drafts]
 verify_jwt = false
 
-[functions.purge-expired-pipeline-recovery]
+[functions.confirm-co-applicant-screening]
 verify_jwt = false
 
-[functions.pipeline-recovery]
-verify_jwt = false
-
-[functions.request-upload-url]
-verify_jwt = false
+[functions.countersign]
+verify_jwt = true
 
 [functions.download-payment-receipt]
+verify_jwt = false
+
+[functions.generate-lease]
+verify_jwt = true
+
+[functions.get-lease]
 verify_jwt = false
 
 [functions.get-tenant-portal-app]
 verify_jwt = false
 
+[functions.import-from-url]
+verify_jwt = false
+
+[functions.issue-payment-receipt]
+verify_jwt = false
+
+[functions.nudge-expiring-drafts]
+verify_jwt = false
+
+[functions.pipeline-recovery]
+verify_jwt = false
+
+[functions.property-location]
+verify_jwt = false
+
+[functions.property-share]
+verify_jwt = false
+
+[functions.purge-expired-pipeline-recovery]
+verify_jwt = false
+
 [functions.receive-application]
 verify_jwt = false
 
-[functions.confirm-co-applicant-screening]
+[functions.receive-pipeline-import]
+verify_jwt = false
+
+[functions.request-upload-url]
+verify_jwt = false
+
+[functions.resend-signing-link]
+verify_jwt = true
+
+[functions.reveal-applicant-ssn]
+verify_jwt = true
+
+[functions.save-draft]
+verify_jwt = false
+
+[functions.send-co-applicant-consent]
+verify_jwt = false
+
+[functions.send-email]
+verify_jwt = true
+
+[functions.send-message]
+verify_jwt = false
+
+[functions.sign-lease]
+verify_jwt = false
+
+[functions.sign-lease-co-applicant]
 verify_jwt = false
