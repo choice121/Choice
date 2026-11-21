@@ -7,6 +7,27 @@
 -- restores v1 as active.
 -- ============================================================================
 
+CREATE OR REPLACE FUNCTION public.guard_immutable_policy_set()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF OLD.status IS DISTINCT FROM 'draft' THEN
+    RAISE EXCEPTION 'immutable_policy_set_protected: cannot delete % policy set %', OLD.status, OLD.version_label
+      USING ERRCODE = '42501';
+  END IF;
+  RETURN OLD;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_guard_immutable_policy_set ON public.policy_sets;
+CREATE TRIGGER trg_guard_immutable_policy_set
+  BEFORE DELETE ON public.policy_sets
+  FOR EACH ROW
+  EXECUTE FUNCTION public.guard_immutable_policy_set();
+
 CREATE OR REPLACE FUNCTION public.guard_immutable_policy_rule()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -22,8 +43,10 @@ BEGIN
       FROM public.policy_sets
       WHERE id = OLD.policy_set_id;
 
-      IF v_parent_status IS DISTINCT FROM 'draft' THEN
-        RAISE EXCEPTION 'immutable_rule_protected: rule % cannot be deleted from % policy set', OLD.rule_key, COALESCE(v_parent_status, 'unknown')
+      -- Block direct deletes on active/archived policy sets.
+      -- Allow deletes on 'draft' sets, and allow cascade deletes when the draft parent was just deleted (NULL).
+      IF v_parent_status IS NOT NULL AND v_parent_status <> 'draft' THEN
+        RAISE EXCEPTION 'immutable_rule_protected: rule % cannot be deleted from % policy set', OLD.rule_key, v_parent_status
           USING ERRCODE = '42501';
       END IF;
     END IF;
@@ -62,6 +85,7 @@ BEGIN
   IF v_test_v2_id IS NOT NULL THEN
     UPDATE public.policy_sets SET status = 'draft' WHERE id = v_test_v2_id;
     UPDATE public.policy_sets SET status = 'active' WHERE version_number = 1;
+    DELETE FROM public.policy_rules WHERE policy_set_id = v_test_v2_id;
     DELETE FROM public.policy_change_log WHERE policy_set_id = v_test_v2_id;
     DELETE FROM public.policy_sets WHERE id = v_test_v2_id;
   END IF;
