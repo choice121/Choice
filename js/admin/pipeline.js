@@ -1,0 +1,3613 @@
+(function(){
+  'use strict';
+
+  let S;            // AdminShell
+  let _status   = 'scraped';
+  let _source   = null;    // null = all, 'zillow', 'realtor'
+  let _quality  = null;    // null = all, 'high' (≥80), 'mid' (60-79), 'low' (<60)
+  let _search   = '';      // address search query
+  let _page     = 0;
+  const PAGE    = 40;
+  let _hasMore  = false;
+  let _loading  = false;
+  let _pageData = [];   // all fetched listings (unfiltered by source/search)
+  let _current  = null; // listing open in panel
+  let _dirty    = {};   // unsaved field changes
+  let _landlords = [];  // cache for publish landlord picker
+  let _selected  = new Set(); // IDs of selected cards for bulk actions
+  let _undoStack = [];
+  let _redoStack = [];
+
+  // ── Session cache (30 s TTL — avoid re-fetch on back-navigation) ──────────
+  const _CPFX = 'pl_v1_';
+  const _CTTL = 30000;
+  function _cGet(k){ try{ const r=sessionStorage.getItem(_CPFX+k); if(!r) return null; const {t,d}=JSON.parse(r); return Date.now()-t>_CTTL?null:d; }catch{ return null; } }
+  function _cSet(k,d){ try{ sessionStorage.setItem(_CPFX+k,JSON.stringify({t:Date.now(),d})); }catch{} }
+  function _cClear(){ try{ Object.keys(sessionStorage).filter(k=>k.startsWith(_CPFX)).forEach(k=>sessionStorage.removeItem(k)); }catch{} }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+
+  function fmt$$(n){ return n != null ? '$' + Number(n).toLocaleString() : '—'; }
+  function fmtBeds(l){ return [l.bedrooms != null ? l.bedrooms + ' bd' : null, l.bathrooms != null ? l.bathrooms + ' ba' : null].filter(Boolean).join(' · ') || '—'; }
+  function fmtSqft(l){ return l.square_footage ? l.square_footage.toLocaleString() + ' sqft' : ''; }
+  function parseJSON(s){
+    if(s == null || s === '') return null;
+    if(typeof s !== 'string') return s;
+    try{ return JSON.parse(s); }catch(_){ return null; }
+  }
+
+  // ── Pre-publish validation gate ──────────────────────────────────────────────
+  // Must pass before any pipeline record is promoted to a live listing.
+  // Returns { ok: boolean, failures: string[] }.
+  async function validateForPublish(listing) {
+    const failures = [];
+    const desc = listing.description || '';
+
+    // 1. Image check — note: 6-photo minimum gate removed per user preview policy.
+    // Listings are pre-screened on import and published regardless of photo count.
+
+    // 2. Rent must be set and reasonable
+    const monthlyRent = Number(listing.monthly_rent);
+    if (!Number.isFinite(monthlyRent) || monthlyRent <= 0) {
+      failures.push('Monthly rent is not set');
+    } else if (monthlyRent > 100000) {
+      failures.push('Monthly rent looks incorrect ($' + monthlyRent + ') — please verify');
+    }
+
+    // 2b. Application fee structured field must be exactly 50
+    if (listing.application_fee != null && Number(listing.application_fee) !== 50) {
+      failures.push('Application fee must be $50 (currently $' + listing.application_fee + ')');
+    }
+
+    // 3. Free-application / zero-fee language in description
+    const freeAppRe = /free\s+(?:to\s+)?apply|apply\s+for\s+free|no\s+(?:application\s+|app\s+)?fee|\$?\s*0\.?0*\s+(?:application\s+|app\s+)?fee|\b0\s+(?:application\s+|app\s+)?fee|zero\s+(?:application\s+)?fee|complimentary\s+application|(?:application|app)\s+fee\s+(?:is\s+|of\s+|:\s*)?0\b|application\s+(?:is\s+)?free|fee[- ]?free\s+application|free\s+application|(?:application\s+|app\s+)?fee\s+(?:will\s+be\s+|is\s+)?waived/i;
+    if (freeAppRe.test(desc)) {
+      failures.push('Description contains zero/free/waived application fee language (must say "$50 application fee" or "Application Fee: $50")');
+    }
+
+    // 4. Non-$50 application fee amount in description
+    // Checks trailing amount ("application fee: $35", "application fee of 35") and
+    // leading amount ("$35 application fee", "35 application fee").
+    const _feeAmounts = [];
+    const _feePat1 = /(?:application|app)\s+fee(?:\s+is|\s+of|:|\s+)\s*\$?\s*(\d+(?:\.\d{2})?)/gi;
+    const _feePat2 = /\$?\s*(\d+(?:\.\d{2})?)\s+(?:application|app)\s+fee/gi;
+    let _fm;
+    while ((_fm = _feePat1.exec(desc)) !== null) { _feeAmounts.push(parseFloat(_fm[1])); }
+    while ((_fm = _feePat2.exec(desc)) !== null) { _feeAmounts.push(parseFloat(_fm[1])); }
+    _feeAmounts.forEach(function(amt) {
+      if (Math.abs(amt - 50) > 0.01) {
+        failures.push('Description references a non-$50 application fee (' + (amt === 0 ? 'zero/0' : '$' + amt) + ') — must be $50');
+      }
+    });
+
+    // 5. Tour / showing / contact CTA language
+    const tourRe = /schedule\s+a\s+(?:tour|showing|viewing)|book\s+a\s+(?:tour|showing)|open\s+house|contact\s+(?:us|the\s+agent|the\s+landlord|owner)/i;
+    if (tourRe.test(desc)) {
+      failures.push('Description contains tour/showing/contact CTA language');
+    }
+
+    // 6. External portal application instructions
+    const portalRe = /turbotenant|zillow\s+application|apartments\.com|apply\s+on\s+\w+|listing\s*id\s*#?\s*\d+/i;
+    if (portalRe.test(desc)) {
+      failures.push('Description references an external application portal');
+    }
+
+    return { ok: failures.length === 0, failures };
+  }
+
+  function qsClass(score){ if(score == null) return ''; return score >= 80 ? 'qs-high' : score >= 60 ? 'qs-mid' : 'qs-low'; }
+  function qsBadge(score){
+    if(score == null) return '';
+    return `<span class="qs-badge ${qsClass(score)}" title="Data quality score">Q: ${score}</span>`;
+  }
+  function statusChip(status){
+    const map = { scraped:'', edited:'info', published:'success', archived:'' };
+    return S.statusPill ? S.statusPill(status) : `<span class="pill ${map[status]||''}">${status}</span>`;
+  }
+  function validationBadgeHtml(l){
+    const vs = l && l.validation_status;
+    if(!vs || vs === 'pending') return '';
+    const reason = l.review_reason ? ' (' + l.review_reason + ')' : '';
+    if(vs === 'passed') return `<span class="qs-badge qs-high" title="Phase 6 Validation Passed">✓ Eligible</span>`;
+    if(vs === 'needs_review') return `<span class="qs-badge qs-mid" title="Needs Review${S.esc(reason)}">⚠ Review</span>`;
+    if(vs === 'rejected') return `<span class="qs-badge qs-low" title="Rejected${S.esc(reason)}">⛔ Rejected</span>`;
+    return '';
+  }
+  function imageUrls(raw){
+    const imgs = parseJSON(raw) || [];
+    if (!Array.isArray(imgs)) return [];
+    return imgs.map(function(item){
+      if (typeof item === 'string') return item;
+      if (item && typeof item === 'object' && typeof item.url === 'string') return item.url;
+      return null;
+    }).filter(Boolean);
+  }
+  function thumbUrl(l){
+    const imgs = imageUrls(l.original_image_urls);
+    return (imgs && imgs.length) ? imgs[0] : null;
+  }
+  function photoUrls(l){
+    return imageUrls(l.original_image_urls);
+  }
+  // Convert a stored JSON array to a user-editable comma-separated string
+  function jArrToText(v){
+    if(!v || v === '[]') return '';
+    const arr = parseJSON(v);
+    if(!arr || !arr.length) return typeof v === 'string' && !v.startsWith('[') ? v : '';
+    return arr.map(function(item){
+      if (typeof item === 'string') return item;
+      if (item && typeof item === 'object' && typeof item.url === 'string') return item.url;
+      return '';
+    }).filter(Boolean).join(', ');
+  }
+  // Convert a comma-separated text string back to a JSON array string for storage
+  function textToJArr(s){
+    if(!s || !s.trim()) return '[]';
+    return JSON.stringify(s.split(',').map(x => x.trim()).filter(Boolean));
+  }
+  // Returns the import type for labelling in the panel
+  // 'ios'       — imported via iOS Scriptable from Zillow detail page (has full data)
+  // 'admin-url' — imported via admin "Import URL" button on desktop
+  // 'enriched'  — Realtor.com Phase 2 detail scrape complete
+  // 'search'    — basic search-results scrape only (limited data)
+  function importSource(l){
+    const od = parseJSON(l.original_data);
+    if(od && od._import && String(od._import).startsWith('ios-scriptable')) return 'ios';
+    if(od && od._import && String(od._import).startsWith('admin-url-import')) return 'admin-url';
+    if(od && od._phase === 'detail') return 'enriched';
+    return 'search';
+  }
+
+  // Returns true if the listing was enriched by Phase 2 detail scraping
+  function isEnriched(l){
+    const od = parseJSON(l.original_data);
+    return od && od._phase === 'detail';
+  }
+
+  // Returns true if the listing has full detail data (either Phase 2 or iOS/admin import)
+  function hasDetailData(l){
+    const src = importSource(l);
+    return src === 'ios' || src === 'enriched' || src === 'admin-url';
+  }
+
+  // Returns _pageData filtered by active source, quality, and search query
+  function visibleListings(){
+    let list = _pageData;
+    if(_source) list = list.filter(l => (l.source || '') === _source);
+    if(_quality){
+      list = list.filter(l => {
+        const s = l.data_quality_score ?? 0;
+        if(_quality === 'high') return s >= 80;
+        if(_quality === 'mid')  return s >= 60 && s < 80;
+        if(_quality === 'low')  return s < 60;
+        return true;
+      });
+    }
+    if(_search){
+      const q = _search.toLowerCase();
+      list = list.filter(l => {
+        const addr = (l.address  || '').toLowerCase();
+        const city = (l.city    || '').toLowerCase();
+        const st   = (l.state   || '').toLowerCase();
+        const zip  = (l.zip     || '').toLowerCase();
+        const unit = (l.unit_number || '').toLowerCase();
+        return addr.includes(q) || city.includes(q) || st.includes(q) || zip.includes(q) || unit.includes(q);
+      });
+    }
+    return list;
+  }
+
+  // Update search result count display
+  function updateSearchCount(visible){
+    const el  = document.getElementById('pl-search-count');
+    const clr = document.getElementById('pl-search-clear');
+    if(!el) return;
+    if(_search){
+      el.textContent  = visible.length + ' result' + (visible.length !== 1 ? 's' : '') + ' for "' + _search + '"';
+      el.style.display = 'block';
+      if(clr) clr.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+      if(clr) clr.style.display = 'none';
+    }
+  }
+
+  // Sync the bulk action bar visibility + count
+  function updateBulkBar(){
+    const bar   = document.getElementById('pl-bulk-bar');
+    const count = document.getElementById('pl-bulk-count');
+    const chkAll = document.getElementById('pl-select-all');
+    if(!bar) return;
+    const n = _selected.size;
+    if(n === 0){
+      bar.classList.remove('visible');
+    } else {
+      bar.classList.add('visible');
+      if(count) count.textContent = n + ' selected';
+    }
+    // Keep select-all checkbox in sync
+    if(chkAll){
+      const publishable = visibleListings().filter(l => l.status !== 'published' && l.status !== 'archived');
+      chkAll.indeterminate = n > 0 && n < publishable.length;
+      chkAll.checked = publishable.length > 0 && publishable.every(l => _selected.has(l.id));
+    }
+  }
+
+  // ── Data ────────────────────────────────────────────────────────────────────
+
+  async function fetchCounts(){
+    const { data, error } = await CP.sb().rpc('pipeline_count');
+    if(error || !data) return;
+    const c = typeof data === 'string' ? JSON.parse(data) : data;
+    const total = Object.values(c).reduce((a,b) => a + Number(b), 0);
+    document.getElementById('cnt-scraped').textContent   = c.scraped   || 0;
+    document.getElementById('cnt-edited').textContent    = c.edited    || 0;
+    document.getElementById('cnt-published').textContent = c.published || 0;
+    document.getElementById('cnt-archived').textContent  = c.archived  || 0;
+    document.getElementById('cnt-all').textContent       = total;
+  }
+
+  async function fetchListings(status, page){
+    const ck = status + '_' + page;
+    const cv = _cGet(ck);
+    if(cv){ _hasMore = cv.m; return cv.r; }
+    const { data, error } = await CP.sb().rpc('pipeline_list', {
+      p_status: status,
+      p_limit:  PAGE + 1,
+      p_offset: page * PAGE
+    });
+    if(error) throw error;
+    const rows = typeof data === 'string' ? JSON.parse(data) : (data || []);
+    _hasMore = rows.length > PAGE;
+    const r = _hasMore ? rows.slice(0, PAGE) : rows;
+    _cSet(ck, {r, m: _hasMore});
+    return r;
+  }
+
+  async function loadLandlords(){
+    if(_landlords.length) return _landlords;
+    const { data } = await CP.sb().rpc('admin_list_landlords', { p_page: 0, p_per_page: 200 }).catch(() => ({ data: null }));
+    const rows = Array.isArray(data) ? data : [];
+    _landlords = rows.map(r => ({ id: r.id, name: r.contact_name || r.business_name || r.id }));
+    return _landlords;
+  }
+
+  // ── Render: list ────────────────────────────────────────────────────────────
+
+  function renderCard(l){
+    const photos = photoUrls(l);
+    const thumb = photos[0];
+    const score = l.data_quality_score;
+    const missing = parseJSON(l.missing_fields) || [];
+    const isPublished = l.status === 'published';
+    const isArchived  = l.status === 'archived';
+    const isChecked   = _selected.has(l.id);
+    const srcLabel = l.source === 'zillow' ? 'Zillow' : l.source === 'realtor' ? 'Realtor' : (l.source ? S.esc(l.source) : '');
+    const srcImp = importSource(l);
+    const folderBadge = l.folder_serial ? `<span class="qs-badge" style="background:rgba(99,102,241,.15);color:var(--brand)" title="Folder serial number">#${l.folder_serial}</span>` : '';
+    const isFourDigitBatch = Boolean(l.batch_id && /^\d{4}$/.test(String(l.batch_id)));
+    const batchBadge = l.batch_id
+      ? (isFourDigitBatch
+          ? `<span class="qs-badge" style="background:rgba(99,102,241,.22);color:#a5b4fc;border:1px solid rgba(99,102,241,.35)" title="4-Digit Pipeline Batch #${S.esc(l.batch_id)}">Batch #${S.esc(l.batch_id)}</span>`
+          : `<span class="qs-badge" style="background:rgba(234,179,8,.16);color:#eab308" title="Legacy batch ${S.esc(l.batch_id)}">Batch ${S.esc(l.batch_id)}</span>`)
+      : '';
+
+    return `<div class="pl-card${isChecked ? ' pl-card-selected' : ''}" data-pl-id="${S.esc(l.id)}" role="button" tabindex="0" aria-label="${S.esc((l.address||'Listing') + ', ' + (l.city||''))}">
+      <div class="pl-thumb-wrap">
+        ${photos.length > 1 ? `<div class="pl-thumb-strip">${photos.slice(0, Math.min(5, photos.length)).map((u, i) => `<img class="pl-thumb-strip-img" src="" data-src="${S.esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer"${i === 0 ? ' style="display:block;flex:0 0 100%"' : ''} onerror="this.style.display='none'">`).join('')}</div>` : (thumb ? `<img class="pl-thumb" src="" data-src="${S.esc(thumb)}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : '')}
+        <div class="pl-thumb-placeholder"${thumb ? ' style="display:none"' : ''}>
+          <svg class="i" width="28" height="28" style="opacity:.2"><use href="#i-property"/></svg>
+        </div>
+        ${photos.length > 1 ? `<div class="pl-photo-count-badge">${photos.length} photos</div>` : ''}
+        <label class="pl-card-check" onclick="event.stopPropagation()" title="Select">
+          <input type="checkbox" class="pl-check" data-id="${S.esc(l.id)}" ${isChecked ? 'checked' : ''} aria-label="Select listing">
+        </label>
+        <div class="pl-card-badges">
+          ${l.source ? `<span class="src-badge src-${S.esc(l.source)}">${srcLabel}</span>` : ''}
+          ${qsBadge(score)}
+          ${validationBadgeHtml(l)}
+          ${folderBadge}
+          ${batchBadge}
+          ${srcImp === 'admin-url' ? `<span class="qs-badge qs-high" title="Imported via admin URL import">🖥 Desktop</span>` : ''}
+          ${isPublished && l.choice_property_id ? `<a href="/property.html?id=${S.esc(l.choice_property_id)}" class="qs-badge qs-high" style="text-decoration:none;pointer-events:auto" target="_blank" onclick="event.stopPropagation()">Live ↗</a>` : ''}
+          ${isPublished && l.photo_import_status === 'failed' ? `<span class="qs-badge qs-low" title="${S.esc(l.last_photo_import_error || 'Photo transfer to ImageKit failed')} — listing stays hidden from the public site until photos are added">⏳ Pending images</span>` : ''}
+          ${l.source_status && l.source_status !== 'available' ? `<span class="qs-badge ${l.source_status === 'pending' ? 'qs-mid' : 'qs-low'}" title="Source site status: ${S.esc(l.source_status)}">${l.source_status === 'pending' ? '⏳ Pending' : l.source_status === 'rented' ? '🔒 Rented' : '⚠ ' + S.esc(l.source_status)}</span>` : ''}
+        </div>
+      </div>
+      <div class="pl-body">
+        <div class="pl-addr">${S.esc(l.address || '(no address)')}${l.unit_number ? ' #'+S.esc(l.unit_number) : ''}</div>
+        <div class="pl-meta">${S.esc([l.city, l.state].filter(Boolean).join(', '))}${l.zip ? ' '+S.esc(l.zip) : ''} · ${fmtBeds(l)}${l.square_footage ? ' · '+fmtSqft(l) : ''}</div>
+        <div class="pl-rent">${fmt$$(l.monthly_rent)}/mo</div>
+        <div class="pl-tags">
+          ${missing.length ? `<span class="qs-badge qs-low" title="Missing: ${S.esc(missing.join(', '))}">${missing.length} missing</span>` : '<span class="qs-badge qs-high">✓ Complete</span>'}
+          ${isEnriched(l) ? `<span class="qs-badge qs-high" title="Phase 2 scrape data available">Full data</span>` : ''}
+          ${l.available_date ? `<span class="qs-badge" style="background:rgba(99,102,241,.1);color:var(--brand)">Avail ${S.esc(l.available_date)}</span>` : ''}
+          ${l.listed_at ? `<span class="qs-badge" style="background:rgba(120,120,120,.08);color:var(--text-muted)" title="Original listing date from the source site">Listed ${S.esc(new Date(l.listed_at + 'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}))}</span>` : l.scraped_at ? `<span class="qs-badge" style="background:rgba(120,120,120,.08);color:var(--text-muted)" title="Source listing date missing; showing import timestamp as a fallback">Imported ${S.esc(new Date(l.scraped_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}))}</span>` : ''}
+        </div>
+      </div>
+      <div class="pl-card-ft" onclick="event.stopPropagation()">
+        ${!isArchived ? `<button class="btn btn-sm btn-ghost pl-arc-btn" data-id="${S.esc(l.id)}" title="Archive">Archive</button>` : '<span class="pill pill-muted" style="font-size:.68rem">Archived</span>'}
+        ${!isPublished && !isArchived ? `<button class="btn btn-sm btn-primary pl-pub-btn" data-id="${S.esc(l.id)}" title="Publish to site">Publish →</button>` : ''}
+        ${!isPublished && !isArchived ? `<button class="btn btn-sm btn-ghost pl-del-btn" data-id="${S.esc(l.id)}" title="Delete from pipeline" style="color:var(--danger)">Delete</button>` : ''}
+        ${l.photo_import_status === 'failed' && !isArchived ? `<button class="btn btn-sm btn-outline pl-retry-photos-btn" data-id="${S.esc(l.id)}" data-prop-id="${S.esc(l.choice_property_id || '')}" title="Retry downloading photos to ImageKit">Retry photos</button>` : ''}
+        ${isPublished && l.choice_property_id ? `<a class="btn btn-sm btn-ghost" href="/admin/property-detail.html?id=${S.esc(l.choice_property_id)}" target="_blank" onclick="event.stopPropagation()">Edit ↗</a>` : ''}
+      </div>
+    </div>`;
+  }
+
+  function renderList(listings, append){
+    const wrap = document.getElementById('pl-list');
+    updateSearchCount(listings);
+    if(!append){
+      wrap.innerHTML = listings.length
+        ? listings.map(renderCard).join('')
+        : `<div class="pl-empty">
+             <svg class="i"><use href="#i-check"/></svg>
+             <h3>${_search ? 'No matches' : 'Nothing here'}</h3>
+             <p>${_search
+               ? 'No listings match <strong>' + S.esc(_search) + '</strong>. Try a different address or clear the search.'
+               : 'No listings with status "' + _status + '"' + (_source ? ' from ' + _source : '') + ' in the pipeline.'
+             }</p>
+           </div>`;
+    } else {
+      listings.forEach(l => wrap.insertAdjacentHTML('beforeend', renderCard(l)));
+    }
+    document.getElementById('load-more-wrap').style.display = _hasMore && !_search ? '' : 'none';
+  }
+
+  // ── Render: detail panel ─────────────────────────────────────────────────────
+
+  function withTimeout(promise, ms){
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Photo request timed out')), ms))
+    ]);
+  }
+
+  async function panelPhotos(l){
+    const imgs = imageUrls(l.original_image_urls);
+    
+    // If published and has a choice_property_id, fetch the actual ImageKit photos
+    // from property_photos (transferred by import-pipeline-photos).
+    if(l.choice_property_id){
+      try {
+        const photoQuery = CP.sb()
+          .from('property_photos')
+          .select('url,display_order')
+          .eq('property_id', l.choice_property_id)
+          .order('display_order', { ascending: true })
+          .limit(50);
+        const { data: photos, error } = await withTimeout(photoQuery, 8000);
+        
+        if(!error && Array.isArray(photos) && photos.length){
+          const urls = photos.map(p => p.url).filter(Boolean);
+          return renderPhotoStatus(l) + renderGallery(urls, 'on ImageKit');
+        }
+      } catch(err){
+        console.warn('[pipeline] property photo query failed; using source photos', err);
+      }
+    }
+    
+    if(!imgs.length) return renderPhotoStatus(l) + '<p class="pl-photo-count">No photos from source.</p>';
+
+    // FIX: Zillow/Realtor CDN images block hotlinking from the admin domain.
+    // Use the admin session token to proxy non-ImageKit URLs through the
+    // proxy-image edge function so they display correctly.
+    // ImageKit URLs (ik.imagekit.io) work directly.
+    try {
+      const session = await withTimeout(CP.sb().auth.getSession(), 3000);
+      const token = session?.data?.session?.access_token || '';
+      const supabaseUrl = (window.CONFIG?.SUPABASE_URL || '').replace(/\/+$/, '');
+      const proxied = imgs.map(u => {
+        if (u.includes('ik.imagekit.io')) return u;
+        if (!token || !supabaseUrl) return u;
+        return supabaseUrl + '/functions/v1/proxy-image?url=' + encodeURIComponent(u) + '&token=' + encodeURIComponent(token);
+      });
+      return renderGallery(proxied, 'from source');
+    } catch(_) {
+      return renderGallery(imgs, 'from source');
+    }
+  }
+
+  // ── Modern photo gallery carousel ─────────────────────────────────────────
+  function renderGallery(urls, label){
+    if(!urls.length) return '<p class="pl-photo-count">No photos available.</p>';
+    const thumbs = urls.slice(0, 20).map((u, i) =>
+      `<img class="pl-gallery-thumb${i === 0 ? ' active' : ''}" src="${S.esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-idx="${i}" onclick="event.stopPropagation()">`
+    ).join('');
+    return `
+    <div class="pl-gallery" id="pl-gallery">
+      <div class="pl-gallery-main">
+        <img id="pl-gallery-img" src="${S.esc(urls[0])}" alt="" referrerpolicy="no-referrer">
+        ${urls.length > 1 ? `
+          <button class="pl-gallery-nav prev" id="pl-gallery-prev" aria-label="Previous photo">‹</button>
+          <button class="pl-gallery-nav next" id="pl-gallery-next" aria-label="Next photo">›</button>
+          <div class="pl-gallery-counter" id="pl-gallery-counter">1 / ${urls.length}</div>
+        ` : ''}
+      </div>
+      ${urls.length > 1 ? `<div class="pl-gallery-thumbs" id="pl-gallery-thumbs">${thumbs}</div>` : ''}
+      <div class="pl-photo-count">${urls.length} photo${urls.length!==1?'s':''} ${label}</div>
+    </div>`;
+  }
+
+  function renderPhotoStatus(l){
+    const photos = imageUrls(l.original_image_urls);
+    const hasSource = photos.length > 0;
+    const imported = Boolean(l.choice_property_id);
+    const status = l.photo_import_status;
+    const labels = [];
+
+    if (imported) {
+      if (status === 'failed') {
+        labels.push(`<div class="pl-panel-alert pl-panel-alert-warning">Photo transfer to ImageKit failed. <button class="btn btn-sm btn-outline" id="pl-transfer-photos-btn" data-id="${S.esc(l.id)}" data-prop-id="${S.esc(l.choice_property_id)}">Retry transfer</button></div>`);
+      } else if (status === 'pending') {
+        labels.push('<div class="pl-panel-alert pl-panel-alert-info">Photo transfer is pending. It may take a few minutes to complete.</div>');
+      } else {
+        labels.push('<div class="pl-panel-alert pl-panel-alert-success">Photos are stored on ImageKit and ready for the live listing.</div>');
+      }
+    } else if (hasSource) {
+      labels.push(`<div class="pl-panel-alert pl-panel-alert-info">${photos.length} source photo${photos.length!==1?'s':''} available. They will be transferred after publish. <button class="btn btn-sm btn-outline" id="pl-edit-photos-btn">Edit photos</button></div>`);
+    } else {
+      labels.push('<div class="pl-panel-alert pl-panel-alert-warning">No source photos found. Add at least one photo before publishing.</div>');
+    }
+
+    return labels.join('');
+  }
+
+  function missingTags(l){
+    const m = parseJSON(l.missing_fields) || [];
+    if(!m.length) return '<span style="font-size:.75rem;color:var(--success)">✓ All key fields present</span>';
+    return `<div class="missing-tags">${m.map(f => `<span class="missing-tag">${S.esc(f)}</span>`).join('')}</div>`;
+  }
+
+  function fi(id, label, value, type, required, full, opts){
+    const req = required ? ' required' : '';
+    const cls = (full ? 'pl-form-grid full' : '');
+    const inner = opts
+      ? `<select id="pf-${id}"${req}>${opts.map(o => `<option value="${S.esc(o.v)}"${value===o.v?' selected':''}>${S.esc(o.l)}</option>`).join('')}</select>`
+      : type === 'textarea'
+        ? `<textarea id="pf-${id}"${req}>${S.esc(value??'')}</textarea>`
+        : `<input id="pf-${id}" type="${type||'text'}" value="${S.esc(String(value??''))}"${req}>`;
+    return `<div class="pl-field${required?' required':''}${cls ? ' '+cls : ''}"><label for="pf-${id}">${label}</label>${inner}</div>`;
+  }
+
+  function renderPanel(l){
+    const score = l.data_quality_score;
+    const isPublished = l.status === 'published';
+    const isArchived  = l.status === 'archived';
+    const editedFields = parseJSON(l.edited_fields) || [];
+    const enriched = isEnriched(l);
+    const srcType  = importSource(l);
+    const photoCount = imageUrls(l.original_image_urls).length;
+
+    return `
+    <div class="pl-panel-hd">
+      <div class="pl-panel-hd-body">
+        <div class="pl-panel-title">${S.esc(l.address || '(no address)')}</div>
+        <div class="pl-panel-sub">${S.esc([l.city, l.state, l.zip].filter(Boolean).join(', '))}
+          ${score != null ? ` · <span class="qs-badge ${qsClass(score)}">Q: ${score}/100</span>` : ''}
+          ${srcType === 'ios'       ? ` · <span class="qs-badge qs-high" title="Imported from Zillow detail page via iOS Scriptable">📱 iOS import</span>` :
+            srcType === 'admin-url' ? ` · <span class="qs-badge qs-high" title="Imported via admin URL import on desktop">🖥 Desktop import</span>` :
+            srcType === 'enriched'  ? ` · <span class="qs-badge qs-high" title="Phase 2 detail scrape complete">✓ Full data</span>` :
+                                      ` · <span class="qs-badge qs-low" title="Only basic search data — open the listing and re-import for full details">Search only</span>`}
+          ${editedFields.length ? ` · <span style="font-size:.7rem;color:var(--brand)">${editedFields.length} fields edited</span>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">
+          ${l.source_url ? `<a href="${S.esc(l.source_url)}" target="_blank" rel="noopener" class="pl-source-link">
+            <svg class="i i-sm"><use href="#i-arrow"/></svg> View on ${S.esc(l.source||'source')}
+          </a>` : ''}
+          ${l.source === 'zillow' && l.source_url && srcType === 'search' ? `<button class="btn btn-sm btn-outline" id="pl-reimport-btn" style="font-size:.72rem;padding:3px 10px" title="Re-import full listing data from Zillow via desktop">↑ Import full details</button>` : ''}
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="pl-close-btn" aria-label="Close panel">✕</button>
+    </div>
+
+    <div class="pl-panel-body">
+
+      <!-- Photos -->
+      <div class="pl-section">
+        <div class="pl-section-title">Photos from source ${photoCount ? `<span style="font-weight:400;color:var(--muted-2)">(${photoCount})</span>` : ''}</div>
+        <div id="panel-photos-container">${photoCount ? '<span style="font-size:.75rem;color:var(--muted-2)">Loading…</span>' : ''}</div>
+      </div>
+
+      <!-- Missing fields & Phase 6 Validation Gate -->
+      <div class="pl-section">
+        <div class="pl-section-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span>Data quality &amp; Eligibility</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${(l.broker_name || l.agent_name) ? `<button type="button" class="btn btn-ghost btn-sm" id="pl-quick-block-poster-btn" data-poster="${S.esc(l.broker_name || l.agent_name)}" style="font-size:.68rem;padding:2px 8px;color:var(--danger)" title="Add this poster to unlimited Prohibited Profiles blocklist">🚫 Block Poster</button>` : ''}
+            <button type="button" class="btn btn-outline btn-sm" id="pl-revalidate-one-btn" style="font-size:.68rem;padding:2px 8px">✓ Validate Now</button>
+          </div>
+        </div>
+        ${missingTags(l)}
+        ${(() => {
+          const rep = parseJSON(l.validation_report);
+          const vs = l.validation_status || rep?.status || 'pending';
+          const checks = Array.isArray(rep?.checks) ? rep.checks : [];
+          const poster = rep?.poster_verification || {};
+          const pillCls = vs === 'passed' ? 'pl-gov-pill-ok' : vs === 'rejected' ? 'pl-gov-pill-bad' : vs === 'needs_review' ? 'pl-gov-pill-warn' : 'pl-gov-pill-info';
+          return `<div style="margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);font-size:.78rem">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+              <div><strong>Eligibility Gate:</strong> <span class="pl-gov-pill ${pillCls}">${S.esc(vs)}</span>${l.review_reason ? ` <span style="color:var(--muted-2)">· ${S.esc(l.review_reason)}</span>` : ''}</div>
+              ${vs === 'needs_review' ? `<div style="display:flex;gap:6px">
+                <button type="button" class="btn btn-sm btn-primary" id="pl-review-approve-btn" style="padding:2px 9px;font-size:.7rem">Approve</button>
+                <button type="button" class="btn btn-sm btn-outline" id="pl-review-reject-btn" style="padding:2px 9px;font-size:.7rem;color:var(--danger)">Reject</button>
+              </div>` : ''}
+            </div>
+            ${(l.agent_name || l.broker_name || poster.poster_category) ? `<div style="margin-top:6px;color:var(--muted-2);font-size:.73rem">
+              Poster: <strong>${S.esc(l.broker_name || l.agent_name || 'Unattributed')}</strong> · Proof: <strong>${poster.verified_owner_landlord ? '✓ Explicit Owner/Landlord' : S.esc(poster.poster_category || 'Unverified')}</strong>
+            </div>` : ''}
+            ${checks.length ? `<div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">${checks.map(c => `<div style="display:flex;justify-content:space-between;gap:8px;font-size:.72rem">
+              <span>${S.esc(c.label || c.key)}</span>
+              <span style="font-weight:700;color:${c.status==='passed'?'#22c55e':c.status==='rejected'?'#ef4444':'#eab308'}">${S.esc(c.status)}${c.reason ? ' ('+S.esc(c.reason)+')' : ''}</span>
+            </div>`).join('')}</div>` : ''}
+          </div>`;
+        })()}
+      </div>
+
+      <!-- Core fields -->
+      <div class="pl-section">
+        <div class="pl-section-title">Listing details</div>
+        <div class="pl-form-grid full">${fi('title','Title', l.title,'text',true,true)}</div>
+        <div class="pl-form-grid" style="margin-top:10px">
+          ${fi('address','Street address', l.address,'text',true)}
+          ${fi('unit_number','Unit / Apt #', l.unit_number,'text',false)}
+          ${fi('city','City', l.city,'text',true)}
+          ${fi('state','State', l.state,'text',true)}
+          ${fi('zip','ZIP', l.zip,'text',true)}
+          ${fi('county','County', l.county,'text',false)}
+          ${fi('neighborhood','Neighborhood', l.neighborhood,'text',false)}
+        </div>
+      </div>
+
+      <!-- Pricing & Size -->
+      <div class="pl-section">
+        <div class="pl-section-title">Pricing &amp; size</div>
+        <div class="pl-form-grid">
+          ${fi('monthly_rent','Monthly rent ($)', l.monthly_rent,'number',true)}
+          ${fi('security_deposit','Security deposit ($)', l.security_deposit,'number',false)}
+          ${fi('application_fee','App fee ($)', l.application_fee,'number',false)}
+          ${fi('last_months_rent','Last month rent ($)', l.last_months_rent,'number',false)}
+          ${fi('admin_fee','Admin fee ($)', l.admin_fee,'number',false)}
+          ${fi('pet_deposit','Pet deposit ($)', l.pet_deposit,'number',false)}
+          ${fi('parking_fee','Parking fee ($)', l.parking_fee,'number',false)}
+          ${fi('hoa_fee','HOA fee ($)', l.hoa_fee,'number',false)}
+          ${fi('hoa_fee_frequency','HOA frequency', l.hoa_fee_frequency,'text',false)}
+          ${fi('tax_annual_amount','Annual tax ($)', l.tax_annual_amount,'number',false)}
+          ${fi('bedrooms','Bedrooms', l.bedrooms,'number',false)}
+          ${fi('bathrooms','Bathrooms', l.bathrooms,'number',false)}
+          ${fi('half_bathrooms','Half baths', l.half_bathrooms,'number',false)}
+          ${fi('square_footage','Sqft', l.square_footage,'number',false)}
+          ${fi('lot_size_sqft','Lot sqft', l.lot_size_sqft,'number',false)}
+          ${fi('year_built','Year built', l.year_built,'number',false)}
+          ${fi('floors','Floors / stories', l.floors,'number',false)}
+          ${fi('garage_spaces','Garage spaces', l.garage_spaces,'number',false)}
+          ${fi('property_type','Property type', l.property_type,'text',false,false,[
+            {v:'',l:'— select —'},{v:'SINGLE_FAMILY',l:'Single family'},{v:'DUPLEX',l:'Duplex'},
+            {v:'TOWNHOMES',l:'Townhouse'},{v:'CONDOS',l:'Condo'},{v:'APARTMENT',l:'Apartment'},
+            {v:'STUDIO',l:'Studio'},{v:'MULTI_FAMILY',l:'Multi-family'},
+            {v:'MOBILE',l:'Mobile'},{v:'LAND',l:'Land'},{v:'FARM',l:'Farm'}
+          ])}
+          ${fi('property_subtype','Property subtype', l.property_subtype,'text',false)}
+          ${fi('ev_charging','EV charging', l.ev_charging,'text',false)}
+          ${fi('available_date','Available date', l.available_date,'date',false)}
+          ${fi('listed_at','Source listed date', l.listed_at ? String(l.listed_at).split('T')[0] : '','date',false)}
+          ${fi('minimum_lease_months','Min lease (mo)', l.minimum_lease_months,'number',false)}
+        </div>
+      </div>
+
+      <!-- Features -->
+      <div class="pl-section">
+        <div class="pl-section-title">Features ${hasDetailData(l) ? '' : '<span style="font-size:.65rem;font-weight:400;color:var(--muted-2)">(populated by Phase 2 scrape)</span>'}</div>
+        <div class="pl-form-grid">
+          ${fi('heating_type','Heating', l.heating_type,'text',false)}
+          ${fi('cooling_type','Cooling', l.cooling_type,'text',false)}
+          ${fi('laundry_type','Laundry', l.laundry_type,'text',false)}
+          ${fi('has_central_air','Central air', l.has_central_air,'text',false,false,[
+            {v:'',l:'— unknown —'},{v:'true',l:'Yes'},{v:'false',l:'No'}
+          ])}
+          ${fi('has_basement','Basement', l.has_basement,'text',false,false,[
+            {v:'',l:'— unknown —'},{v:'true',l:'Yes'},{v:'false',l:'No'}
+          ])}
+          ${fi('parking','Parking', l.parking,'text',false)}
+        </div>
+        <div class="pl-form-grid full" style="margin-top:10px">
+          ${fi('flooring','Flooring (comma-separated)', jArrToText(l.flooring),'text',false,true)}
+        </div>
+      </div>
+
+      <!-- Appliances & Utilities -->
+      <div class="pl-section">
+        <div class="pl-section-title">Appliances &amp; utilities ${hasDetailData(l) ? '' : '<span style="font-size:.65rem;font-weight:400;color:var(--muted-2)">(populated by Phase 2 scrape)</span>'}</div>
+        <div class="pl-form-grid full">
+          ${fi('appliances','Appliances (comma-separated)', jArrToText(l.appliances),'text',false,true)}
+          ${fi('utilities_included','Utilities included (comma-separated)', jArrToText(l.utilities_included),'text',false,true)}
+          ${fi('amenities','Amenities / tags (comma-separated)', jArrToText(l.amenities),'textarea',false,true)}
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="pl-section">
+        <div class="pl-section-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>Description &amp; instructions</span>
+          ${l.original_description ? `
+            <button type="button" class="btn btn-ghost btn-sm" id="pl-compare-desc-btn" style="font-size:.72rem;padding:2px 8px;color:var(--brand);display:inline-flex;align-items:center;gap:4px" title="View side-by-side comparison of original scraped text vs enriched description">
+              ⇄ Compare Original vs Enriched
+            </button>` : ''}
+        </div>
+        <div class="pl-form-grid full">
+          <div class="pl-field">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+              <label for="pf-description" style="margin:0">Description (Current / Enriched)</label>
+              ${l.original_description && l.original_description !== l.description ? `
+                <button type="button" class="btn btn-ghost btn-sm" id="pl-revert-desc-btn" style="font-size:.68rem;padding:1px 6px;color:var(--muted-2)" title="Restore description to original scraped listing text">
+                  ↺ Revert to original
+                </button>` : ''}
+            </div>
+            <textarea id="pf-description">${S.esc(l.description??'')}</textarea>
+          </div>
+          ${fi('showing_instructions','Showing instructions', l.showing_instructions,'textarea',false,true)}
+          ${fi('move_in_special','Move-in special / concession', l.move_in_special,'text',false,true)}
+          ${fi('location_context','Location context', l.location_context,'text',false,true)}
+          ${fi('virtual_tour_url','Virtual tour URL', l.virtual_tour_url,'url',false,true)}
+        </div>
+      </div>
+
+      <!-- Policies -->
+      <div class="pl-section">
+        <div class="pl-section-title">Policies</div>
+        <div class="pl-form-grid">
+          ${fi('pets_allowed','Pets allowed', l.pets_allowed,'text',false,false,[
+            {v:'',l:'— unknown —'},{v:'true',l:'Yes'},{v:'false',l:'No'}
+          ])}
+          ${fi('smoking_allowed','Smoking', l.smoking_allowed,'text',false,false,[
+            {v:'',l:'— unknown —'},{v:'true',l:'Yes'},{v:'false',l:'No'}
+          ])}
+          ${fi('pet_types_allowed','Pet types (comma-sep)', jArrToText(l.pet_types_allowed),'text',false)}
+          ${fi('lease_terms','Lease terms (comma-sep)', jArrToText(l.lease_terms),'text',false)}
+        </div>
+      </div>
+
+      ${isPublished && l.choice_property_id ? `
+      <div class="pl-section">
+        <div class="pl-section-title">Published</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <a class="btn btn-sm btn-outline" href="/property.html?id=${S.esc(l.choice_property_id)}" target="_blank">View live listing ↗</a>
+          <a class="btn btn-sm btn-outline" href="/admin/property-detail.html?id=${S.esc(l.choice_property_id)}">Edit full listing</a>
+        </div>
+      </div>` : ''}
+
+      ${(() => {
+        const provenanceBlocks = [
+          ['Field provenance', l.field_provenance],
+          ['Structural details', l.structural_details],
+          ['Utility details', l.utility_details],
+          ['Financial details', l.financial_details],
+          ['Location details', l.location_details],
+          ['Floor plans', l.floor_plans],
+          ['Videos / Tours', l.videos],
+          ['Original data metadata', l.original_data],
+          ['Source raw payload', l.source_raw_payload],
+        ].filter(([, val]) => {
+          if (val == null) return false;
+          if (typeof val === 'string') return val.trim() !== '' && val.trim() !== '{}' && val.trim() !== '[]';
+          if (Array.isArray(val)) return val.length > 0;
+          if (typeof val === 'object') return Object.keys(val).length > 0;
+          return true;
+        });
+        if (!provenanceBlocks.length) return '';
+        return `
+      <div class="pl-section">
+        <details>
+          <summary class="pl-section-title" style="cursor:pointer;user-select:none;margin-bottom:8px">
+            Source Raw Data &amp; Provenance (${provenanceBlocks.length} sections)
+          </summary>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+            ${provenanceBlocks.map(([label, val]) => {
+              let formatted = val;
+              if (typeof val === 'string') {
+                const parsed = parseJSON(val);
+                formatted = parsed ? JSON.stringify(parsed, null, 2) : val;
+              } else {
+                try { formatted = JSON.stringify(val, null, 2); } catch(_) { formatted = String(val); }
+              }
+              return `<div>
+                <div style="font-size:.7rem;font-weight:700;color:var(--muted-2);text-transform:uppercase;margin-bottom:4px">${S.esc(label)}</div>
+                <pre style="max-height:220px;overflow:auto;background:var(--surface-2,#0f172a);color:var(--text,#e2e8f0);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:.7rem;line-height:1.45;margin:0;white-space:pre-wrap;word-break:break-word">${S.esc(formatted)}</pre>
+              </div>`;
+            }).join('')}
+          </div>
+        </details>
+      </div>`;
+      })()}
+
+      <div style="height:20px"></div>
+
+    </div>
+
+    <div class="pl-panel-ft">
+      ${!isArchived && !isPublished ? `<button class="btn btn-ghost pl-arc-btn-panel" data-id="${S.esc(l.id)}">Archive</button>` : ''}
+      <div style="flex:1"></div>
+      ${!isPublished ? `<button class="btn btn-outline pl-save-btn" data-id="${S.esc(l.id)}">Save changes</button>` : ''}
+      ${!isPublished && !isArchived ? `
+        <label style="display:flex;align-items:center;gap:8px;margin-right:auto">
+          <input type="checkbox" id="pf-delete-on-publish" style="width:16px;height:16px"> <span style="font-size:.78rem;color:var(--muted-2)">Delete from pipeline after publish</span>
+        </label>
+        <button class="btn btn-primary pl-pub-btn-panel" data-id="${S.esc(l.id)}">Publish as draft →</button>
+      ` : ''}
+    </div>`;
+  }
+
+  // ── Panel open / close ──────────────────────────────────────────────────────
+
+  // Auto-fill county (and neighborhood if missing) via Geoapify reverse geocode.
+  // Only fires when lat+lng are known and county is empty.
+  async function autoFillLocation(l){
+    const apiKey = window.CONFIG && CONFIG.GEOAPIFY_API_KEY;
+    if(!apiKey || !l.lat || !l.lng) return;
+    if(l.county) return; // already set — don't overwrite
+
+    const panel = document.getElementById('pl-panel');
+    if(!panel) return;
+
+    const countyEl = panel.querySelector('#pf-county');
+    const neighEl  = panel.querySelector('#pf-neighborhood');
+    if(!countyEl) return;
+
+    // Show subtle loading hint
+    countyEl.placeholder = 'Looking up…';
+
+    try {
+      const res  = await fetch(`https://api.geoapify.com/v1/geocode/reverse?lat=${encodeURIComponent(l.lat)}&lon=${encodeURIComponent(l.lng)}&apiKey=${encodeURIComponent(apiKey)}`);
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const json = await res.json();
+      const props = json?.features?.[0]?.properties;
+      if(!props) throw new Error('No result');
+
+      // county field — Geoapify calls it "county"
+      const county = props.county || '';
+      if(county && countyEl && !countyEl.value.trim()){
+        countyEl.value = county;
+        countyEl.style.borderColor = 'var(--brand)';
+        setTimeout(() => { if(countyEl) countyEl.style.borderColor = ''; }, 2000);
+      }
+
+      // neighborhood — prefer suburb, then district, then city_district
+      const neighborhood = props.suburb || props.district || props.city_district || '';
+      if(neighborhood && neighEl && !neighEl.value.trim() && !l.neighborhood){
+        neighEl.value = neighborhood;
+        neighEl.style.borderColor = 'var(--brand)';
+        setTimeout(() => { if(neighEl) neighEl.style.borderColor = ''; }, 2000);
+      }
+
+      if(county || neighborhood){
+        S.toast('County' + (neighborhood ? ' & neighborhood' : '') + ' auto-filled from coordinates', 'info');
+      }
+    } catch(e){
+      // silently ignore — user can fill county manually
+    } finally {
+      if(countyEl) countyEl.placeholder = '';
+    }
+  }
+
+  function openPanel(l){
+    _current = l;
+    _dirty   = {};
+    const panel    = document.getElementById('pl-panel');
+    const backdrop = document.getElementById('pl-backdrop');
+    panel.innerHTML = renderPanel(l);
+    requestAnimationFrame(() => {
+      panel.classList.add('open');
+      backdrop.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      panel.querySelector('#pl-close-btn').addEventListener('click', closePanel);
+      // Focus first focusable input for accessibility
+      const firstInput = panel.querySelector('input,select,textarea,button');
+      if(firstInput) setTimeout(() => firstInput.focus(), 100);
+      // Auto-fill county/neighborhood from lat+lng if missing
+      autoFillLocation(l);
+    });
+
+      const saveBtn = panel.querySelector('.pl-save-btn');
+      if(saveBtn) saveBtn.addEventListener('click', () => doSave(l.id));
+
+      const arcBtn = panel.querySelector('.pl-arc-btn-panel');
+      if(arcBtn) arcBtn.addEventListener('click', () => doArchive(l.id));
+
+      const pubBtn = panel.querySelector('.pl-pub-btn-panel');
+      if(pubBtn) pubBtn.addEventListener('click', () => doPublish(l.id));
+
+
+      const compareBtn = panel.querySelector('#pl-compare-desc-btn');
+      if(compareBtn) compareBtn.addEventListener('click', () => openDescCompareModal(l));
+
+      const revalBtn = panel.querySelector('#pl-revalidate-one-btn');
+      if(revalBtn) revalBtn.addEventListener('click', async () => {
+        revalBtn.disabled = true; revalBtn.textContent = 'Validating…';
+        try {
+          const { data, error } = await CP.sb().functions.invoke('property-validator', {
+            body: { action: 'validate_property', pipeline_id: l.id, check_photo_reachability: true }
+          });
+          if(error) throw error;
+          const res = typeof data === 'string' ? JSON.parse(data) : data;
+          if(!res?.ok) throw new Error(res?.error || 'Validation failed');
+          l.validation_status = res.report.status;
+          l.needs_review = res.report.needs_review;
+          l.review_reason = res.report.primary_reason;
+          l.validation_report = res.report;
+          l.validated_at = res.report.validated_at;
+          S.toast(`Validation: ${res.report.status}${res.report.primary_reason ? ' (' + res.report.primary_reason + ')' : ''}`, res.report.status === 'passed' ? 'success' : 'info');
+          openPanel(l);
+          refreshCard(l.id);
+        } catch(err){
+          S.toast('Validation error: ' + (err.message || 'unknown'), 'error');
+          revalBtn.disabled = false; revalBtn.textContent = '✓ Validate Now';
+        }
+      });
+
+      const quickBlockBtn = panel.querySelector('#pl-quick-block-poster-btn');
+      if(quickBlockBtn) quickBlockBtn.addEventListener('click', async () => {
+        const posterName = quickBlockBtn.dataset.poster || '';
+        if(!posterName) return;
+        const ok = await S.confirm(
+          `Block "${posterName}" permanently?`,
+          'Adds this operator/profile to your Prohibited Profiles blocklist so matching Zillow listings are automatically rejected.'
+        );
+        if(!ok) return;
+        try {
+          const { data, error } = await CP.sb().functions.invoke('rules-engine', {
+            body: {
+              action: 'prohibited_profiles',
+              sub_action: 'bulk_create',
+              entries: [{ canonical_name: posterName, notes: 'Blocked directly from pipeline listing #' + l.id }]
+            }
+          });
+          if(error) throw error;
+          const res = typeof data === 'string' ? JSON.parse(data) : data;
+          if(!res?.ok) throw new Error(res?.error || 'Block failed');
+          S.toast(`Added "${posterName}" to Blocked Profiles`, 'success');
+        } catch(err){
+          S.toast('Block failed: ' + (err.message || 'unknown'), 'error');
+        }
+      });
+
+      const approveRevBtn = panel.querySelector('#pl-review-approve-btn');
+      if(approveRevBtn) approveRevBtn.addEventListener('click', () => resolvePanelReview(l, 'approve'));
+      const rejectRevBtn = panel.querySelector('#pl-review-reject-btn');
+      if(rejectRevBtn) rejectRevBtn.addEventListener('click', () => resolvePanelReview(l, 'reject'));
+
+      const revertBtn = panel.querySelector('#pl-revert-desc-btn');
+      if(revertBtn) revertBtn.addEventListener('click', async () => {
+        if(!l.original_description) return;
+        const ok = await S.confirm('Revert to original description?', 'This replaces the current enriched description in the input box with the original raw text from the listing source. You can still edit it before saving.');
+        if(!ok) return;
+        const ta = panel.querySelector('#pf-description');
+        if(ta){
+          ta.value = l.original_description;
+          ta.dispatchEvent(new Event('input', { bubbles: true }));
+          S.toast('Description reverted to original text', 'info');
+        }
+      });
+
+      const delBtn = panel.querySelector('.pl-del-btn');
+      if(delBtn) delBtn.addEventListener('click', async e => {
+        e.stopPropagation();
+        const ok = await S.confirm('Delete this listing from the pipeline?', 'This permanently deletes the pipeline record — it cannot be undone.');
+        if(!ok) return;
+        delBtn.disabled = true; delBtn.textContent = 'Deleting…';
+        try {
+          const { data, error } = await CP.sb().rpc('pipeline_delete', { p_id: l.id });
+          if(error) throw error;
+          const res = typeof data === 'string' ? JSON.parse(data) : data;
+          if(!res?.ok) throw new Error(res?.error || 'Delete failed');
+          S.toast('Deleted from pipeline', 'success');
+          removeCard(l.id);
+          closePanel();
+          fetchCounts().catch(()=>{});
+        } catch(err){
+          console.error('[pipeline] delete failed', err);
+          S.toast('Delete failed: ' + (err.message||'unknown'), 'error');
+        } finally {
+          delBtn.disabled = false; delBtn.textContent = 'Delete';
+        }
+      });
+
+      // Load photos asynchronously (may fetch from ImageKit for published listings)
+      // FIX: photoCount was referenced from renderPanel() scope (undefined here),
+      // so panelPhotos() never ran and "Loading…" stayed stuck on screen.
+      // Now it always runs — panelPhotos() handles the empty case itself.
+      const photoContainer = panel.querySelector('#panel-photos-container');
+      if(photoContainer){
+        panelPhotos(l).then(html => {
+          if(photoContainer) photoContainer.innerHTML = html;
+          wireGalleryEvents();
+          wirePanelPhotoActions();
+          // Wire edit photos button (if present)
+          const editBtn = panel.querySelector('#pl-edit-photos-btn');
+          if(editBtn) editBtn.addEventListener('click', e => { e.stopPropagation(); openPhotoEditor(l); });
+        }).catch(err => {
+          console.error('[pipeline] photo gallery load failed', err);
+          if(photoContainer) {
+            photoContainer.innerHTML = '<p class="pl-photo-count" style="color:var(--danger,#dc2626)">Unable to load photos. Retry opening this listing.</p>';
+          }
+        });
+      }
+
+    // Autosize textareas in the panel
+    (function autosizeTextareas(){
+      try{
+        const tx = panel.querySelectorAll('textarea');
+        tx.forEach(t => {
+          const res = () => { t.style.height = 'auto'; t.style.height = Math.min(800, t.scrollHeight) + 'px'; };
+          res();
+          t.removeEventListener('input', res);
+          t.addEventListener('input', res);
+        });
+      }catch(e){}
+    })();
+
+    // "Import full details" pre-fills the Import URL modal with this listing's source URL
+    const reimportBtn = panel.querySelector('#pl-reimport-btn');
+    if(reimportBtn) reimportBtn.addEventListener('click', () => {
+      openImportModal(l.source_url);
+    });
+  }
+
+  // ── Gallery navigation events ─────────────────────────────────────────────
+  function wireGalleryEvents(){
+    const gallery = document.getElementById('pl-gallery');
+    if(!gallery) return;
+    const img = document.getElementById('pl-gallery-img');
+    const counter = document.getElementById('pl-gallery-counter');
+    const thumbs = gallery.querySelectorAll('.pl-gallery-thumb');
+    const prev = document.getElementById('pl-gallery-prev');
+    const next = document.getElementById('pl-gallery-next');
+    if(!img) return;
+    const urls = thumbs.length ? Array.from(thumbs).map(t => t.src) : [img.src];
+    let idx = 0;
+
+    function show(i){
+      idx = (i + urls.length) % urls.length;
+      img.src = urls[idx];
+      if(counter) counter.textContent = (idx + 1) + ' / ' + urls.length;
+      thumbs.forEach((t, ti) => t.classList.toggle('active', ti === idx));
+    }
+
+    if(prev) prev.addEventListener('click', e => { e.stopPropagation(); show(idx - 1); });
+    if(next) next.addEventListener('click', e => { e.stopPropagation(); show(idx + 1); });
+    thumbs.forEach(t => {
+      t.addEventListener('click', e => {
+        e.stopPropagation();
+        show(parseInt(t.dataset.idx || '0', 10));
+      });
+    });
+    // Swipe support for mobile
+    let startX = 0;
+    const main = gallery.querySelector('.pl-gallery-main');
+    if(main){
+      main.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+      main.addEventListener('touchend', e => {
+        const dx = e.changedTouches[0].clientX - startX;
+        if(Math.abs(dx) > 40) show(idx + (dx < 0 ? 1 : -1));
+      }, { passive: true });
+    }
+  }
+
+function wirePanelPhotoActions(){
+    const btn = document.getElementById('pl-transfer-photos-btn');
+    if(!btn) return;
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      btn.disabled = true;
+      btn.textContent = 'Retrying…';
+      await doTransferPhotos(btn.dataset.id, btn.dataset.propId);
+      btn.disabled = false;
+      btn.textContent = 'Retry transfer';
+    });
+  }
+
+  function closePanel(){
+    const panel    = document.getElementById('pl-panel');
+    const backdrop = document.getElementById('pl-backdrop');
+    panel.classList.remove('open');
+    backdrop.classList.remove('open');
+    document.body.style.overflow = '';
+    setTimeout(() => { panel.innerHTML = ''; _current = null; _dirty = {}; }, 300);
+  }
+
+  // ── Import from URL (desktop import) ────────────────────────────────────────
+
+  function openImportModal(prefillUrl){
+    // Remove any existing modal
+    const existing = document.getElementById('pl-import-modal');
+    if(existing) existing.remove();
+
+    const folder = _activeFolder ? _folders.find(f => f.id === _activeFolder) : null;
+    const isBatchFolder = Boolean(folder && (folder.is_disposable_batch || folder.batch_id));
+    const folderLabel = folder ? (isBatchFolder ? `📦 Batch #${folder.batch_id || folder.name}` : folder.name) : '';
+    const folderNotice = folder ? `<div style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.18);font-size:.82rem;color:var(--muted-2)">This listing will be imported into the active ${isBatchFolder ? 'batch' : 'folder'}: <strong>${S.esc(folderLabel)}</strong>.</div>` : '';
+
+    const modal = document.createElement('div');
+    modal.id = 'pl-import-modal';
+    modal.innerHTML = `
+      <div class="pl-import-backdrop"></div>
+      <div class="pl-import-dialog" role="dialog" aria-modal="true" aria-label="Import Zillow listing">
+        <div class="pl-import-hd">
+          <div style="font-size:.95rem;font-weight:700">Import Zillow listing</div>
+          <button class="pl-import-close" aria-label="Close">✕</button>
+        </div>
+        <div class="pl-import-body">
+          <p style="font-size:.82rem;color:var(--muted-2);margin:0 0 14px">
+            Paste any Zillow listing detail URL. The server will fetch and parse the listing data automatically.
+            <br><span style="font-size:.75rem;opacity:.8">Note: Zillow occasionally blocks datacenter IPs. If that happens, use the iOS importer instead.</span>
+          </p>
+          ${folderNotice}
+          <div class="pl-field" style="margin-bottom:14px">
+            <label for="pl-import-url">Zillow listing URL</label>
+            <input id="pl-import-url" type="url" placeholder="https://www.zillow.com/homedetails/…" autocomplete="off" spellcheck="false">
+          </div>
+          <input type="hidden" id="pl-import-folder-id" value="${folder ? S.esc(folder.id) : ''}">
+          <input type="hidden" id="pl-import-batch-id" value="${folder && folder.batch_id ? S.esc(folder.batch_id) : ''}">
+          <div id="pl-import-result" style="display:none"></div>
+        </div>
+        <div class="pl-import-ft">
+          <button class="btn btn-ghost" id="pl-import-cancel">Cancel</button>
+          <div style="flex:1"></div>
+          <button class="btn btn-primary" id="pl-import-submit">Import listing →</button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(modal);
+
+    // Wire events
+    modal.querySelector('.pl-import-backdrop').addEventListener('click', closeImportModal);
+    modal.querySelector('.pl-import-close').addEventListener('click', closeImportModal);
+    document.getElementById('pl-import-cancel').addEventListener('click', closeImportModal);
+    document.getElementById('pl-import-submit').addEventListener('click', doImportFromUrl);
+
+    // Allow Enter to submit
+    document.getElementById('pl-import-url').addEventListener('keydown', e => {
+      if(e.key === 'Enter') { e.preventDefault(); doImportFromUrl(); }
+    });
+
+    // Pre-fill URL if provided (e.g. from "Import full details" button)
+    if(prefillUrl){
+      setTimeout(() => {
+        const input = document.getElementById('pl-import-url');
+        if(input){ input.value = prefillUrl; input.focus(); }
+      }, 50);
+    } else {
+      setTimeout(() => {
+        const input = document.getElementById('pl-import-url');
+        if(input) input.focus();
+      }, 50);
+    }
+
+    // ESC to close
+    modal._escHandler = e => { if(e.key === 'Escape') closeImportModal(); };
+    document.addEventListener('keydown', modal._escHandler);
+  }
+
+  function closeImportModal(){
+    const modal = document.getElementById('pl-import-modal');
+    if(!modal) return;
+    if(modal._escHandler) document.removeEventListener('keydown', modal._escHandler);
+    modal.remove();
+  }
+
+  async function doImportFromUrl(){
+    const urlInput  = document.getElementById('pl-import-url');
+    const submitBtn = document.getElementById('pl-import-submit');
+    const resultEl  = document.getElementById('pl-import-result');
+    const folderId  = document.getElementById('pl-import-folder-id');
+    const batchId   = document.getElementById('pl-import-batch-id');
+    if(!urlInput || !submitBtn || !resultEl) return;
+
+    const url = urlInput.value.trim();
+    if(!url){
+      urlInput.focus();
+      return;
+    }
+    if(!url.includes('zillow.com')){
+      showImportResult('error', 'Please paste a Zillow URL (zillow.com).');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Importing…';
+    resultEl.style.display = 'none';
+
+    try {
+      const payload = { url };
+      if(folderId && folderId.value) payload.folder_id = folderId.value;
+      if(batchId && batchId.value) payload.batch_id = batchId.value;
+      const { data, error } = await CP.sb().functions.invoke('import-from-url', {
+        body: payload
+      });
+      if(error) throw error;
+      const res = typeof data === 'string' ? JSON.parse(data) : data;
+
+      if(res?.ok){
+        // Success
+        const score = res.score ?? '?';
+        const photos = res.photos ?? 0;
+        const city   = res.city   ? ' in ' + res.city : '';
+        const pop    = res.populated_fields?.length ?? '?';
+        const miss   = res.missing_fields?.length   ?? 0;
+
+        showImportResult('success',
+          `<strong>✓ Added to pipeline!</strong><br>
+           <span style="font-size:.78rem">${S.esc(res.title||'')}${city}</span><br>
+           <span style="font-size:.75rem;color:var(--muted-2);margin-top:4px;display:block">
+             Quality score: <strong>${score}/100</strong> · ${photos} photo${photos!==1?'s':''} · ${pop} fields populated
+             ${miss ? ` · <span style="color:var(--danger)">${miss} missing</span>` : ' · <span style="color:var(--success)">Complete</span>'}
+           </span>`
+        );
+        submitBtn.textContent = '✓ Imported';
+
+        // Refresh the list in the background
+        _cClear();
+        fetchCounts().catch(()=>{});
+        loadFolders().catch(()=>{});
+        setTimeout(async () => {
+          try {
+            if (_activeFolder) {
+              await selectFolder(_activeFolder);
+            } else {
+              const [listings] = await Promise.all([fetchListings(_status, 0), Promise.resolve()]);
+              _pageData = listings;
+              renderList(visibleListings(), false);
+              wireCardEvents();
+            }
+          } catch(_){}
+        }, 800);
+
+        // Auto-close modal after 3s
+        setTimeout(closeImportModal, 3000);
+
+      } else if(res?.duplicate){
+        showImportResult('info',
+          `<strong>Already in pipeline</strong><br>
+           <span style="font-size:.78rem">${S.esc(res.title||'')} (${S.esc(res.id||'')})</span><br>
+           <span style="font-size:.75rem;color:var(--muted-2)">This listing has already been imported. Try a different URL.</span>`
+        );
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Import listing →';
+
+      } else if(res?.blocked){
+        showImportResult('warning',
+          `<strong>Zillow blocked the request</strong><br>
+           <span style="font-size:.78rem">${S.esc(res.message||'Zillow blocked the server-side fetch.')}</span><br>
+           <span style="font-size:.75rem;color:var(--muted-2);margin-top:4px;display:block">
+             Use the <strong>iOS Scriptable importer</strong> instead — it runs from your phone's residential IP which Zillow allows.
+           </span>`
+        );
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Try another URL';
+
+      } else {
+        showImportResult('error',
+          `<strong>Import failed</strong><br>
+           <span style="font-size:.78rem">${S.esc(res?.error || 'Unknown error')}</span>`
+        );
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Import listing →';
+      }
+    } catch(e){
+      console.error('[pipeline] import-from-url failed', e);
+      showImportResult('error',
+        `<strong>Request failed</strong><br>
+         <span style="font-size:.78rem">${S.esc(e.message||'Network error')}</span>`
+      );
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Import listing →';
+    }
+  }
+
+  function showImportResult(type, html){
+    const el = document.getElementById('pl-import-result');
+    if(!el) return;
+    const colors = {
+      success: { bg:'rgba(34,197,94,.1)', border:'rgba(34,197,94,.25)', color:'var(--text)' },
+      error:   { bg:'rgba(239,68,68,.08)', border:'rgba(239,68,68,.25)', color:'var(--text)' },
+      warning: { bg:'rgba(234,179,8,.08)', border:'rgba(234,179,8,.25)', color:'var(--text)' },
+      info:    { bg:'rgba(99,102,241,.08)', border:'rgba(99,102,241,.2)', color:'var(--text)' },
+    };
+    const c = colors[type] || colors.info;
+    el.style.cssText = `display:block;padding:12px 14px;border-radius:8px;border:1px solid ${c.border};background:${c.bg};color:${c.color};font-size:.82rem;line-height:1.5;margin-top:4px`;
+    el.innerHTML = html;
+  }
+
+  // ── Description Comparison Modal ────────────────────────────────────────────
+
+  function openDescCompareModal(l){
+    if(!l) return;
+    // Remove existing if any
+    const existing = document.getElementById('pl-desc-compare-modal');
+    if(existing) existing.remove();
+
+    const currentDesc = document.querySelector('#pf-description')?.value ?? l.description ?? '';
+    const origDesc = l.original_description || 'No original description captured.';
+
+    const modal = document.createElement('div');
+    modal.id = 'pl-desc-compare-modal';
+    modal.innerHTML = `
+      <div class="pl-compare-backdrop"></div>
+      <div class="pl-compare-dialog" role="dialog" aria-modal="true" aria-label="Compare Descriptions">
+        <div class="pl-compare-hd">
+          <div class="pl-compare-title">
+            <span>⇄ Description Comparison</span>
+            <span style="font-size:.8rem;font-weight:400;color:var(--muted-2);margin-left:4px">
+              ${S.esc(l.address || l.title || '')}
+            </span>
+          </div>
+          <button class="pl-compare-close" title="Close">✕</button>
+        </div>
+        <div class="pl-compare-body">
+          <div class="pl-compare-col">
+            <div class="pl-compare-col-hd">
+              <span class="pl-compare-col-title">Original Scraped Text</span>
+              <span class="pl-compare-badge pl-compare-badge-orig">Unmodified Source</span>
+            </div>
+            <div class="pl-compare-col-content">${S.esc(origDesc)}</div>
+          </div>
+          <div class="pl-compare-col">
+            <div class="pl-compare-col-hd">
+              <span class="pl-compare-col-title">Current Enriched Description</span>
+              <span class="pl-compare-badge pl-compare-badge-curr">Live in Form</span>
+            </div>
+            <div class="pl-compare-col-content">${S.esc(currentDesc || 'Empty description')}</div>
+          </div>
+        </div>
+        <div class="pl-compare-ft">
+          ${l.original_description ? `
+            <button class="btn btn-outline btn-sm" id="pl-modal-revert-btn" style="margin-right:auto">
+              ↺ Use Original in Form
+            </button>` : ''}
+          <button class="btn btn-ghost btn-sm" id="pl-modal-close-btn">Close</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const closeModal = () => modal.remove();
+    modal.querySelector('.pl-compare-backdrop').addEventListener('click', closeModal);
+    modal.querySelector('.pl-compare-close').addEventListener('click', closeModal);
+    modal.querySelector('#pl-modal-close-btn').addEventListener('click', closeModal);
+
+    const modalRevertBtn = modal.querySelector('#pl-modal-revert-btn');
+    if(modalRevertBtn){
+      modalRevertBtn.addEventListener('click', () => {
+        const ta = document.querySelector('#pf-description');
+        if(ta && l.original_description){
+          ta.value = l.original_description;
+          ta.dispatchEvent(new Event('input', { bubbles: true }));
+          S.toast('Original description copied to editor', 'info');
+        }
+        closeModal();
+      });
+    }
+  }
+
+
+
+  // ── Actions ─────────────────────────────────────────────────────────────────
+
+  function collectPatch(){
+    const panel = document.getElementById('pl-panel');
+    if(!panel || !_current) return {};
+    const l = _current;
+    const patch = {};
+
+    // Plain text fields
+    const textFields = [
+      'title','address','unit_number','city','state','zip','county','neighborhood',
+      'description','original_description','showing_instructions','move_in_special','location_context','virtual_tour_url',
+      'property_type','property_subtype','hoa_fee_frequency','ev_charging','available_date','listed_at',
+      'heating_type','cooling_type','laundry_type','parking',
+    ];
+    // Integer fields
+    const intFields = [
+      'monthly_rent','security_deposit','application_fee',
+      'last_months_rent','admin_fee','pet_deposit','parking_fee','hoa_fee','tax_annual_amount',
+      'bedrooms','half_bathrooms','square_footage','minimum_lease_months','garage_spaces',
+      'year_built','floors','lot_size_sqft',
+    ];
+    // Float fields
+    const floatFields = ['bathrooms'];
+    // Boolean fields (stored as true/false/null)
+    const boolFields = ['pets_allowed','smoking_allowed','has_central_air','has_basement'];
+    // JSON-array fields stored as comma-separated text in the form
+    const jArrFields = ['appliances','utilities_included','amenities','flooring','pet_types_allowed','lease_terms'];
+
+    textFields.forEach(f => {
+      const el = panel.querySelector('#pf-'+f);
+      if(!el) return;
+      const v = el.value.trim() || null;
+      const oldV = l[f] != null ? String(l[f]).trim() : null;
+      if(v !== oldV) patch[f] = v;
+    });
+    intFields.forEach(f => {
+      const el = panel.querySelector('#pf-'+f);
+      if(!el) return;
+      const raw = el.value.trim();
+      const v   = raw ? parseInt(raw, 10) : null;
+      if(v !== l[f]) patch[f] = v;
+    });
+    floatFields.forEach(f => {
+      const el = panel.querySelector('#pf-'+f);
+      if(!el) return;
+      const raw = el.value.trim();
+      const v   = raw ? parseFloat(raw) : null;
+      if(v !== l[f]) patch[f] = v;
+    });
+    boolFields.forEach(f => {
+      const el = panel.querySelector('#pf-'+f);
+      if(!el) return;
+      const raw = el.value;
+      const v   = raw === '' ? null : raw === 'true';
+      if(v !== l[f]) patch[f] = v;
+    });
+    jArrFields.forEach(f => {
+      const el = panel.querySelector('#pf-'+f);
+      if(!el) return;
+      const newArr = textToJArr(el.value);
+      const oldArr = l[f] || '[]';
+      if(newArr !== oldArr) patch[f] = newArr;
+    });
+
+    return patch;
+  }
+
+  async function doSave(id){
+    const patch = collectPatch();
+    if(!Object.keys(patch).length){ S.toast('No changes to save', 'info'); return; }
+    _cClear();
+    const btn = document.querySelector('.pl-save-btn');
+    if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+    const { data, error } = await CP.sb().rpc('pipeline_save', { p_id: id, p_patch: patch });
+    if(btn){ btn.disabled = false; btn.textContent = 'Save changes'; }
+    if(error){ S.toast('Save failed: ' + error.message, 'error'); return; }
+    const res = typeof data === 'string' ? JSON.parse(data) : data;
+    if(!res?.ok){ S.toast('Save failed: ' + (res?.error||'unknown'), 'error'); return; }
+    S.toast('Saved', 'success');
+    Object.assign(_current, patch);
+    if(_current.status === 'scraped') _current.status = 'edited';
+    refreshCard(id);
+    fetchCounts().catch(()=>{});
+  }
+
+  async function doArchive(id){
+    const ok = await S.confirm('Archive this listing?', 'It will be hidden from the pipeline. You can still find it under the Archived filter.');
+    if(!ok) return;
+    _cClear();
+    const { data, error } = await CP.sb().rpc('pipeline_archive', { p_id: id });
+    if(error){ S.toast('Archive failed: ' + error.message, 'error'); return; }
+    const res = typeof data === 'string' ? JSON.parse(data) : data;
+    if(!res?.ok){ S.toast('Archive failed: ' + (res?.error||'unknown'), 'error'); return; }
+    S.toast('Archived', 'success');
+    removeCard(id);
+    closePanel();
+    fetchCounts().catch(()=>{});
+  }
+
+  // Transfer source photos to ImageKit in the background after publish
+  async function doTransferPhotos(pipelineId, propertyId){
+    const listing = _pageData.find(l => l.id === pipelineId);
+    const urls = listing ? (parseJSON(listing.original_image_urls) || []) : [];
+    if(!urls.length) return;
+
+    S.toast(`Transferring ${Math.min(urls.length, 20)} photo${urls.length !== 1 ? 's' : ''} to ImageKit…`, 'info');
+
+    try {
+      const { data, error } = await CP.sb().functions.invoke('import-pipeline-photos', {
+        body: { pipeline_id: pipelineId, property_id: propertyId }
+      });
+      if(error) throw error;
+      const res = typeof data === 'string' ? JSON.parse(data) : data;
+      if(res?.transferred > 0){
+        S.toast(`${res.transferred} photo${res.transferred !== 1 ? 's' : ''} added to ImageKit ✓`, 'success');
+      } else if(res?.skipped > 0){
+        S.toast('Photos could not be transferred — add manually in property edit', 'info');
+      }
+    } catch(e){
+      console.warn('[pipeline] photo transfer failed', e);
+      // Non-fatal — property is published, photos can be added manually
+    }
+  }
+
+  async function doPublish(id){
+    const panel = document.getElementById('pl-panel');
+    const required = ['pf-title','pf-address','pf-city','pf-state','pf-zip'];
+    const missing = [];
+    required.forEach(fid => {
+      const el = panel && panel.querySelector('#'+fid);
+      if(el && !el.value.trim()) missing.push(fid.replace('pf-',''));
+    });
+    if(missing.length){
+      S.toast('Please fill required fields: ' + missing.join(', '), 'error');
+      return;
+    }
+
+    // Save any unsaved changes first
+    const patch = collectPatch();
+    if(Object.keys(patch).length){
+      const { error: se } = await CP.sb().rpc('pipeline_save', { p_id: id, p_patch: patch });
+      if(se){ S.toast('Could not save changes before publishing: ' + se.message, 'error'); return; }
+    }
+
+    // Merge unsaved patch into _current so validation sees the just-saved values.
+    const l = Object.assign({}, _current || {}, patch);
+
+    // ── Pre-publish validation gate ──────────────────────────────────────────
+    // Must run before any RPC call. Mirrors validate_for_publish() in enrichment.py.
+    const validation = await validateForPublish(l);
+    if (!validation.ok) {
+      S.toast(
+        'Cannot publish — fix these issues first:\n• ' + validation.failures.join('\n• '),
+        'error'
+      );
+      return;
+    }
+
+    const desc = [l.address, l.city, l.state].filter(Boolean).join(', ');
+    const ok = await S.confirm(
+      'Publish "' + desc + '" as a draft?',
+      'A draft property will be created in your listings. Photos will be transferred to ImageKit automatically.'
+    );
+    if(!ok) return;
+    _cClear();
+
+    const btn = document.querySelector('.pl-pub-btn-panel');
+    if(btn){ btn.disabled = true; btn.textContent = 'Publishing…'; }
+
+    // If the user chose to delete the pipeline record after publishing, call the new RPC
+    const deleteOnPublishEl = panel.querySelector('#pf-delete-on-publish');
+    const deleteOnPublish = deleteOnPublishEl && deleteOnPublishEl.checked;
+    const rpcName = deleteOnPublish ? 'pipeline_publish_and_delete' : 'pipeline_publish';
+    const { data, error } = await CP.sb().rpc(rpcName, { p_id: id, p_landlord_id: null });
+    if(btn){ btn.disabled = false; btn.textContent = 'Publish as draft →'; }
+    if(error){ S.toast('Publish failed: ' + error.message, 'error'); return; }
+    const res = typeof data === 'string' ? JSON.parse(data) : data;
+    if(!res?.ok){ S.toast('Publish failed: ' + (res?.error||'unknown'), 'error'); return; }
+
+    const propId = res.choice_property_id;
+    // Temporary owner directive: drop virtual_tour_url & videos when publishing (do not remove extraction/UI)
+    const DISABLE_TOUR_AND_VIDEO_LINKS_ON_PUBLISH = true;
+    if (DISABLE_TOUR_AND_VIDEO_LINKS_ON_PUBLISH && propId) {
+      try {
+        await CP.sb().from('properties').update({ virtual_tour_url: null, videos: null }).eq('id', propId);
+      } catch (_) {}
+    }
+    S.toast('Published! Opening edit page…', 'success');
+    removeCard(id);
+    closePanel();
+    fetchCounts().catch(()=>{});
+
+    // Transfer photos in background (non-blocking)
+    doTransferPhotos(id, propId);
+
+    // Open edit page
+    setTimeout(() => {
+      window.open('/admin/property-detail.html?id=' + encodeURIComponent(propId), '_blank');
+    }, 400);
+  }
+
+  async function doBulkPublish(){
+    const ids = [..._selected];
+    if(!ids.length) return;
+
+    // Only publish non-published, non-archived
+    const publishable = ids.filter(id => {
+      const l = _pageData.find(x => x.id === id);
+      return l && l.status !== 'published' && l.status !== 'archived';
+    });
+
+    if(!publishable.length){
+      S.toast('No publishable listings selected (already published or archived)', 'info');
+      return;
+    }
+
+    const ok = await S.confirm(
+      `Publish ${publishable.length} listing${publishable.length !== 1 ? 's' : ''} as drafts?`,
+      'Each will become a draft property. Photos are not auto-transferred for bulk publish — add them individually from each property\'s edit page.'
+    );
+    if(!ok) return;
+
+    const bar = document.getElementById('pl-bulk-pub');
+    if(bar){ bar.disabled = true; bar.textContent = 'Publishing…'; }
+
+    let succeeded = 0;
+    let failed = 0;
+    let blocked = 0;
+
+    for(const id of publishable){
+      try {
+        const listing = _pageData.find(x => x.id === id);
+        if (!listing) { failed++; continue; }
+
+        // Pre-publish validation gate — skip invalid records in bulk mode
+        const validation = await validateForPublish(listing);
+        if (!validation.ok) {
+          console.warn('[pipeline] bulk publish blocked for', id, validation.failures);
+          blocked++;
+          continue;
+        }
+
+        const { data, error } = await CP.sb().rpc('pipeline_publish', { p_id: id, p_landlord_id: null });
+        if(error) throw error;
+        const res = typeof data === 'string' ? JSON.parse(data) : data;
+        if(!res?.ok) throw new Error(res?.error || 'unknown');
+        if (res.choice_property_id) {
+          // Temporary owner directive: drop virtual_tour_url & videos when publishing
+          try {
+            await CP.sb().from('properties').update({ virtual_tour_url: null, videos: null }).eq('id', res.choice_property_id);
+          } catch (_) {}
+        }
+        succeeded++;
+        removeCard(id);
+        _selected.delete(id);
+      } catch(e){
+        console.error('[pipeline] bulk publish failed for', id, e);
+        failed++;
+      }
+    }
+
+    if(bar){ bar.disabled = false; bar.textContent = 'Publish all →'; }
+    updateBulkBar();
+    fetchCounts().catch(()=>{});
+
+    if(succeeded > 0 && failed === 0 && blocked === 0){
+      S.toast(`${succeeded} listing${succeeded !== 1 ? 's' : ''} published as drafts ✓`, 'success');
+    } else if(succeeded > 0 && blocked > 0){
+      S.toast(`${succeeded} published, ${blocked} blocked (fix photos/descriptions first)`, 'info');
+    } else if(succeeded > 0){
+      S.toast(`${succeeded} published, ${failed} failed`, 'info');
+    } else if(blocked > 0){
+      S.toast(`All ${blocked} listing${blocked !== 1 ? 's' : ''} blocked by validation — fix photos and descriptions`, 'error');
+    } else {
+      S.toast('Bulk publish failed — try again or publish individually', 'error');
+    }
+  }
+
+  // ── Card DOM helpers ─────────────────────────────────────────────────────────
+
+  function removeCard(id){
+    const el = document.querySelector(`.pl-card[data-pl-id="${CSS.escape(id)}"]`);
+    if(el) el.remove();
+    // Remove from page data too
+    _pageData = _pageData.filter(l => l.id !== id);
+    const list = document.getElementById('pl-list');
+    if(list && !list.querySelector('.pl-card')){
+      list.innerHTML = `<div class="pl-empty"><svg class="i"><use href="#i-check"/></svg><h3>All done</h3><p>No more listings with this status.</p></div>`;
+    }
+  }
+
+  function refreshCard(id){
+    const el = document.querySelector(`.pl-card[data-pl-id="${CSS.escape(id)}"]`);
+    if(!el || !_current) return;
+    el.outerHTML = renderCard(_current);
+    wireCardEvents();
+  }
+
+  // ── Lazy-load card thumbnails via IntersectionObserver ───────────────────────
+  function setupLazyLoad(){
+    const imgs = document.querySelectorAll('.pl-thumb[data-src], .pl-thumb-strip-img[data-src]');
+    if(!imgs.length) return;
+    if(!('IntersectionObserver' in window)){
+      imgs.forEach(img => { img.src = img.dataset.src; img.removeAttribute('data-src'); });
+      return;
+    }
+    const obs = new IntersectionObserver((entries, ob) => {
+      entries.forEach(e => {
+        if(!e.isIntersecting) return;
+        const img = e.target;
+        img.src = img.dataset.src;
+        img.removeAttribute('data-src');
+        ob.unobserve(img);
+      });
+    }, { rootMargin: '160px' });
+    imgs.forEach(img => obs.observe(img));
+  }
+
+  // ── Event wiring ─────────────────────────────────────────────────────────────
+
+  function wireCardEvents(){
+    document.querySelectorAll('.pl-card').forEach(card => {
+      card.onclick = null;
+      card.onclick = (e) => {
+        // If clicking on actionable button, don't toggle card selection
+        if(e.target.closest('button, a, select, input, label.pl-card-check')) return;
+        const chk = card.querySelector('.pl-check');
+        if(chk){
+          chk.checked = !chk.checked;
+          const id = chk.dataset.id;
+          if(chk.checked){
+            _selected.add(id);
+          } else {
+            _selected.delete(id);
+          }
+          card.classList.toggle('pl-card-selected', chk.checked);
+          updateBulkBar();
+        }
+      };
+      card.ondblclick = (e) => {
+        if(e.target.closest('button, a, select, input')) return;
+        const id = card.dataset.plId;
+        const listing = _pageData.find(l => l.id === id);
+        if(listing) openPanel(listing);
+      };
+      card.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); card.click(); } };
+    });
+
+    // Publish buttons on cards
+    document.querySelectorAll('.pl-pub-btn').forEach(btn => {
+      btn.onclick = e => { e.stopPropagation(); doPublish(btn.dataset.id); };
+    });
+
+    // Archive buttons on cards
+    document.querySelectorAll('.pl-arc-btn').forEach(btn => {
+      btn.onclick = e => { e.stopPropagation(); doArchive(btn.dataset.id); };
+    });
+
+    // Retry photos buttons on cards (photo_import_status === 'failed')
+    document.querySelectorAll('.pl-retry-photos-btn').forEach(btn => {
+      btn.onclick = async e => {
+        e.stopPropagation();
+        btn.disabled = true;
+        btn.textContent = 'Retrying…';
+        await doTransferPhotos(btn.dataset.id, btn.dataset.propId);
+        btn.disabled = false;
+        btn.textContent = 'Retry photos';
+        load(false).catch(()=>{});
+      };
+    });
+
+    // Selection checkboxes
+    document.querySelectorAll('.pl-check').forEach(chk => {
+      chk.onchange = e => {
+        const id = chk.dataset.id;
+        if(chk.checked){
+          _selected.add(id);
+        } else {
+          _selected.delete(id);
+        }
+        const card = chk.closest('.pl-card');
+        if(card) card.classList.toggle('pl-card-selected', chk.checked);
+        updateBulkBar();
+      };
+    });
+
+    // Lazy-load thumbnails after cards are in the DOM
+    setupLazyLoad();
+  }
+
+  function wireChips(){
+    const chips = document.getElementById('status-chips');
+    if(!chips) return;
+    chips.addEventListener('click', e => {
+      const chip = e.target.closest('.chip');
+      if(!chip || !chip.dataset.plStatus) return;
+      chips.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      _status = chip.dataset.plStatus;
+      _page   = 0;
+      _selected.clear();
+      updateBulkBar();
+      load(false);
+    });
+  }
+
+  function wireSourceChips(){
+    const row = document.getElementById('source-chips');
+    if(!row) return;
+    row.addEventListener('click', e => {
+      const chip = e.target.closest('.chip');
+      if(!chip || !('plSource' in chip.dataset)) return;
+      row.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      _source = chip.dataset.plSource || null;
+      _selected.clear();
+      updateBulkBar();
+      // Re-render from cached page data — no server round trip
+      renderList(visibleListings(), false);
+      wireCardEvents();
+    });
+  }
+
+  function wireBulkBar(){
+    const selectAll = document.getElementById('pl-select-all');
+    if(selectAll){
+      selectAll.addEventListener('change', () => {
+        const publishable = visibleListings().filter(l => l.status !== 'published' && l.status !== 'archived');
+        if(selectAll.checked){
+          publishable.forEach(l => _selected.add(l.id));
+        } else {
+          publishable.forEach(l => _selected.delete(l.id));
+        }
+        // Re-render to reflect checkbox states
+        renderList(visibleListings(), false);
+        wireCardEvents();
+        updateBulkBar();
+      });
+    }
+
+    const clearBtn = document.getElementById('pl-bulk-clear');
+    if(clearBtn){
+      clearBtn.addEventListener('click', () => {
+        _selected.clear();
+        renderList(visibleListings(), false);
+        wireCardEvents();
+        updateBulkBar();
+      });
+    }
+
+    const pubBtn = document.getElementById('pl-bulk-pub');
+    if(pubBtn){
+      pubBtn.addEventListener('click', () => doBulkPublish());
+    }
+
+    const delBtn = document.getElementById('pl-bulk-delete');
+    if(delBtn){
+      delBtn.addEventListener('click', async () => {
+        const ids = [..._selected];
+        if(!ids.length) return;
+        const ok = await S.confirm(`Delete ${ids.length} listing${ids.length!==1?'s':''} from pipeline?`, 'This permanently deletes pipeline records. This cannot be undone.');
+        if(!ok) return;
+        delBtn.disabled = true; delBtn.textContent = 'Deleting…';
+        try {
+          const { data, error } = await CP.sb().rpc('pipeline_bulk_delete', { p_ids: JSON.stringify(ids) });
+          if(error) throw error;
+          const res = typeof data === 'string' ? JSON.parse(data) : data;
+          if(!res?.ok) throw new Error(res?.error || 'Delete failed');
+          // Remove from UI
+          ids.forEach(id => removeCard(id));
+          _selected.clear(); updateBulkBar(); fetchCounts().catch(()=>{});
+          S.toast(`${res.deleted || ids.length} deleted from pipeline`, 'success');
+        } catch(e){
+          console.error('[pipeline] bulk delete failed', e);
+          S.toast('Bulk delete failed: ' + (e.message||'unknown'), 'error');
+        } finally {
+          delBtn.disabled = false; delBtn.textContent = 'Delete from pipeline';
+        }
+      });
+    }
+  }
+
+  function wireSearch(){
+    const input = document.getElementById('pl-search');
+    const clear = document.getElementById('pl-search-clear');
+    if(!input) return;
+
+    let _debounce;
+    input.addEventListener('input', () => {
+      clearTimeout(_debounce);
+      _debounce = setTimeout(() => {
+        _search = input.value.trim();
+        _selected.clear();
+        updateBulkBar();
+        renderList(visibleListings(), false);
+        wireCardEvents();
+      }, 200);
+    });
+
+    if(clear){
+      clear.addEventListener('click', () => {
+        input.value = '';
+        _search = '';
+        _selected.clear();
+        updateBulkBar();
+        renderList(visibleListings(), false);
+        wireCardEvents();
+        input.focus();
+      });
+    }
+  }
+
+  function wireQualityChips(){
+    const row = document.getElementById('quality-chips');
+    if(!row) return;
+    row.addEventListener('click', e => {
+      const chip = e.target.closest('.chip');
+      if(!chip || !('plQuality' in chip.dataset)) return;
+      row.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      _quality = chip.dataset.plQuality || null;
+      _selected.clear();
+      updateBulkBar();
+      renderList(visibleListings(), false);
+      wireCardEvents();
+    });
+  }
+
+  function wireImportButton(){
+    const btn = document.getElementById('pl-import-url-btn');
+    if(btn) btn.addEventListener('click', openImportModal);
+  }
+
+  function wireRefreshButton(){
+    const btn = document.getElementById('pl-refresh-btn');
+    if(!btn) return;
+    btn.addEventListener('click', async () => {
+      if(_loading) return;
+      btn.disabled = true;
+      btn.style.opacity = '.5';
+      _cClear();
+      _page = 0;
+      try {
+        await load(false);
+        S.toast('Pipeline refreshed', 'success');
+      } catch(_){
+        S.toast('Refresh failed', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.style.opacity = '';
+      }
+    });
+  }
+
+  function wireBackdrop(){
+    document.getElementById('pl-backdrop').addEventListener('click', closePanel);
+  }
+
+  function wireLoadMore(){
+    document.getElementById('load-more-btn').addEventListener('click', async () => {
+      if(_loading) return;
+      _page++;
+      _loading = true;
+      try {
+        const more = await fetchListings(_status, _page);
+        _pageData.push(...more);
+        // Only append the subset matching the active source filter
+        const visible = _source ? more.filter(l => (l.source || '') === _source) : more;
+        if(visible.length){
+          renderList(visible, true);
+          wireCardEvents();
+        }
+      } catch(e){
+        S.toast('Failed to load more', 'error');
+        _page--;
+      } finally {
+        _loading = false;
+      }
+    });
+  }
+
+  // ── Folder system ─────────────────────────────────────────────────────────────
+
+  let _folders = [];       // list of folders
+  let _activeFolder = null; // currently selected folder (null = all)
+  let _pendingFolderIds = null; // selected items to assign when creating a new folder
+
+  async function loadFolders(){
+    try {
+      const { data, error } = await CP.sb().rpc('pipeline_folder_list');
+      if(error) throw error;
+      _folders = typeof data === 'string' ? JSON.parse(data) : (data || []);
+      renderFolderSidebar();
+      renderFolderBanner();
+    } catch(e){
+      console.warn('[pipeline] loadFolders failed', e);
+    }
+  }
+
+  function renderFolderBanner(){
+    const banner = document.getElementById('pl-folder-banner');
+    const actions = document.getElementById('pl-folder-actions');
+    if(!_activeFolder || !banner){
+      if(banner) banner.classList.remove('visible');
+      if(actions) actions.style.display = 'none';
+      return;
+    }
+
+    const folder = _folders.find(f => f.id === _activeFolder);
+    if(!folder){
+      banner.classList.remove('visible');
+      if(actions) actions.style.display = 'none';
+      return;
+    }
+
+    const isBatch = Boolean(folder.is_disposable_batch || folder.batch_id);
+    const published = folder.published_count || 0;
+    const archived = folder.archived_count || 0;
+    const total = folder.property_count || 0;
+    const missing = _pageData.filter(l => !l.choice_property_id && l.status !== 'archived').length;
+    const titleHtml = isBatch
+      ? `Working in 📦 Batch #${S.esc(folder.batch_id || folder.name)} <span class="pl-folder-badge">Disposable Batch · ${S.esc(folder.cleanup_state || 'open')}</span>`
+      : `Working in "${S.esc(folder.name)}"`;
+
+    banner.innerHTML = `
+      <div>
+        <div class="pl-folder-banner-title">${titleHtml}</div>
+        <div class="pl-folder-banner-meta">${total} listing${total !== 1 ? 's' : ''} · ${published} published · ${archived} archived · ${missing} needs review${folder.description ? ' · ' + S.esc(folder.description) : ''}</div>
+      </div>
+      <div class="pl-folder-banner-actions">
+        <button class="btn btn-sm btn-outline" id="pl-banner-close-folder-btn">${isBatch ? 'Close batch' : 'Close folder'}</button>
+        <button class="btn btn-sm btn-primary" id="pl-banner-publish-folder-btn">${isBatch ? 'Publish batch' : 'Publish folder'}</button>
+      </div>
+    `;
+
+    banner.classList.add('visible');
+    if(actions) actions.style.display = 'flex';
+
+    const closeBtn = document.getElementById('pl-banner-close-folder-btn');
+    const pubBtn = document.getElementById('pl-banner-publish-folder-btn');
+    if(closeBtn) closeBtn.addEventListener('click', closeActiveFolder);
+    if(pubBtn) pubBtn.addEventListener('click', publishActiveFolder);
+  }
+
+  function renderFolderSidebar(){
+    const wrap = document.getElementById('pl-folders');
+    if(!wrap) return;
+    if(!_folders.length){
+      wrap.innerHTML = `
+        <div class="pl-folder-item pl-batch-new" id="pl-new-batch-item" role="button" tabindex="0">+ New Batch (4-Digit)</div>
+        <div class="pl-folder-item pl-folder-new" id="pl-new-folder-item" role="button" tabindex="0">+ New Folder</div>
+      `;
+      const newFolderBtn = document.getElementById('pl-new-folder-item');
+      if(newFolderBtn) newFolderBtn.addEventListener('click', () => openCreateFolderModal(_selected.size ? [..._selected] : null));
+      const newBatchBtn = document.getElementById('pl-new-batch-item');
+      if(newBatchBtn) newBatchBtn.addEventListener('click', () => openCreateBatchModal());
+      renderFolderBanner();
+      return;
+    }
+
+    const allItem = `
+      <div class="pl-folder-item${_activeFolder === null ? ' active' : ''}" data-folder-id="" role="button" tabindex="0">
+        <div class="pl-folder-name">📂 All pipeline</div>
+        <div class="pl-folder-count">${_pageData.length || ''}</div>
+      </div>
+    `;
+
+    wrap.innerHTML = allItem + _folders.map(f => {
+      const isBatch = Boolean(f.is_disposable_batch || f.batch_id);
+      const label = isBatch ? `Batch #${S.esc(f.batch_id || f.name)}` : S.esc(f.name);
+      const icon = S.esc(f.icon || (isBatch ? '📦' : '📁'));
+      const batchBadge = isBatch ? '<span class="pl-folder-badge">Batch</span>' : '';
+      return `
+        <div class="pl-folder-item${isBatch ? ' pl-folder-batch' : ''}${_activeFolder === f.id ? ' active' : ''}" data-folder-id="${S.esc(f.id)}" role="button" tabindex="0" title="${S.esc(f.description || label)}">
+          <div class="pl-folder-name">${icon} ${label}</div>
+          ${batchBadge}
+          <div class="pl-folder-count">${f.property_count || 0}</div>
+        </div>
+      `;
+    }).join('')
+      + '<div class="pl-folder-item pl-batch-new" id="pl-new-batch-item" role="button" tabindex="0">+ New Batch (4-Digit)</div>'
+      + '<div class="pl-folder-item pl-folder-new" id="pl-new-folder-item" role="button" tabindex="0">+ New Folder</div>';
+
+    wrap.querySelectorAll('.pl-folder-item[data-folder-id]').forEach(el => {
+      el.addEventListener('click', () => selectFolder(el.dataset.folderId || null));
+    });
+    const newBtn = document.getElementById('pl-new-folder-item');
+    if(newBtn) newBtn.addEventListener('click', () => openCreateFolderModal(_selected.size ? [..._selected] : null));
+    const newBatchBtn = document.getElementById('pl-new-batch-item');
+    if(newBatchBtn) newBatchBtn.addEventListener('click', () => openCreateBatchModal());
+    renderFolderBanner();
+  }
+
+  async function selectFolder(folderId){
+    _activeFolder = folderId;
+    renderFolderSidebar();
+    if(!folderId){
+      _selected.clear();
+      updateBulkBar();
+      await load(false);
+      return;
+    }
+    try {
+      const { data, error } = await CP.sb().rpc('pipeline_folder_properties', { p_folder_id: folderId });
+      if(error) throw error;
+      const rows = typeof data === 'string' ? JSON.parse(data) : (data || []);
+      _pageData = rows;
+      renderList(visibleListings(), false);
+      wireCardEvents();
+      renderFolderBanner();
+    } catch(e){
+      console.error('[pipeline] selectFolder failed', e);
+      S.toast('Failed to load folder', 'error');
+    }
+  }
+
+  function openCreateFolderModal(selectedIds = null){
+    _pendingFolderIds = Array.isArray(selectedIds) ? selectedIds : null;
+    const modal = document.createElement('div');
+    modal.id = 'pl-folder-modal';
+    modal.innerHTML = `
+      <div class="pl-import-backdrop"></div>
+      <div class="pl-import-dialog" role="dialog" aria-modal="true" aria-label="Create folder">
+        <div class="pl-import-hd">
+          <div style="font-size:.95rem;font-weight:700">Create New Folder</div>
+          <button class="pl-import-close" aria-label="Close">✕</button>
+        </div>
+        <div class="pl-import-body">
+          <div class="pl-field" style="margin-bottom:14px">
+            <label for="pl-folder-name">Folder name</label>
+            <input id="pl-folder-name" type="text" placeholder="e.g. Wisdom, Columbus Q3, Fix Descriptions" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="pl-field" style="margin-bottom:14px">
+            <label for="pl-folder-desc">Description (optional)</label>
+            <input id="pl-folder-desc" type="text" placeholder="What is this folder for?" autocomplete="off">
+          </div>
+          <div id="pl-folder-result" style="display:none"></div>
+        </div>
+        <div class="pl-import-ft">
+          <button class="btn btn-ghost" id="pl-folder-cancel">Cancel</button>
+          <div style="flex:1"></div>
+          <button class="btn btn-primary" id="pl-folder-create">Create Folder →</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    modal.querySelector('.pl-import-backdrop').addEventListener('click', closeFolderModal);
+    modal.querySelector('.pl-import-close').addEventListener('click', closeFolderModal);
+    document.getElementById('pl-folder-cancel').addEventListener('click', closeFolderModal);
+    document.getElementById('pl-folder-create').addEventListener('click', doCreateFolder);
+    document.getElementById('pl-folder-name').addEventListener('keydown', e => {
+      if(e.key === 'Enter') doCreateFolder();
+    });
+    setTimeout(() => document.getElementById('pl-folder-name').focus(), 50);
+  }
+
+  function closeFolderModal(){
+    const modal = document.getElementById('pl-folder-modal');
+    if(modal) modal.remove();
+  }
+
+  async function doCreateFolder(){
+    const nameInput = document.getElementById('pl-folder-name');
+    const descInput = document.getElementById('pl-folder-desc');
+    const resultEl  = document.getElementById('pl-folder-result');
+    if(!nameInput || !resultEl) return;
+    const name = nameInput.value.trim();
+    if(!name){
+      nameInput.focus();
+      return;
+    }
+    const btn = document.getElementById('pl-folder-create');
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
+    try {
+      const { data, error } = await CP.sb().rpc('pipeline_folder_create', {
+        p_name: name,
+        p_description: descInput ? descInput.value.trim() || null : null
+      });
+      if(error) throw error;
+      const res = typeof data === 'string' ? JSON.parse(data) : data;
+      if(!res?.ok){
+        resultEl.style.cssText = 'display:block;padding:10px 12px;border-radius:8px;background:rgba(239,68,68,.1);color:#dc2626;font-size:.8rem;margin-top:4px';
+        resultEl.textContent = res?.error || 'Failed to create folder';
+        btn.disabled = false;
+        btn.textContent = 'Create Folder →';
+        return;
+      }
+      S.toast('Folder "' + res.name + '" created ✓', 'success');
+      closeFolderModal();
+      await loadFolders();
+      if(_pendingFolderIds && _pendingFolderIds.length){
+        await addSelectedToNewFolder(res.id, _pendingFolderIds);
+        _pendingFolderIds = null;
+      }
+    } catch(e){
+      resultEl.style.cssText = 'display:block;padding:10px 12px;border-radius:8px;background:rgba(239,68,68,.1);color:#dc2626;font-size:.8rem;margin-top:4px';
+      resultEl.textContent = e.message || 'Failed to create folder';
+      btn.disabled = false;
+      btn.textContent = 'Create Folder →';
+    }
+  }
+
+  let _usedBatchIdsCache = new Set();
+
+  function generateUnusedFourDigitId(extraUsed){
+    const used = new Set(_usedBatchIdsCache);
+    _folders.forEach(f => {
+      if(f && f.batch_id) used.add(String(f.batch_id));
+      if(f && f.name && /^\d{4}$/.test(String(f.name).trim())) used.add(String(f.name).trim());
+    });
+    if(extraUsed){
+      extraUsed.forEach(id => used.add(String(id)));
+    }
+    for(let attempt = 0; attempt < 250; attempt++){
+      const candidate = String(1000 + Math.floor(Math.random() * 9000));
+      if(!used.has(candidate)) return candidate;
+    }
+    for(let n = 0; n <= 9999; n++){
+      const padded = String(n).padStart(4, '0');
+      if(!used.has(padded)) return padded;
+    }
+    return '';
+  }
+
+  async function openCreateBatchModal(){
+    const existing = document.getElementById('pl-batch-modal');
+    if(existing) existing.remove();
+
+    const suggestedId = generateUnusedFourDigitId();
+    const modal = document.createElement('div');
+    modal.id = 'pl-batch-modal';
+    modal.innerHTML = `
+      <div class="pl-import-backdrop"></div>
+      <div class="pl-import-dialog" role="dialog" aria-modal="true" aria-label="New 4-Digit Pipeline Batch">
+        <div class="pl-import-hd">
+          <div>
+            <div style="font-size:.95rem;font-weight:700">📦 New 4-Digit Pipeline Batch</div>
+            <div style="font-size:.72rem;color:var(--muted-2)">Creates a permanent Batch #XXXX ledger row + linked disposable pipeline folder</div>
+          </div>
+          <button class="pl-import-close" aria-label="Close">✕</button>
+        </div>
+        <div class="pl-import-body">
+          <div id="pl-batch-stats-banner" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:10px;font-size:.76rem"></div>
+          <div class="pl-field" style="margin-bottom:12px">
+            <label for="pl-batch-id">Pipeline Batch ID (Exact 4 digits, 0000–9999)</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input id="pl-batch-id" type="text" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" value="${S.esc(suggestedId)}" placeholder="e.g. 4821" autocomplete="off" style="font-weight:800;letter-spacing:.12em;flex:1">
+              <button type="button" class="btn btn-outline btn-sm" id="pl-batch-random-btn" style="white-space:nowrap">🎲 Generate Unused</button>
+            </div>
+            <span style="font-size:.7rem;color:var(--muted-2)">One-time use per 4-digit Batch ID. Existing legacy PB-* batches remain preserved automatically.</span>
+          </div>
+          <div class="pl-field" style="margin-bottom:12px">
+            <label for="pl-batch-market">Target Market / City</label>
+            <input id="pl-batch-market" type="text" placeholder="e.g. Dallas, TX" autocomplete="off">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+            <div class="pl-field">
+              <label for="pl-batch-visibility">Listing Visibility</label>
+              <select id="pl-batch-visibility">
+                <option value="private_placement" selected>Private Placement (Strict Default · Magic Link)</option>
+                <option value="active">Public Active Listing (Explicit Override Only)</option>
+              </select>
+            </div>
+            <div class="pl-field">
+              <label for="pl-batch-workflow">Workflow Mode</label>
+              <select id="pl-batch-workflow">
+                <option value="scrape_and_publish" selected>Scrape &amp; Publish</option>
+                <option value="pipeline_publish">Pipeline Publish Only</option>
+              </select>
+            </div>
+          </div>
+          <div class="pl-field" style="margin-bottom:12px">
+            <label for="pl-batch-desc">Folder Note / Description (optional)</label>
+            <input id="pl-batch-desc" type="text" placeholder="e.g. Client placement collection for Oak Cliff 3BR+" autocomplete="off">
+          </div>
+          <div id="pl-batch-result" style="display:none"></div>
+        </div>
+        <div class="pl-import-ft">
+          <button class="btn btn-ghost" id="pl-batch-cancel">Cancel</button>
+          <div style="flex:1"></div>
+          <button class="btn btn-primary" id="pl-batch-create-btn">Create Batch &amp; Folder →</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    modal.querySelector('.pl-import-backdrop').addEventListener('click', closeBatchModal);
+    modal.querySelector('.pl-import-close').addEventListener('click', closeBatchModal);
+    document.getElementById('pl-batch-cancel').addEventListener('click', closeBatchModal);
+    document.getElementById('pl-batch-create-btn').addEventListener('click', doCreateBatch);
+    document.getElementById('pl-batch-random-btn').addEventListener('click', () => {
+      const inp = document.getElementById('pl-batch-id');
+      if(inp) inp.value = generateUnusedFourDigitId();
+    });
+    document.getElementById('pl-batch-id').addEventListener('keydown', e => {
+      if(e.key === 'Enter'){ e.preventDefault(); doCreateBatch(); }
+    });
+    setTimeout(() => {
+      const inp = document.getElementById('pl-batch-id');
+      if(inp) inp.focus();
+    }, 50);
+
+    // Load live namespace stats & existing used batch IDs in background
+    try {
+      const [statsRes, listRes] = await Promise.all([
+        CP.sb().rpc('batch_namespace_stats').catch(() => ({ data: null })),
+        CP.sb().rpc('batch_list', { p_limit: 200, p_batch_format: 'four_digit' }).catch(() => ({ data: null }))
+      ]);
+      const stats = typeof statsRes.data === 'string' ? JSON.parse(statsRes.data) : statsRes.data;
+      const batches = typeof listRes.data === 'string' ? JSON.parse(listRes.data) : (listRes.data || []);
+      if(Array.isArray(batches)){
+        batches.forEach(b => { if(b && b.batch_id) _usedBatchIdsCache.add(String(b.batch_id)); });
+      }
+      const idInput = document.getElementById('pl-batch-id');
+      if(idInput && _usedBatchIdsCache.has(idInput.value.trim())){
+        idInput.value = generateUnusedFourDigitId();
+      }
+      const statsBanner = document.getElementById('pl-batch-stats-banner');
+      if(statsBanner && stats){
+        const isWarn = Boolean(stats.warning_triggered);
+        statsBanner.style.display = 'block';
+        statsBanner.style.background = isWarn ? 'rgba(234,179,8,.14)' : 'rgba(99,102,241,.08)';
+        statsBanner.style.border = isWarn ? '1px solid rgba(234,179,8,.35)' : '1px solid rgba(99,102,241,.2)';
+        statsBanner.style.color = isWarn ? '#fbbf24' : 'var(--muted-2)';
+        statsBanner.innerHTML = isWarn
+          ? `⚠ <strong>4-Digit Namespace Notice:</strong> ${stats.used_four_digit_count} / 10,000 IDs used (${stats.remaining_four_digit_count} remaining). Archive/extend namespace before exhaustion.`
+          : `4-Digit Namespace: <strong>${stats.used_four_digit_count}</strong> used · <strong>${stats.remaining_four_digit_count}</strong> available · ${stats.legacy_pb_count} legacy PB batches preserved`;
+      }
+    } catch(_){}
+  }
+
+  function closeBatchModal(){
+    const modal = document.getElementById('pl-batch-modal');
+    if(modal) modal.remove();
+  }
+
+  async function doCreateBatch(){
+    const idInput = document.getElementById('pl-batch-id');
+    const marketInput = document.getElementById('pl-batch-market');
+    const visSelect = document.getElementById('pl-batch-visibility');
+    const wfSelect = document.getElementById('pl-batch-workflow');
+    const descInput = document.getElementById('pl-batch-desc');
+    const resultEl = document.getElementById('pl-batch-result');
+    const btn = document.getElementById('pl-batch-create-btn');
+    if(!idInput || !resultEl || !btn) return;
+
+    const batchId = idInput.value.trim();
+    if(!/^\d{4}$/.test(batchId)){
+      resultEl.style.cssText = 'display:block;padding:10px 12px;border-radius:8px;background:rgba(239,68,68,.1);color:#dc2626;font-size:.8rem;margin-top:4px';
+      resultEl.textContent = 'Enter an exact 4-digit numeric Batch ID (0000–9999).';
+      idInput.focus();
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Creating Batch…';
+    resultEl.style.display = 'none';
+
+    const selectedVisibility = (visSelect && visSelect.value) || 'private_placement';
+    let explicitPublicOverride = false;
+    if (selectedVisibility === 'active') {
+      const okPublic = await S.confirm(
+        `Confirm Public Override for Batch #${batchId}?`,
+        'Strict rule: every batch defaults to Private Placement unless you explicitly instruct Public Active publishing.'
+      );
+      if (!okPublic) {
+        btn.disabled = false;
+        btn.textContent = 'Create Batch & Folder →';
+        return;
+      }
+      explicitPublicOverride = true;
+    }
+
+    try {
+      const { data, error } = await CP.sb().rpc('batch_create', {
+        p_batch_id: batchId,
+        p_target_market: (marketInput && marketInput.value.trim()) || 'Unspecified',
+        p_workflow_type: (wfSelect && wfSelect.value) || 'scrape_and_publish',
+        p_visibility: selectedVisibility,
+        p_task_config: explicitPublicOverride ? { explicit_public_override: true, public_override_reason: 'Explicit Pipeline UI override' } : {},
+        p_description: (descInput && descInput.value.trim()) || null
+      });
+      if(error) throw error;
+      const res = typeof data === 'string' ? JSON.parse(data) : data;
+      if(!res?.ok){
+        resultEl.style.cssText = 'display:block;padding:10px 12px;border-radius:8px;background:rgba(239,68,68,.1);color:#dc2626;font-size:.8rem;margin-top:4px';
+        resultEl.textContent = res?.message || res?.error || 'Failed to create batch';
+        btn.disabled = false;
+        btn.textContent = 'Create Batch & Folder →';
+        return;
+      }
+
+      _usedBatchIdsCache.add(res.batch_id);
+      S.toast(`Batch #${res.batch_id} & disposable folder ready ✓`, 'success');
+      closeBatchModal();
+      await loadFolders();
+      if(res.folder_id){
+        await selectFolder(res.folder_id);
+      }
+    } catch(e){
+      resultEl.style.cssText = 'display:block;padding:10px 12px;border-radius:8px;background:rgba(239,68,68,.1);color:#dc2626;font-size:.8rem;margin-top:4px';
+      resultEl.textContent = e.message || 'Failed to create batch';
+      btn.disabled = false;
+      btn.textContent = 'Create Batch & Folder →';
+    }
+  }
+
+  function openPhotoEditor(listing){
+    const imgs = imageUrls(listing.original_image_urls || '[]');
+    const modal = document.createElement('div');
+    modal.id = 'pl-photo-editor-modal';
+    modal.innerHTML = `
+      <div class="pl-import-backdrop"></div>
+      <div class="pl-import-dialog" role="dialog" aria-modal="true" aria-label="Edit photos">
+        <div class="pl-import-hd">
+          <div style="font-size:.95rem;font-weight:700">Edit photos</div>
+          <button class="pl-import-close" aria-label="Close">✕</button>
+        </div>
+        <div class="pl-import-body">
+          <p style="font-size:.82rem;color:var(--muted-2);margin:0 0 14px">Reorder or remove source photos. Changes update the pipeline record's <em>original_image_urls</em>.</p>
+          <div id="pl-photo-edit-list" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+        <div class="pl-import-ft">
+          <button class="btn btn-ghost" id="pl-photo-edit-cancel">Cancel</button>
+          <div style="flex:1"></div>
+          <button class="btn btn-primary" id="pl-photo-edit-save">Save changes</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.querySelector('.pl-import-backdrop').addEventListener('click', closePhotoEditor);
+    modal.querySelector('.pl-import-close').addEventListener('click', closePhotoEditor);
+    document.getElementById('pl-photo-edit-cancel').addEventListener('click', closePhotoEditor);
+
+    const listEl = document.getElementById('pl-photo-edit-list');
+    function renderList(){
+      listEl.innerHTML = imgs.map((u, i) => `
+        <div style="display:flex;align-items:center;gap:8px">
+          <img src="${S.esc(u)}" style="width:84px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">
+          <div style="flex:1">
+            <div style="font-size:.85rem;opacity:.85">${S.esc(u)}</div>
+            <div style="margin-top:6px;display:flex;gap:6px">
+              <button class="btn btn-sm btn-ghost" data-action="up" data-idx="${i}">Up</button>
+              <button class="btn btn-sm btn-ghost" data-action="down" data-idx="${i}">Down</button>
+              <button class="btn btn-sm btn-ghost" data-action="primary" data-idx="${i}">Make primary</button>
+              <button class="btn btn-sm btn-ghost" data-action="remove" data-idx="${i}" style="color:var(--danger)">Remove</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      listEl.querySelectorAll('button[data-action]').forEach(btn => {
+        btn.addEventListener('click', e => {
+          const action = btn.dataset.action;
+          const idx = parseInt(btn.dataset.idx, 10);
+            if(action === 'remove') imgs.splice(idx,1);
+            else if(action === 'primary' && idx !== 0){ const it = imgs.splice(idx,1)[0]; imgs.unshift(it); }
+          else if(action === 'up' && idx > 0) { const t = imgs[idx-1]; imgs[idx-1]=imgs[idx]; imgs[idx]=t; }
+          else if(action === 'down' && idx < imgs.length-1) { const t = imgs[idx+1]; imgs[idx+1]=imgs[idx]; imgs[idx]=t; }
+          renderList();
+        });
+      });
+    }
+
+    renderList();
+
+    async function saveEdits(){
+      const { data, error } = await CP.sb().rpc('pipeline_save', { p_id: listing.id, p_patch: { original_image_urls: JSON.stringify(imgs) } });
+      if(error){ S.toast('Save failed: ' + error.message, 'error'); return; }
+      const res = typeof data === 'string' ? JSON.parse(data) : data;
+      if(!res?.ok){ S.toast('Save failed: ' + (res?.error||'unknown'), 'error'); return; }
+      S.toast('Photos updated', 'success');
+      closePhotoEditor();
+      // Refresh panel photos
+      const photoContainer = document.getElementById('panel-photos-container');
+      if(photoContainer){ panelPhotos(listing).then(html => { photoContainer.innerHTML = html; wireGalleryEvents(); wirePanelPhotoActions(); }); }
+    }
+
+    document.getElementById('pl-photo-edit-save').addEventListener('click', saveEdits);
+
+    function closePhotoEditor(){ const m = document.getElementById('pl-photo-editor-modal'); if(m) m.remove(); }
+  }
+
+  async function addSelectedToFolder(){
+    const ids = [..._selected];
+    if(!ids.length) return;
+    if(!_folders.length){
+      S.toast('Create a folder first', 'info');
+      openCreateFolderModal(ids);
+      return;
+    }
+    openFolderPicker({ selectedIds: ids });
+  }
+
+  async function addSelectedToNewFolder(folderId, ids){
+    if(!folderId || !ids?.length) return;
+    let succeeded = 0;
+    for(const id of ids){
+      try {
+        const { data, error } = await CP.sb().rpc('pipeline_folder_add_property', {
+          p_property_id: id,
+          p_folder_id: folderId
+        });
+        if(!error && data?.ok) succeeded++;
+      } catch(e){ /* ignore */ }
+    }
+    if(succeeded > 0){
+      S.toast(`${succeeded} listing${succeeded !== 1 ? 's' : ''} added to the new folder ✓`, 'success');
+      _selected.clear();
+      updateBulkBar();
+      await loadFolders();
+      selectFolder(folderId);
+    }
+  }
+
+  function openFolderPicker(options = {}){
+    const ids = Array.isArray(options.selectedIds) ? options.selectedIds : null;
+    const modal = document.createElement('div');
+    modal.id = 'pl-folder-modal';
+    modal.innerHTML = `
+      <div class="pl-import-backdrop"></div>
+      <div class="pl-import-dialog" role="dialog" aria-modal="true" aria-label="Add to folder">
+        <div class="pl-import-hd">
+          <div style="font-size:.95rem;font-weight:700">Add to folder</div>
+          <button class="pl-import-close" aria-label="Close">✕</button>
+        </div>
+        <div class="pl-import-body">
+          <div style="margin-bottom:14px;font-size:.85rem;color:var(--muted-2)">Select an existing folder or create a new one.</div>
+          <div id="pl-folder-picker-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
+          <button class="btn btn-outline" id="pl-folder-picker-new">Create new folder</button>
+          <div id="pl-folder-result" style="display:none"></div>
+        </div>
+        <div class="pl-import-ft">
+          <button class="btn btn-ghost" id="pl-folder-cancel">Cancel</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    modal.querySelector('.pl-import-backdrop').addEventListener('click', closeFolderModal);
+    modal.querySelector('.pl-import-close').addEventListener('click', closeFolderModal);
+    document.getElementById('pl-folder-cancel').addEventListener('click', closeFolderModal);
+    document.getElementById('pl-folder-picker-new').addEventListener('click', () => {
+      closeFolderModal();
+      openCreateFolderModal(ids);
+    });
+
+    const listWrapper = document.getElementById('pl-folder-picker-list');
+    if(listWrapper){
+      if(!_folders.length){
+        listWrapper.innerHTML = '<div class="pl-folder-empty">No folders exist yet. Create one below.</div>';
+      } else {
+        listWrapper.innerHTML = _folders.map(f => {
+          const isBatch = Boolean(f.is_disposable_batch || f.batch_id);
+          const label = isBatch ? `📦 Batch #${S.esc(f.batch_id || f.name)}` : `📁 ${S.esc(f.name)}`;
+          return `
+            <button class="btn btn-ghost" type="button" data-folder-id="${S.esc(f.id)}" style="justify-content:space-between;display:flex;align-items:center">
+              <span>${label}</span>
+              <span style="opacity:.7">${f.property_count || 0}</span>
+            </button>
+          `;
+        }).join('');
+        listWrapper.querySelectorAll('button[data-folder-id]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const folderId = btn.dataset.folderId;
+            closeFolderModal();
+            await addSelectedToNewFolder(folderId, ids);
+          });
+        });
+      }
+    }
+  }
+
+  async function deleteActiveFolder(){
+    if(!_activeFolder) return;
+    const folder = _folders.find(f => f.id === _activeFolder);
+    if(!folder) return;
+    const ok = await S.confirm(
+      `Archive folder "${folder.name}"?`,
+      `This will archive all non-published listings in the folder. Published listings will remain live but be removed from the folder.`
+    );
+    if(!ok) return;
+    try {
+      const { data, error } = await CP.sb().rpc('pipeline_folder_delete', { p_folder_id: _activeFolder });
+      if(error) throw error;
+      const res = typeof data === 'string' ? JSON.parse(data) : data;
+      if(!res?.ok) throw new Error(res?.error || 'Failed to archive folder');
+      S.toast(`Folder "${res.name}" archived — ${res.archived || 0} properties archived`, 'success');
+      _activeFolder = null;
+      await loadFolders();
+      await load(false);
+    } catch(e){
+      S.toast('Archive failed: ' + e.message, 'error');
+    }
+  }
+
+  async function _parseEdgeError(error){
+    if(!error) return 'Unknown error';
+    try {
+      if(error.context && typeof error.context.json === 'function'){
+        const body = await error.context.json();
+        return body?.error || body?.message || error.message || 'Edge Function error';
+      }
+    } catch(_){}
+    return error.message || 'Edge Function error';
+  }
+
+  function openBatchPublishResultModal(folder, res){
+    const existing = document.getElementById('pl-batch-publish-modal');
+    if(existing) existing.remove();
+
+    const batchId = res?.batch_id || folder?.batch_id || folder?.name || '';
+    const vReport = res?.verification || {};
+    const results = Array.isArray(res?.results) ? res.results : [];
+    const magicLink = res?.magic_link_url || vReport?.magic_link_url || '';
+
+    function renderBody(currentRes, currentVer){
+      const overallStatus = String(currentRes?.status || 'published');
+      const statusPillCls = overallStatus === 'published'
+        ? 'pl-gov-pill-ok'
+        : overallStatus === 'partial'
+          ? 'pl-gov-pill-warn'
+          : 'pl-gov-pill-bad';
+      const verPass = currentVer?.verified === true;
+      const verPillCls = verPass ? 'pl-gov-pill-ok' : 'pl-gov-pill-bad';
+      const checks = currentVer?.checks && typeof currentVer.checks === 'object' ? Object.entries(currentVer.checks) : [];
+      const linkUrl = currentRes?.magic_link_url || currentVer?.magic_link_url || '';
+
+      return `
+        <div class="pl-gov-card">
+          <div class="pl-gov-row">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <strong style="font-size:.92rem">Batch #${S.esc(batchId)}</strong>
+              <span class="pl-gov-pill ${statusPillCls}">${S.esc(overallStatus)}</span>
+              <span class="pl-gov-pill ${verPillCls}">${verPass ? '✓ Link Verified' : '✕ Verification Issue'}</span>
+            </div>
+            <div style="font-size:.76rem;color:var(--muted-2)">
+              Published: <strong>${currentRes?.published_count ?? 0}</strong> ·
+              Failed: <strong>${currentRes?.failed_count ?? 0}</strong> ·
+              Skipped: <strong>${currentRes?.skipped_count ?? 0}</strong>
+            </div>
+          </div>
+          ${linkUrl ? `
+            <div style="display:flex;gap:8px;align-items:center;margin-top:4px;flex-wrap:wrap">
+              <input id="pl-bp-res-link" type="text" readonly value="${S.esc(linkUrl)}"
+                style="flex:1;min-width:240px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:.78rem;color:var(--text);font-family:monospace">
+              <button type="button" class="btn btn-sm btn-primary" id="pl-bp-res-copy">Copy Link</button>
+              <a href="${S.esc(linkUrl)}" target="_blank" rel="noopener" class="btn btn-sm btn-outline">Preview ↗</a>
+            </div>
+          ` : '<div style="font-size:.78rem;color:#ef4444;margin-top:4px">No active magic link was minted because zero eligible properties succeeded.</div>'}
+          ${checks.length ? `
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+              ${checks.map(([k, chk]) => {
+                const ok = typeof chk === 'boolean' ? chk : Boolean(chk && chk.ok === true);
+                const tip = (chk && typeof chk === 'object' && chk.detail) ? chk.detail : (ok ? 'Passed' : 'Failed');
+                return `<span class="pl-gov-pill ${ok ? 'pl-gov-pill-ok' : 'pl-gov-pill-bad'}" title="${S.esc(tip)}">${ok ? '✓' : '✕'} ${S.esc(k.replace(/_/g, ' '))}</span>`;
+              }).join('')}
+            </div>
+          ` : ''}
+        </div>
+        <div class="pl-gov-card">
+          <div class="pl-gov-row">
+            <strong style="font-size:.82rem">Per-Listing Results (${results.length})</strong>
+          </div>
+          <div class="pl-gov-props" style="margin-top:2px">
+            ${results.length ? results.map(item => {
+              const ok = item.ok === true || item.status === 'published';
+              const statusLabel = item.status || (ok ? 'published' : 'failed');
+              const labelTitle = item.title || item.address || item.pipeline_id;
+              return `<div class="pl-gov-prop-item" style="align-items:flex-start;flex-direction:column;gap:4px">
+                <div style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+                  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                    <span class="pl-gov-pill ${ok ? 'pl-gov-pill-ok' : 'pl-gov-pill-bad'}">${S.esc(statusLabel)}</span>
+                    <strong>${S.esc(labelTitle)}</strong>
+                    ${item.reused_canonical ? '<span class="pl-gov-pill pl-gov-pill-info">Canonical Reused</span>' : ''}
+                  </div>
+                  <div style="font-size:.75rem;color:var(--muted-2)">
+                    ${item.published_rent != null ? `$${Number(item.published_rent).toLocaleString()}/mo` : ''}
+                    ${item.pricing_method ? ` · ${S.esc(item.pricing_method)}` : ''}
+                  </div>
+                </div>
+                ${item.error ? `<div style="font-size:.74rem;color:#ef4444">${S.esc(item.error)}</div>` : ''}
+              </div>`;
+            }).join('') : '<div style="font-size:.78rem;color:var(--muted-2)">No eligible listings were found in this batch.</div>'}
+          </div>
+        </div>
+      `;
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'pl-batch-publish-modal';
+    modal.className = 'pl-gov-modal';
+    modal.innerHTML = `
+      <div class="pl-import-backdrop"></div>
+      <div class="pl-gov-dialog" role="dialog" aria-modal="true" aria-label="Batch Publish &amp; Verification">
+        <div class="pl-import-hd">
+          <div>
+            <div style="font-size:1rem;font-weight:800">📦 Batch #${S.esc(batchId)} Publish &amp; Verification</div>
+            <div style="font-size:.74rem;color:var(--muted-2)">Batch-scoped canonical private placement, single #share= link &amp; live privacy verification.</div>
+          </div>
+          <button class="pl-import-close" aria-label="Close">✕</button>
+        </div>
+        <div class="pl-gov-body" id="pl-bp-res-body">${renderBody(res, vReport)}</div>
+        <div class="pl-import-ft">
+          <button type="button" class="btn btn-sm btn-outline" id="pl-bp-reverify-btn">↻ Re-verify Live Link</button>
+          <div style="flex:1"></div>
+          <button type="button" class="btn btn-ghost" id="pl-bp-res-done">Close</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    const close = () => modal.remove();
+    modal.querySelector('.pl-import-backdrop').addEventListener('click', close);
+    modal.querySelector('.pl-import-close').addEventListener('click', close);
+    modal.querySelector('#pl-bp-res-done').addEventListener('click', close);
+
+    function wireDynamicButtons(){
+      const copyBtn = modal.querySelector('#pl-bp-res-copy');
+      const linkInput = modal.querySelector('#pl-bp-res-link');
+      if(copyBtn && linkInput){
+        copyBtn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(linkInput.value);
+            copyBtn.textContent = '✓ Copied';
+            setTimeout(() => { copyBtn.textContent = 'Copy Link'; }, 1800);
+          } catch(_){
+            linkInput.select();
+            document.execCommand('copy');
+          }
+        });
+      }
+    }
+    wireDynamicButtons();
+
+    const reverifyBtn = modal.querySelector('#pl-bp-reverify-btn');
+    reverifyBtn.addEventListener('click', async () => {
+      reverifyBtn.disabled = true;
+      reverifyBtn.textContent = 'Verifying…';
+      try {
+        const { data, error } = await CP.sb().functions.invoke('verify-batch-publication', {
+          body: { batch_id: String(batchId) },
+        });
+        let parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        if(error && !parsed){
+          try {
+            if(error.context && typeof error.context.json === 'function'){
+              parsed = await error.context.json();
+            }
+          } catch(_){}
+        }
+        if(!parsed) throw new Error(await _parseEdgeError(error));
+        modal.querySelector('#pl-bp-res-body').innerHTML = renderBody(res, parsed);
+        wireDynamicButtons();
+        S.toast(parsed.verified ? 'Batch link & privacy shield verified ✓' : 'Verification detected an issue', parsed.verified ? 'success' : 'error');
+      } catch(err){
+        S.toast('Verification error: ' + (err?.message || 'Unknown error'), 'error');
+      } finally {
+        reverifyBtn.disabled = false;
+        reverifyBtn.textContent = '↻ Re-verify Live Link';
+      }
+    });
+  }
+
+  async function publishActiveFolder(){
+    if(!_activeFolder) return;
+    const folder = _folders.find(f => f.id === _activeFolder);
+    if(!folder) return;
+    const isBatch = Boolean(folder.is_disposable_batch || folder.batch_id);
+    if(isBatch){
+      const batchId = String(folder.batch_id || folder.name);
+      const ok = await S.confirm(
+        `Publish Batch #${batchId}?`,
+        `This validates ${folder.property_count || 0} listing(s), applies batch pricing/descriptions, publishes canonical private placements, mints one #share= magic link, and verifies live privacy shielding.`
+      );
+      if(!ok) return;
+      const pubBtn = document.getElementById('pl-banner-publish-folder-btn');
+      if(pubBtn){ pubBtn.disabled = true; pubBtn.textContent = 'Publishing & Verifying…'; }
+      try {
+        const { data, error } = await CP.sb().functions.invoke('publish-batch', {
+          body: { batch_id: batchId, verify: true },
+        });
+        if(error) throw new Error(await _parseEdgeError(error));
+        const res = typeof data === 'string' ? JSON.parse(data) : data;
+        if(!res) throw new Error('Empty response from publish-batch');
+        S.toast(
+          `Batch #${batchId}: ${res.published_count ?? 0} published, ${res.failed_count ?? 0} failed`,
+          (res.failed_count > 0 || res.ok === false) ? 'info' : 'success'
+        );
+        openBatchPublishResultModal(folder, res);
+        await loadFolders();
+        selectFolder(_activeFolder);
+      } catch(e){
+        S.toast('Batch publish failed: ' + (e?.message || 'Unknown error'), 'error');
+      } finally {
+        if(pubBtn){ pubBtn.disabled = false; pubBtn.textContent = 'Publish batch'; }
+      }
+      return;
+    }
+
+    const ok = await S.confirm(
+      `Publish all in "${folder.name}"?`,
+      `This will publish all ${folder.property_count || 0} properties in this folder as drafts.`
+    );
+    if(!ok) return;
+    try {
+      const { data, error } = await CP.sb().rpc('pipeline_folder_publish', { p_folder_id: _activeFolder });
+      if(error) throw error;
+      const res = typeof data === 'string' ? JSON.parse(data) : data;
+      if(!res?.ok) throw new Error(res?.error || 'Failed to publish folder');
+      S.toast(`${res.published} published, ${res.failed} failed`, res.failed > 0 ? 'info' : 'success');
+      await loadFolders();
+      selectFolder(_activeFolder);
+    } catch(e){
+      S.toast('Publish failed: ' + e.message, 'error');
+    }
+  }
+
+  async function renameActiveFolder(){
+    if(!_activeFolder) return;
+    const folder = _folders.find(f => f.id === _activeFolder);
+    if(!folder) return;
+    const name = window.prompt('Rename folder', folder.name);
+    if(!name || !name.trim() || name.trim() === folder.name) return;
+    try {
+      const { data, error } = await CP.sb().rpc('pipeline_folder_rename', {
+        p_folder_id: _activeFolder,
+        p_new_name: name.trim(),
+      });
+      if(error) throw error;
+      const res = typeof data === 'string' ? JSON.parse(data) : data;
+      if(!res?.ok){
+        S.toast('Rename failed: ' + (res?.error || 'unknown'), 'error');
+        return;
+      }
+      S.toast(`Renamed folder to "${res.name}"`, 'success');
+      await loadFolders();
+    } catch(e){
+      S.toast('Rename failed: ' + (e.message || 'unknown'), 'error');
+    }
+  }
+
+  async function closeActiveFolder(){
+    if(!_activeFolder) return;
+    _activeFolder = null;
+    _selected.clear();
+    updateBulkBar();
+    renderFolderSidebar();
+    await load(false);
+  }
+
+  function wireFolderButtons(){
+    const addBtn = document.getElementById('pl-add-to-folder-btn');
+    if(addBtn) addBtn.addEventListener('click', addSelectedToFolder);
+
+    const renameFolderBtn = document.getElementById('pl-rename-folder-btn');
+    if(renameFolderBtn) renameFolderBtn.addEventListener('click', renameActiveFolder);
+
+    const pubFolderBtn = document.getElementById('pl-publish-folder-btn');
+    if(pubFolderBtn) pubFolderBtn.addEventListener('click', publishActiveFolder);
+
+    const delFolderBtn = document.getElementById('pl-delete-folder-btn');
+    if(delFolderBtn) delFolderBtn.addEventListener('click', deleteActiveFolder);
+
+    const closeFolderBtn = document.getElementById('pl-close-folder-btn');
+    if(closeFolderBtn) closeFolderBtn.addEventListener('click', closeActiveFolder);
+  }
+
+  // ── Publishing History & 24-Hour Recovery Modals ─────────────────────────
+
+  function fmtRemainingWindow(expiresIso){
+    if(!expiresIso) return 'Expired';
+    const ms = new Date(expiresIso).getTime() - Date.now();
+    if(ms <= 0) return 'Expired (>24h)';
+    const mins = Math.floor(ms / 60000);
+    const hrs = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    return hrs > 0 ? `${hrs}h ${remMins}m left` : `${remMins}m left`;
+  }
+
+  function recoveryBadgeHtml(status){
+    const s = String(status || 'active');
+    if(s === 'recoverable') return '<span class="pl-gov-pill pl-gov-pill-warn">24h Recoverable</span>';
+    if(s === 'partially_restored') return '<span class="pl-gov-pill pl-gov-pill-info">Partially Restored</span>';
+    if(s === 'restored') return '<span class="pl-gov-pill pl-gov-pill-info">Restored</span>';
+    if(s === 'expired') return '<span class="pl-gov-pill pl-gov-pill-bad">Window Expired</span>';
+    if(s === 'permanently_deleted') return '<span class="pl-gov-pill pl-gov-pill-bad">Purged (&gt;24h)</span>';
+    return `<span class="pl-gov-pill pl-gov-pill-ok">${S.esc(s)}</span>`;
+  }
+
+  async function updateRecoveryBadge(){
+    const badge = document.getElementById('pl-recovery-badge');
+    if(!badge) return;
+    try {
+      const { data, error } = await CP.sb().rpc('pipeline_get_recoverable_batches');
+      if(error) { badge.style.display = 'none'; return; }
+      const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+      const count = Array.isArray(parsed?.batches) ? parsed.batches.length : 0;
+      if(count > 0){
+        badge.textContent = count;
+        badge.style.display = 'inline-flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    } catch(_){
+      badge.style.display = 'none';
+    }
+  }
+
+  async function openPublishingHistoryModal(){
+    const existing = document.getElementById('pl-history-modal');
+    if(existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'pl-history-modal';
+    modal.className = 'pl-gov-modal';
+    modal.innerHTML = `
+      <div class="pl-import-backdrop"></div>
+      <div class="pl-gov-dialog" role="dialog" aria-modal="true" aria-label="Publishing Activity History">
+        <div class="pl-import-hd">
+          <div>
+            <div style="font-size:1rem;font-weight:800">📋 Publishing Activity History</div>
+            <div style="font-size:.74rem;color:var(--muted-2)">Lightweight batch ledger retained permanently after pipeline cleanup</div>
+          </div>
+          <button class="pl-import-close" aria-label="Close">✕</button>
+        </div>
+        <div style="padding:12px 20px 0;display:flex;gap:8px;align-items:center">
+          <input id="pl-hist-market" type="search" placeholder="Filter by city/market (e.g. Dallas, TX)…" style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:7px 11px;font-size:.82rem;color:var(--text)">
+          <button class="btn btn-sm btn-outline" id="pl-hist-filter-btn">Filter</button>
+        </div>
+        <div class="pl-gov-body" id="pl-history-body">
+          <div style="text-align:center;padding:30px;color:var(--muted-2)">Loading publishing history…</div>
+        </div>
+        <div class="pl-import-ft">
+          <span style="font-size:.74rem;color:var(--muted-2)">Live published listings &amp; 90-day client shares remain intact after pipeline purge.</span>
+          <div style="flex:1"></div>
+          <button class="btn btn-ghost" id="pl-hist-close-btn">Close</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    const closeModal = () => modal.remove();
+    modal.querySelector('.pl-import-backdrop').addEventListener('click', closeModal);
+    modal.querySelector('.pl-import-close').addEventListener('click', closeModal);
+    modal.querySelector('#pl-hist-close-btn').addEventListener('click', closeModal);
+
+    async function loadHistory(marketFilter){
+      const bodyEl = modal.querySelector('#pl-history-body');
+      bodyEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted-2)">Loading…</div>';
+      try {
+        const { data, error } = await CP.sb().rpc('pipeline_get_publishing_history', {
+          p_limit: 30,
+          p_market: marketFilter || null,
+          p_batch_id: null
+        });
+        if(error){
+          const msg = String(error.message || '');
+          const isPending = msg.includes('does not exist') || msg.includes('PGRST202') || error.code === '42883';
+          bodyEl.innerHTML = `<div class="pl-gov-card"><strong>${isPending ? 'Database Migration Pending' : 'Failed to load history'}</strong><p style="font-size:.8rem;color:var(--muted-2);margin:4px 0 0">${S.esc(isPending ? 'Run supabase/migrations/20261112000001_publishing_history_and_recovery.sql via Supabase deploy workflow to enable history tracking.' : msg)}</p></div>`;
+          return;
+        }
+        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        const batches = Array.isArray(parsed?.batches) ? parsed.batches : [];
+        if(!batches.length){
+          bodyEl.innerHTML = '<div style="text-align:center;padding:36px;color:var(--muted-2)">No publishing batches recorded yet.</div>';
+          return;
+        }
+        bodyEl.innerHTML = batches.map(b => {
+          const props = Array.isArray(b.properties) ? b.properties : [];
+          const hasShare = Boolean(b.magic_link_url);
+          const expIso = b.live_share_expires_at || b.share_expires_at;
+          const shareRevoked = Boolean(b.live_share_revoked_at);
+          const shareExpired = expIso && new Date(expIso).getTime() <= Date.now();
+          const recoveryState = b.recovery_status || (b.permanently_deleted_at ? 'permanently_deleted' : b.restored_at ? 'restored' : b.pipeline_deleted_at ? 'recoverable' : 'active');
+          return `<div class="pl-gov-card">
+            <div class="pl-gov-row">
+              <div>
+                <strong style="font-size:.9rem">${S.esc(b.id)}</strong>
+                <span style="margin-left:8px;font-size:.82rem;color:var(--muted-2)">${S.esc(b.target_market || 'Mixed Market')}</span>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                <span class="pl-gov-pill pl-gov-pill-info">${S.esc(b.workflow_type)}</span>
+                <span class="pl-gov-pill ${b.status === 'completed' ? 'pl-gov-pill-ok' : b.status === 'failed' ? 'pl-gov-pill-bad' : 'pl-gov-pill-warn'}">${S.esc(b.status)}</span>
+                ${recoveryBadgeHtml(recoveryState)}
+              </div>
+            </div>
+            <div style="font-size:.76rem;color:var(--muted-2);display:flex;gap:14px;flex-wrap:wrap">
+              <span>Published: <strong>${b.published_count || 0}</strong></span>
+              <span>Failed: <strong>${b.failed_count || 0}</strong></span>
+              <span>Visibility: <strong>${S.esc(b.visibility)}</strong></span>
+              <span>Cleanup: <strong>${b.cleanup_completed ? 'Verified' : 'Pending'}</strong></span>
+              <span>Date: <strong>${b.started_at ? new Date(b.started_at).toLocaleString() : '—'}</strong></span>
+              ${b.recovery_expires_at && recoveryState === 'recoverable' ? `<span>Window: <strong>${S.esc(fmtRemainingWindow(b.recovery_expires_at))}</strong></span>` : ''}
+            </div>
+            ${hasShare ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.76rem;background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.2);padding:8px 10px;border-radius:8px">
+              <span style="font-weight:700;color:var(--brand)">Client Magic Link:</span>
+              <a href="${S.esc(b.magic_link_url)}" target="_blank" style="color:var(--text);word-break:break-all;flex:1">${S.esc(b.magic_link_url)}</a>
+              <span class="pl-gov-pill ${shareRevoked || shareExpired ? 'pl-gov-pill-bad' : b.share_verified ? 'pl-gov-pill-ok' : 'pl-gov-pill-warn'}">${shareRevoked ? 'Revoked' : shareExpired ? 'Expired' : b.share_verified ? 'Verified' : 'Unverified'}</span>
+              <button class="btn btn-sm btn-ghost pl-copy-link-btn" data-url="${S.esc(b.magic_link_url)}">Copy</button>
+            </div>` : ''}
+            ${props.length ? `<details>
+              <summary style="cursor:pointer;font-size:.75rem;font-weight:700;color:var(--brand)">View ${props.length} property snapshot${props.length === 1 ? '' : 's'}</summary>
+              <div class="pl-gov-props">
+                ${props.map(p => `<div class="pl-gov-prop-item">
+                  <div>
+                    <strong>${S.esc(p.address || p.pipeline_id)}</strong>
+                    <span style="color:var(--muted-2);margin-left:6px">${S.esc([p.city, p.state, p.zip].filter(Boolean).join(' '))}</span>
+                    ${p.monthly_rent ? `<span style="margin-left:6px;font-weight:700">$${Number(p.monthly_rent).toLocaleString()}/mo</span>` : ''}
+                  </div>
+                  <div style="display:flex;gap:6px;align-items:center">
+                    <span class="pl-gov-pill ${p.published_status === 'published' ? 'pl-gov-pill-ok' : p.published_status === 'failed' ? 'pl-gov-pill-bad' : 'pl-gov-pill-warn'}">${S.esc(p.published_status)}</span>
+                    ${p.property_id ? `<a href="/property.html?id=${S.esc(p.property_id)}" target="_blank" class="btn btn-sm btn-ghost" style="padding:2px 7px;font-size:.68rem">Live ↗</a>` : ''}
+                  </div>
+                </div>`).join('')}
+              </div>
+            </details>` : ''}
+          </div>`;
+        }).join('');
+
+        bodyEl.querySelectorAll('.pl-copy-link-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(btn.dataset.url || '');
+              S.toast('Magic link copied', 'success');
+            } catch(_){
+              S.toast('Copy failed — use link directly', 'info');
+            }
+          });
+        });
+      } catch(err){
+        bodyEl.innerHTML = `<div class="pl-gov-card"><strong>Error</strong><p style="font-size:.8rem;color:var(--muted-2)">${S.esc(err.message || 'Unknown error')}</p></div>`;
+      }
+    }
+
+    modal.querySelector('#pl-hist-filter-btn').addEventListener('click', () => {
+      loadHistory(modal.querySelector('#pl-hist-market').value.trim());
+    });
+    modal.querySelector('#pl-hist-market').addEventListener('keydown', e => {
+      if(e.key === 'Enter'){ e.preventDefault(); loadHistory(e.target.value.trim()); }
+    });
+    await loadHistory('');
+  }
+
+  async function openRecoveryArchiveModal(){
+    const existing = document.getElementById('pl-recovery-modal');
+    if(existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'pl-recovery-modal';
+    modal.className = 'pl-gov-modal';
+    modal.innerHTML = `
+      <div class="pl-import-backdrop"></div>
+      <div class="pl-gov-dialog" role="dialog" aria-modal="true" aria-label="24-Hour Pipeline Recovery Archive">
+        <div class="pl-import-hd">
+          <div>
+            <div style="font-size:1rem;font-weight:800">♻ 24-Hour Pipeline Recovery Archive</div>
+            <div style="font-size:.74rem;color:var(--muted-2)">Isolated from normal publishing. Explicitly restore original batches within 24 hours, or purge expired (&gt;24h) snapshots.</div>
+          </div>
+          <button class="pl-import-close" aria-label="Close">✕</button>
+        </div>
+        <div class="pl-gov-body" id="pl-recovery-body">
+          <div style="text-align:center;padding:30px;color:var(--muted-2)">Loading recoverable batches…</div>
+        </div>
+        <div class="pl-import-ft">
+          <button class="btn btn-sm btn-outline" id="pl-purge-expired-btn" style="color:var(--danger);border-color:rgba(239,68,68,.35)">Purge Expired (&gt;24h)</button>
+          <div style="flex:1"></div>
+          <button class="btn btn-ghost" id="pl-rec-close-btn">Close</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    const closeModal = () => modal.remove();
+    modal.querySelector('.pl-import-backdrop').addEventListener('click', closeModal);
+    modal.querySelector('.pl-import-close').addEventListener('click', closeModal);
+    modal.querySelector('#pl-rec-close-btn').addEventListener('click', closeModal);
+
+    async function loadRecoverable(){
+      const bodyEl = modal.querySelector('#pl-recovery-body');
+      bodyEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted-2)">Loading…</div>';
+      try {
+        const { data, error } = await CP.sb().rpc('pipeline_get_recoverable_batches');
+        if(error){
+          const msg = String(error.message || '');
+          const isPending = msg.includes('does not exist') || msg.includes('PGRST202') || error.code === '42883';
+          bodyEl.innerHTML = `<div class="pl-gov-card"><strong>${isPending ? 'Database Migration Pending' : 'Failed to load recovery archive'}</strong><p style="font-size:.8rem;color:var(--muted-2);margin:4px 0 0">${S.esc(isPending ? 'Deploy supabase/migrations/20261112000001_publishing_history_and_recovery.sql to activate 24h recovery.' : msg)}</p></div>`;
+          return;
+        }
+        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        const batches = Array.isArray(parsed?.batches) ? parsed.batches : [];
+        if(!batches.length){
+          bodyEl.innerHTML = '<div style="text-align:center;padding:36px;color:var(--muted-2)">No batches are currently inside the 24-hour recovery window.</div>';
+          return;
+        }
+        bodyEl.innerHTML = batches.map(b => {
+          const items = Array.isArray(b.items) ? b.items : [];
+          const propCount = b.recoverable_count || items.length;
+          return `<div class="pl-gov-card">
+            <div class="pl-gov-row">
+              <div>
+                <strong style="font-size:.92rem">${S.esc(b.batch_id)}</strong>
+                <span style="margin-left:8px;font-size:.82rem;color:var(--muted-2)">${S.esc(b.target_market || 'Mixed Market')}</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span class="pl-gov-pill pl-gov-pill-warn">${S.esc(fmtRemainingWindow(b.recovery_expires_at))}</span>
+                <button class="btn btn-sm btn-primary pl-restore-batch-btn" data-batch-id="${S.esc(b.batch_id)}" data-count="${propCount}">
+                  ↺ Restore Batch (${propCount})
+                </button>
+              </div>
+            </div>
+            <div style="font-size:.75rem;color:var(--muted-2);display:flex;gap:14px;flex-wrap:wrap">
+              <span>Deleted: <strong>${b.deleted_at ? new Date(b.deleted_at).toLocaleString() : '—'}</strong></span>
+              <span>Expires: <strong>${b.recovery_expires_at ? new Date(b.recovery_expires_at).toLocaleString() : '—'}</strong></span>
+            </div>
+            ${items.length ? `<div class="pl-gov-props">
+              ${items.map(it => `<div class="pl-gov-prop-item">
+                <div>
+                  <strong>${S.esc(it.address || it.pipeline_id)}</strong>
+                  <span style="color:var(--muted-2);margin-left:6px">${S.esc(it.pipeline_id)}</span>
+                  ${it.source_listing_id ? `<span style="color:var(--muted-2);margin-left:6px">src: ${S.esc(it.source_listing_id)}</span>` : ''}
+                </div>
+                <div style="display:flex;gap:6px;align-items:center">
+                  <span class="pl-gov-pill pl-gov-pill-info">${it.has_raw_payload ? 'Raw Payload Preserved' : 'Metadata Snapshot'}</span>
+                  <button class="btn btn-sm btn-outline pl-restore-item-btn" data-batch-id="${S.esc(b.batch_id)}" data-pipeline-id="${S.esc(it.pipeline_id)}" style="padding:2px 8px;font-size:.68rem">↺ Restore</button>
+                </div>
+              </div>`).join('')}
+            </div>` : ''}
+          </div>`;
+        }).join('');
+
+        bodyEl.querySelectorAll('.pl-restore-item-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const batchId = btn.dataset.batchId;
+            const pipelineId = btn.dataset.pipelineId;
+            const ok = await S.confirm(
+              `Restore ${pipelineId} from ${batchId}?`,
+              'This restores only this individual property record back to the active pipeline while keeping its original batch identity. It does NOT automatically republish it.'
+            );
+            if(!ok) return;
+            btn.disabled = true;
+            btn.textContent = 'Restoring…';
+            try {
+              const { data: rData, error: rErr } = await CP.sb().rpc('pipeline_restore_batch', {
+                p_batch_id: batchId,
+                p_pipeline_ids: [pipelineId],
+                p_reason: 'Explicit individual property restoration via Admin Console'
+              });
+              if(rErr) throw rErr;
+              const rParsed = typeof rData === 'string' ? JSON.parse(rData) : rData;
+              if(!rParsed?.ok) throw new Error(rParsed?.error || 'Restoration failed');
+              S.toast(`Restored ${pipelineId} (${batchId}) ✓`, 'success');
+              _cClear();
+              await Promise.all([load(false), fetchCounts(), updateRecoveryBadge(), loadRecoverable()]);
+            } catch(e){
+              S.toast('Restore failed: ' + (e.message || 'unknown'), 'error');
+              btn.disabled = false;
+              btn.textContent = '↺ Restore';
+            }
+          });
+        });
+
+        bodyEl.querySelectorAll('.pl-restore-batch-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const batchId = btn.dataset.batchId;
+            const count = btn.dataset.count;
+            const ok = await S.confirm(
+              `Restore batch ${batchId}?`,
+              `This restores ${count} property record(s) back to the active pipeline in their original batch grouping. It does NOT automatically republish them.`
+            );
+            if(!ok) return;
+            btn.disabled = true;
+            btn.textContent = 'Restoring…';
+            try {
+              const { data: rData, error: rErr } = await CP.sb().rpc('pipeline_restore_batch', {
+                p_batch_id: batchId,
+                p_pipeline_ids: null,
+                p_reason: 'Explicit administrator restoration via Admin Console'
+              });
+              if(rErr) throw rErr;
+              const rParsed = typeof rData === 'string' ? JSON.parse(rData) : rData;
+              if(!rParsed?.ok) throw new Error(rParsed?.error || 'Restoration failed');
+              S.toast(`Restored ${rParsed.restored_count || count} property record(s) from ${batchId} ✓`, 'success');
+              _cClear();
+              await Promise.all([load(false), fetchCounts(), updateRecoveryBadge(), loadRecoverable()]);
+            } catch(e){
+              S.toast('Restore failed: ' + (e.message || 'unknown'), 'error');
+              btn.disabled = false;
+              btn.textContent = `↺ Restore Batch (${count})`;
+            }
+          });
+        });
+      } catch(err){
+        bodyEl.innerHTML = `<div class="pl-gov-card"><strong>Error</strong><p style="font-size:.8rem;color:var(--muted-2)">${S.esc(err.message || 'Unknown error')}</p></div>`;
+      }
+    }
+
+    modal.querySelector('#pl-purge-expired-btn').addEventListener('click', async () => {
+      const ok = await S.confirm(
+        'Purge all expired (>24h) recovery archives?',
+        'This permanently deletes snapshots and raw payload storage blobs older than 24 hours while retaining lightweight publishing history.'
+      );
+      if(!ok) return;
+      const purgeBtn = modal.querySelector('#pl-purge-expired-btn');
+      purgeBtn.disabled = true;
+      purgeBtn.textContent = 'Purging…';
+      try {
+        const { data, error } = await CP.sb().functions.invoke('purge-expired-pipeline-recovery', {
+          body: { dry_run: false, limit: 200 }
+        });
+        if(error) throw error;
+        const res = typeof data === 'string' ? JSON.parse(data) : data;
+        S.toast(`Purge complete: ${res?.purged_count || 0} expired records permanently deleted`, 'success');
+        await Promise.all([loadRecoverable(), updateRecoveryBadge()]);
+      } catch(e){
+        S.toast('Purge failed: ' + (e.message || 'unknown'), 'error');
+      } finally {
+        purgeBtn.disabled = false;
+        purgeBtn.textContent = 'Purge Expired (>24h)';
+      }
+    });
+
+    await loadRecoverable();
+  }
+
+  async function resolvePanelReview(l, decision){
+    try {
+      const { data, error } = await CP.sb().functions.invoke('property-validator', {
+        body: { action: 'resolve_review', property_id: l.id, decision }
+      });
+      if(error) throw error;
+      const res = typeof data === 'string' ? JSON.parse(data) : data;
+      if(!res?.ok) throw new Error(res?.error || 'Update failed');
+      l.validation_status = res.validation_status;
+      l.needs_review = false;
+      S.toast(`Review marked: ${res.validation_status}`, 'success');
+      openPanel(l);
+      refreshCard(l.id);
+    } catch(err){
+      S.toast('Review update failed: ' + (err.message || 'unknown'), 'error');
+    }
+  }
+
+  async function runQueueValidation(){
+    const btn = document.getElementById('pl-validate-queue-btn');
+    const folder = _activeFolder ? _folders.find(f => f.id === _activeFolder) : null;
+    const activeBatchId = folder && folder.batch_id ? String(folder.batch_id) : null;
+    if(btn){ btn.disabled = true; btn.textContent = 'Validating…'; }
+    try {
+      const { data, error } = await CP.sb().functions.invoke('property-validator', {
+        body: {
+          action: 'validate_batch',
+          batch_id: activeBatchId,
+          check_photo_reachability: true,
+          limit: 100
+        }
+      });
+      if(error) throw error;
+      const res = typeof data === 'string' ? JSON.parse(data) : data;
+      if(!res?.ok) throw new Error(res?.error || 'Validation failed');
+      S.toast(
+        `Validated ${res.total}: ${res.passed_count} passed, ${res.needs_review_count} review, ${res.rejected_count} rejected`,
+        res.rejected_count > 0 || res.needs_review_count > 0 ? 'info' : 'success'
+      );
+      _cClear();
+      if(_activeFolder){
+        await selectFolder(_activeFolder);
+      } else {
+        await load(false);
+      }
+    } catch(err){
+      S.toast('Validation failed: ' + (err.message || 'unknown'), 'error');
+    } finally {
+      if(btn){ btn.disabled = false; btn.textContent = '✓ Validate'; }
+    }
+  }
+
+  async function openBlockedProfilesModal(){
+    const existing = document.getElementById('pl-blocked-profiles-modal');
+    if(existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'pl-blocked-profiles-modal';
+    modal.className = 'pl-gov-modal';
+    modal.innerHTML = `
+      <div class="pl-import-backdrop"></div>
+      <div class="pl-gov-dialog" role="dialog" aria-modal="true" aria-label="Blocked Zillow Profiles Manager">
+        <div class="pl-import-hd">
+          <div>
+            <div style="font-size:1rem;font-weight:800">🚫 Blocked Zillow Profiles &amp; Operators</div>
+            <div style="font-size:.74rem;color:var(--muted-2)">Add unlimited company names, agent handles, or Zillow /profile/ URLs anytime — Phase 6 rejects matches automatically.</div>
+          </div>
+          <button class="pl-import-close" aria-label="Close">✕</button>
+        </div>
+        <div class="pl-gov-body" style="gap:14px">
+          <div class="pl-gov-card" style="gap:10px">
+            <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+              <strong style="font-size:.86rem">Add New Blocked Profile(s)</strong>
+              <div style="display:flex;gap:6px">
+                <button type="button" class="btn btn-sm btn-primary" id="pl-bp-mode-single">Single Entry</button>
+                <button type="button" class="btn btn-sm btn-outline" id="pl-bp-mode-bulk">Unlimited Bulk Paste</button>
+              </div>
+            </div>
+            <div id="pl-bp-single-form" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div class="pl-field">
+                <label for="pl-bp-name">Profile / Company Name</label>
+                <input id="pl-bp-name" type="text" placeholder="e.g. Progress Residential" autocomplete="off">
+              </div>
+              <div class="pl-field">
+                <label for="pl-bp-url">Zillow Profile URL (optional)</label>
+                <input id="pl-bp-url" type="url" placeholder="https://www.zillow.com/profile/..." autocomplete="off">
+              </div>
+              <div class="pl-field">
+                <label for="pl-bp-aliases">Aliases / Alternate Names (comma-sep)</label>
+                <input id="pl-bp-aliases" type="text" placeholder="e.g. Progress, Progress PM" autocomplete="off">
+              </div>
+              <div class="pl-field">
+                <label for="pl-bp-notes">Note (optional)</label>
+                <input id="pl-bp-notes" type="text" placeholder="Why blocked?" autocomplete="off">
+              </div>
+              <div style="grid-column:1 / -1;display:flex;justify-content:flex-end">
+                <button type="button" class="btn btn-sm btn-primary" id="pl-bp-add-one-btn">+ Add to Blocklist</button>
+              </div>
+            </div>
+            <div id="pl-bp-bulk-form" style="display:none;flex-direction:column;gap:8px">
+              <label for="pl-bp-bulk-text" style="font-size:.72rem;color:var(--muted-2)">
+                Paste unlimited names or Zillow <code>/profile/...</code> URLs (one per line). Optional aliases/URL on the same line separated by <code>|</code> (e.g. <code>Acme Homes | Acme PM | https://www.zillow.com/profile/Acme-Homes/</code>):
+              </label>
+              <textarea id="pl-bp-bulk-text" rows="5" placeholder="https://www.zillow.com/profile/Example-Operator/&#10;Bad Operator LLC | Bad Op&#10;Another Unwanted Agent" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 10px;font-size:.82rem;color:var(--text);font-family:inherit;resize:vertical"></textarea>
+              <div style="display:flex;justify-content:flex-end">
+                <button type="button" class="btn btn-sm btn-primary" id="pl-bp-add-bulk-btn">+ Add All Lines to Blocklist</button>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="pl-bp-search" type="search" placeholder="Filter blocked profiles by name, alias, or Zillow URL…" style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:7px 11px;font-size:.82rem;color:var(--text)">
+            <span id="pl-bp-count" style="font-size:.74rem;color:var(--muted-2);white-space:nowrap">Loading…</span>
+          </div>
+          <div id="pl-bp-list" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+        <div class="pl-import-ft">
+          <span style="font-size:.74rem;color:var(--muted-2)">Unlimited custom entries · 6 core Choice institutional blocks are locked.</span>
+          <div style="flex:1"></div>
+          <button class="btn btn-ghost" id="pl-bp-close-btn">Close</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    const closeModal = () => modal.remove();
+    modal.querySelector('.pl-import-backdrop').addEventListener('click', closeModal);
+    modal.querySelector('.pl-import-close').addEventListener('click', closeModal);
+    modal.querySelector('#pl-bp-close-btn').addEventListener('click', closeModal);
+
+    const singleBtn = modal.querySelector('#pl-bp-mode-single');
+    const bulkBtn = modal.querySelector('#pl-bp-mode-bulk');
+    const singleForm = modal.querySelector('#pl-bp-single-form');
+    const bulkForm = modal.querySelector('#pl-bp-bulk-form');
+    singleBtn.addEventListener('click', () => {
+      singleForm.style.display = 'grid';
+      bulkForm.style.display = 'none';
+      singleBtn.className = 'btn btn-sm btn-primary';
+      bulkBtn.className = 'btn btn-sm btn-outline';
+    });
+    bulkBtn.addEventListener('click', () => {
+      singleForm.style.display = 'none';
+      bulkForm.style.display = 'flex';
+      bulkBtn.className = 'btn btn-sm btn-primary';
+      singleBtn.className = 'btn btn-sm btn-outline';
+    });
+
+    let _allProfiles = [];
+
+    function renderProfilesList(){
+      const q = (modal.querySelector('#pl-bp-search').value || '').trim().toLowerCase();
+      const filtered = q
+        ? _allProfiles.filter(p => {
+            const bag = [
+              p.canonical_name,
+              ...(Array.isArray(p.aliases) ? p.aliases : []),
+              ...(Array.isArray(p.zillow_profile_urls) ? p.zillow_profile_urls : []),
+              p.notes
+            ].filter(Boolean).join(' ').toLowerCase();
+            return bag.includes(q);
+          })
+        : _allProfiles;
+
+      modal.querySelector('#pl-bp-count').textContent = `${filtered.length} profile${filtered.length === 1 ? '' : 's'}`;
+      const listEl = modal.querySelector('#pl-bp-list');
+      if(!filtered.length){
+        listEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted-2);font-size:.82rem">No matching blocked profiles.</div>';
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(p => {
+        const aliases = Array.isArray(p.aliases) ? p.aliases : [];
+        const urls = Array.isArray(p.zillow_profile_urls) ? p.zillow_profile_urls : [];
+        return `<div class="pl-gov-card" style="padding:11px 13px;opacity:${p.enabled === false ? '0.6' : '1'}">
+          <div class="pl-gov-row">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <strong style="font-size:.86rem">${S.esc(p.canonical_name)}</strong>
+              ${p.is_immutable ? '<span class="pl-gov-pill pl-gov-pill-bad">🔒 Core Locked</span>' : '<span class="pl-gov-pill pl-gov-pill-info">Custom</span>'}
+              ${p.enabled === false ? '<span class="pl-gov-pill pl-gov-pill-warn">Paused</span>' : ''}
+            </div>
+            ${!p.is_immutable ? `<div style="display:flex;gap:6px">
+              <button type="button" class="btn btn-sm btn-ghost pl-bp-toggle-btn" data-id="${S.esc(p.id)}" data-enabled="${p.enabled !== false ? 'true' : 'false'}" style="font-size:.7rem;padding:2px 8px">${p.enabled !== false ? 'Pause' : 'Enable'}</button>
+              <button type="button" class="btn btn-sm btn-ghost pl-bp-del-btn" data-id="${S.esc(p.id)}" data-name="${S.esc(p.canonical_name)}" style="font-size:.7rem;padding:2px 8px;color:var(--danger)">Remove</button>
+            </div>` : ''}
+          </div>
+          ${aliases.length ? `<div style="font-size:.74rem;color:var(--muted-2)">Aliases: ${aliases.map(a => `<code style="background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px;margin-right:4px">${S.esc(a)}</code>`).join('')}</div>` : ''}
+          ${urls.length ? `<div style="font-size:.73rem;display:flex;flex-direction:column;gap:2px">${urls.map(u => `<a href="${S.esc(u)}" target="_blank" rel="noopener" style="color:var(--brand);word-break:break-all">${S.esc(u)}</a>`).join('')}</div>` : ''}
+          ${p.notes ? `<div style="font-size:.72rem;color:var(--muted-2)">${S.esc(p.notes)}</div>` : ''}
+        </div>`;
+      }).join('');
+
+      listEl.querySelectorAll('.pl-bp-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const nextEnabled = btn.dataset.enabled !== 'true';
+          try {
+            const { data, error } = await CP.sb().functions.invoke('rules-engine', {
+              body: { action: 'prohibited_profiles', sub_action: 'update', id: btn.dataset.id, enabled: nextEnabled }
+            });
+            if(error) throw error;
+            const res = typeof data === 'string' ? JSON.parse(data) : data;
+            if(!res?.ok) throw new Error(res?.error || 'Update failed');
+            await loadProfiles();
+          } catch(err){
+            S.toast('Update failed: ' + (err.message || 'unknown'), 'error');
+          }
+        });
+      });
+
+      listEl.querySelectorAll('.pl-bp-del-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const ok = await S.confirm(`Remove "${btn.dataset.name}" from blocklist?`, 'Listings matching this profile will no longer be auto-rejected unless re-added.');
+          if(!ok) return;
+          try {
+            const { data, error } = await CP.sb().functions.invoke('rules-engine', {
+              body: { action: 'prohibited_profiles', sub_action: 'delete', id: btn.dataset.id }
+            });
+            if(error) throw error;
+            const res = typeof data === 'string' ? JSON.parse(data) : data;
+            if(!res?.ok) throw new Error(res?.error || 'Delete failed');
+            S.toast('Removed from blocklist', 'success');
+            await loadProfiles();
+          } catch(err){
+            S.toast('Delete failed: ' + (err.message || 'unknown'), 'error');
+          }
+        });
+      });
+    }
+
+    async function loadProfiles(){
+      modal.querySelector('#pl-bp-list').innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted-2)">Loading…</div>';
+      try {
+        const { data, error } = await CP.sb().functions.invoke('rules-engine', {
+          body: { action: 'prohibited_profiles', sub_action: 'list' }
+        });
+        if(error) throw error;
+        const res = typeof data === 'string' ? JSON.parse(data) : data;
+        if(!res?.ok) throw new Error(res?.error || 'Failed to load profiles');
+        _allProfiles = Array.isArray(res.profiles) ? res.profiles : [];
+        renderProfilesList();
+      } catch(err){
+        modal.querySelector('#pl-bp-list').innerHTML = `<div class="pl-gov-card"><strong>Error</strong><p style="font-size:.8rem;color:var(--muted-2)">${S.esc(err.message || 'Failed to load')}</p></div>`;
+      }
+    }
+
+    modal.querySelector('#pl-bp-add-one-btn').addEventListener('click', async () => {
+      const name = modal.querySelector('#pl-bp-name').value.trim();
+      const url = modal.querySelector('#pl-bp-url').value.trim();
+      const aliases = modal.querySelector('#pl-bp-aliases').value.trim();
+      const notes = modal.querySelector('#pl-bp-notes').value.trim();
+      if(!name && !url){
+        S.toast('Enter a profile name or Zillow profile URL', 'error');
+        return;
+      }
+      const btn = modal.querySelector('#pl-bp-add-one-btn');
+      btn.disabled = true; btn.textContent = 'Adding…';
+      try {
+        const { data, error } = await CP.sb().functions.invoke('rules-engine', {
+          body: {
+            action: 'prohibited_profiles',
+            sub_action: 'create',
+            canonical_name: name,
+            aliases: aliases ? aliases.split(',').map(x => x.trim()).filter(Boolean) : [],
+            zillow_profile_urls: url ? [url] : [],
+            notes: notes || null
+          }
+        });
+        if(error) throw error;
+        const res = typeof data === 'string' ? JSON.parse(data) : data;
+        if(!res?.ok) throw new Error(res?.error || 'Failed to add profile');
+        modal.querySelector('#pl-bp-name').value = '';
+        modal.querySelector('#pl-bp-url').value = '';
+        modal.querySelector('#pl-bp-aliases').value = '';
+        modal.querySelector('#pl-bp-notes').value = '';
+        S.toast(`Added "${res.profile.canonical_name}" to blocklist ✓`, 'success');
+        await loadProfiles();
+      } catch(err){
+        S.toast('Add failed: ' + (err.message || 'unknown'), 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = '+ Add to Blocklist';
+      }
+    });
+
+    modal.querySelector('#pl-bp-add-bulk-btn').addEventListener('click', async () => {
+      const text = modal.querySelector('#pl-bp-bulk-text').value.trim();
+      if(!text){
+        S.toast('Paste one or more names or Zillow profile URLs first', 'error');
+        return;
+      }
+      const btn = modal.querySelector('#pl-bp-add-bulk-btn');
+      btn.disabled = true; btn.textContent = 'Adding all…';
+      try {
+        const { data, error } = await CP.sb().functions.invoke('rules-engine', {
+          body: {
+            action: 'prohibited_profiles',
+            sub_action: 'bulk_create',
+            text
+          }
+        });
+        if(error) throw error;
+        const res = typeof data === 'string' ? JSON.parse(data) : data;
+        if(!res?.ok) throw new Error(res?.error || 'Bulk add failed');
+        modal.querySelector('#pl-bp-bulk-text').value = '';
+        S.toast(`Blocklist updated: ${res.created_count} added, ${res.updated_count} updated`, 'success');
+        await loadProfiles();
+      } catch(err){
+        S.toast('Bulk add failed: ' + (err.message || 'unknown'), 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = '+ Add All Lines to Blocklist';
+      }
+    });
+
+    modal.querySelector('#pl-bp-search').addEventListener('input', renderProfilesList);
+    await loadProfiles();
+  }
+
+  function wireHistoryAndRecoveryButtons(){
+    const bpBtn = document.getElementById('pl-blocked-profiles-btn');
+    if(bpBtn) bpBtn.addEventListener('click', openBlockedProfilesModal);
+    const valBtn = document.getElementById('pl-validate-queue-btn');
+    if(valBtn) valBtn.addEventListener('click', runQueueValidation);
+    const histBtn = document.getElementById('pl-history-btn');
+    if(histBtn) histBtn.addEventListener('click', openPublishingHistoryModal);
+    const recBtn = document.getElementById('pl-recovery-btn');
+    if(recBtn) recBtn.addEventListener('click', openRecoveryArchiveModal);
+  }
+
+  // ── Main load ─────────────────────────────────────────────────────────────────
+
+  async function load(showSkeleton){
+    const list = document.getElementById('pl-list');
+    _loading = true;
+    if(showSkeleton !== false){
+      list.innerHTML = '<div class="pl-empty" style="padding:40px"><div class="skeleton sk-line" style="width:60%;margin:0 auto"></div></div>';
+    }
+    try {
+      const [listings] = await Promise.all([
+        fetchListings(_status, 0),
+        fetchCounts()
+      ]);
+      _pageData = listings;
+      renderList(visibleListings(), false);
+      wireCardEvents();
+    } catch(e){
+      console.error('[pipeline] load failed', e);
+      list.innerHTML = `<div class="pl-empty"><svg class="i"><use href="#i-alert"/></svg><h3>Failed to load</h3><p>${S.esc(e.message||'Unknown error')}</p></div>`;
+    } finally {
+      _loading = false;
+    }
+  }
+
+  // ── Keyboard Navigation Helpers ──────────────────────────────────────────────
+
+  function navigatePipelineCards(dir){
+    const cards = Array.from(document.querySelectorAll('.pl-card[data-id]'));
+    if(!cards.length) return;
+    let idx = -1;
+    if(_current){
+      idx = cards.findIndex(c => c.dataset.id === _current.id);
+    }
+    const nextIdx = idx === -1 ? (dir > 0 ? 0 : cards.length - 1) : Math.max(0, Math.min(cards.length - 1, idx + dir));
+    const nextCard = cards[nextIdx];
+    if(nextCard){
+      nextCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      nextCard.click();
+    }
+  }
+
+  function showShortcutsCheatSheet(){
+    if(document.getElementById('pl-shortcuts-modal')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'pl-shortcuts-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:var(--surface,#131b2e);border:1px solid var(--border,rgba(255,255,255,.1));border-radius:16px;max-width:440px;width:100%;padding:24px;box-shadow:0 20px 40px rgba(0,0,0,.5);color:var(--text,#fff)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+          <h3 style="margin:0;font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:8px">
+            <i class="fas fa-keyboard" style="color:var(--brand,#006aff)"></i> Keyboard Shortcuts
+          </h3>
+          <button style="background:none;border:none;color:var(--muted-2,#94a3b8);font-size:1.2rem;cursor:pointer;padding:4px" onclick="document.getElementById('pl-shortcuts-modal').remove()">✕</button>
+        </div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:12px 16px;font-size:.85rem;align-items:center">
+          <kbd style="background:rgba(255,255,255,.1);padding:3px 8px;border-radius:6px;font-family:monospace;font-weight:700;text-align:center">A</kbd>
+          <span>Quick Approve / Publish listing</span>
+          <kbd style="background:rgba(255,255,255,.1);padding:3px 8px;border-radius:6px;font-family:monospace;font-weight:700;text-align:center">R</kbd>
+          <span>Reject / Archive listing</span>
+          <kbd style="background:rgba(255,255,255,.1);padding:3px 8px;border-radius:6px;font-family:monospace;font-weight:700;text-align:center">E</kbd>
+          <span>Edit current listing fields</span>
+          <kbd style="background:rgba(255,255,255,.1);padding:3px 8px;border-radius:6px;font-family:monospace;font-weight:700;text-align:center">J / ↓</kbd>
+          <span>Select next listing card</span>
+          <kbd style="background:rgba(255,255,255,.1);padding:3px 8px;border-radius:6px;font-family:monospace;font-weight:700;text-align:center">K / ↑</kbd>
+          <span>Select previous listing card</span>
+          <kbd style="background:rgba(255,255,255,.1);padding:3px 8px;border-radius:6px;font-family:monospace;font-weight:700;text-align:center">Esc</kbd>
+          <span>Close review panel / modal</span>
+          <kbd style="background:rgba(255,255,255,.1);padding:3px 8px;border-radius:6px;font-family:monospace;font-weight:700;text-align:center">?</kbd>
+          <span>Toggle this helper cheat sheet</span>
+        </div>
+      </div>`;
+    overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────────────────────
+
+  (window.CPShell && window.CPShell.ready ? window.CPShell.ready : Promise.resolve(window.AdminShell))
+    .then(async shell => {
+      S = shell || window.AdminShell;
+      const ok = await S.requireAdmin();
+      if(!ok) return;
+      // Always clear the session cache on page load so newly-imported listings
+      // are visible immediately without waiting for the 30-second TTL to expire.
+      _cClear();
+      wireChips();
+      wireSourceChips();
+      wireQualityChips();
+      wireSearch();
+      wireBackdrop();
+      wireLoadMore();
+      wireBulkBar();
+      wireImportButton();
+      wireRefreshButton();
+      wireFolderButtons();
+      wireHistoryAndRecoveryButtons();
+      // Power-user keyboard triage shortcuts
+      document.addEventListener('keydown', e => {
+        const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+        const isEditing = activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select' || document.activeElement.isContentEditable;
+        
+        if (e.key === 'Escape') {
+          if (_current) closePanel();
+          const helpModal = document.getElementById('pl-shortcuts-modal');
+          if (helpModal) helpModal.remove();
+          const histModal = document.getElementById('pl-history-modal');
+          if (histModal) histModal.remove();
+          const recModal = document.getElementById('pl-recovery-modal');
+          if (recModal) recModal.remove();
+          const batchModal = document.getElementById('pl-batch-modal');
+          if (batchModal) batchModal.remove();
+          const bpPubModal = document.getElementById('pl-batch-publish-modal');
+          if (bpPubModal) bpPubModal.remove();
+          const bpModal = document.getElementById('pl-blocked-profiles-modal');
+          if (bpModal) bpModal.remove();
+          return;
+        }
+
+        if (isEditing) return;
+
+        if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+          e.preventDefault();
+          showShortcutsCheatSheet();
+          return;
+        }
+
+        if (_current) {
+          if (e.key === 'a' || e.key === 'A') {
+            const pubBtn = document.getElementById('pl-publish-btn');
+            if (pubBtn && !pubBtn.disabled) { e.preventDefault(); pubBtn.click(); }
+          } else if (e.key === 'r' || e.key === 'R') {
+            const archBtn = document.getElementById('pl-archive-btn');
+            if (archBtn && !archBtn.disabled) { e.preventDefault(); archBtn.click(); }
+          } else if (e.key === 'e' || e.key === 'E') {
+            const editBtn = document.getElementById('pl-edit-btn');
+            if (editBtn) { e.preventDefault(); editBtn.click(); }
+          }
+        }
+
+        if (e.key === 'j' || e.key === 'J' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          navigatePipelineCards(1);
+        } else if (e.key === 'k' || e.key === 'K' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          navigatePipelineCards(-1);
+        }
+      });
+      load(false);
+      loadFolders();
+      updateRecoveryBadge();
+
+      // Auto-refresh when returning to the Pipeline tab after saving in another tab
+      let _lastFocusRefresh = Date.now();
+      const refreshOnFocus = () => {
+        if (document.hidden || _loading || _current) return;
+        const hasOpenModal = document.querySelector('#pl-import-modal, #pl-folder-modal, #pl-batch-modal, #pl-batch-publish-modal, #pl-photo-editor-modal, #pl-history-modal, #pl-recovery-modal, #pl-desc-compare-modal, #pl-blocked-profiles-modal');
+        if (hasOpenModal) return;
+        const now = Date.now();
+        if (now - _lastFocusRefresh < 2500) return;
+        _lastFocusRefresh = now;
+        _cClear();
+        fetchCounts().catch(() => {});
+        loadFolders().catch(() => {});
+        if (_activeFolder) {
+          selectFolder(_activeFolder).catch(() => {});
+        } else if (_page === 0) {
+          load(false).catch(() => {});
+        }
+      };
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshOnFocus(); });
+      window.addEventListener('focus', refreshOnFocus);
+    })
+    .catch(err => console.error('[pipeline] boot failed', err));
+
+})();

@@ -1,0 +1,3017 @@
+// ============================================================
+// Choice Properties — Live Content Script v37.0.0
+// Universal High-Quality Browser Extension UI for eight supported portals
+//
+// Key Features:
+// 1. Sleek Floating Action Card (Glassmorphism, collision-aware)
+// 2. Pre-flight Live Inspection (Shows parsed rent, beds, baths, photo count before saving)
+// 3. One-Click Fast Save + Integrated Photo Upload Progress Bar
+// 4. Post-Save Quick Actions (Open Pipeline, Copy Link)
+// 5. Zillow Search / Feed Card Quick-Save Buttons
+// 6. Instant Live-Update Architecture (Zero reinstall needed)
+// ============================================================
+(function () {
+  'use strict';
+
+  var EXTENSION_API = (typeof chrome !== 'undefined' && chrome.runtime) ? chrome :
+    ((typeof browser !== 'undefined' && browser.runtime) ? browser : null);
+
+  // Prevent multiple executions
+  if (window.__CP_LIVE_CONTENT_LOADED__) return;
+  window.__CP_LIVE_CONTENT_LOADED__ = true;
+
+  // ── Configuration ──────────────────────────────────────────
+  var EDGE_URL = (window.CP_CONFIG && window.CP_CONFIG.EDGE_URL) || 'https://tlfmwetmhthpyrytrcfo.supabase.co/functions/v1/receive-pipeline-import';
+  var SECRET   = (window.CP_CONFIG && window.CP_CONFIG.IMPORT_SECRET) || 'cp_import_7Kx3m9P2w5';
+  var VERSION  = '37.0.0-live';
+
+  var IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  var MAX_PAYLOAD_BYTES = 2 * 1024 * 1024;
+  var LISTING_REFRESH_DELAY = IS_MOBILE ? 850 : 220;
+
+  var lastUrl = location.href;
+  var activeWidget = null;
+  var isExpanded = false;
+  var isMinimized = false;
+  var currentExtractedData = null;
+  var renderedListingSignature = '';
+  var listingGeneration = 0;
+  var cachedFolders = [];
+  var activeDefaultFolder = null;
+  var isSaving = false;
+  var positionUpdateScheduled = false;
+  var listingRefreshTimer = null;
+  var hydrationRefreshTimers = [];
+  var errorResetTimer = null;
+  var savedListingsState = {};
+  var SAVED_STATE_STORAGE_KEY = 'cp_saved_listings_v1';
+  var WIDGET_POS_KEY = 'cp_widget_pos_v1';
+  var widgetDragCleanup = null;
+
+  function loadSavedListingsCache() {
+    try {
+      var raw = sessionStorage.getItem(SAVED_STATE_STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          savedListingsState = parsed;
+        }
+      }
+    } catch (_) {}
+  }
+  loadSavedListingsCache();
+
+  function canonicalListingPath(url) {
+    try {
+      var u = new URL(url, location.href);
+      return u.origin + u.pathname.replace(/\/+$/, '');
+    } catch (_) {
+      return String(url || '').split('#')[0].split('?')[0].replace(/\/+$/, '');
+    }
+  }
+
+  function getActiveScopeKey() {
+    var def = getDefaultFolderSync();
+    if (def && (def.is_disposable_batch || def.batch_id)) {
+      return 'batch:' + String(def.batch_id || def.name || '');
+    }
+    return 'inbox';
+  }
+
+  function getListingKey(data) {
+    var scope = getActiveScopeKey();
+    if (!data) return canonicalListingPath(location.href) + '@' + scope;
+    var src = data.source || 'listing';
+    if (data.source_listing_id) return src + '|' + String(data.source_listing_id) + '@' + scope;
+    return src + '|' + canonicalListingPath(data.source_url || data.url || location.href) + '@' + scope;
+  }
+
+  function isSameListing(a, b) {
+    if (!a || !b) return false;
+    if (a.source === b.source && a.source_listing_id && b.source_listing_id) {
+      return String(a.source_listing_id) === String(b.source_listing_id);
+    }
+    return canonicalListingPath(a.source_url || a.url || '') === canonicalListingPath(b.source_url || b.url || '');
+  }
+
+  function getSavedState(data) {
+    if (!data) return null;
+    var key = getListingKey(data);
+    return savedListingsState[key] || null;
+  }
+
+  function setSavedState(data, state) {
+    if (!data || !state) return;
+    var key = getListingKey(data);
+    savedListingsState[key] = Object.assign({ updatedAt: Date.now() }, state);
+    try {
+      var keys = Object.keys(savedListingsState);
+      if (keys.length > 100) {
+        keys.sort(function (a, b) {
+          return (savedListingsState[a].updatedAt || 0) - (savedListingsState[b].updatedAt || 0);
+        });
+        keys.slice(0, keys.length - 100).forEach(function (k) { delete savedListingsState[k]; });
+      }
+      sessionStorage.setItem(SAVED_STATE_STORAGE_KEY, JSON.stringify(savedListingsState));
+    } catch (_) {}
+  }
+
+  function generateSaveNonce() {
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  }
+
+  function buildSaveBtnDefaultHtml() {
+    return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><span>Save to Pipeline</span>';
+  }
+
+  function applySavedStateToWidget(container, extracted, forceReapply) {
+    var root = container || activeWidget;
+    if (!root || !extracted) return;
+    var state = getSavedState(extracted);
+    var saveBtn = root.querySelector('#cp-btn-save');
+    var miniSaveBtn = root.querySelector('#cp-mini-save-btn');
+    var successBox = root.querySelector('#cp-success-box');
+    var successText = root.querySelector('#cp-success-text');
+    var successBanner = root.querySelector('.cp-success-banner');
+    var miniTrigger = root.querySelector('#cp-expand-trigger');
+
+    if (!state) {
+      if (forceReapply) {
+        if (saveBtn) {
+          saveBtn.style.display = 'flex';
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = buildSaveBtnDefaultHtml();
+          saveBtn.style.background = '';
+        }
+        if (miniSaveBtn) {
+          miniSaveBtn.disabled = false;
+          miniSaveBtn.textContent = 'Save';
+          miniSaveBtn.classList.remove('cp-mini-saved', 'cp-mini-duplicate', 'cp-mini-queued');
+        }
+        if (successBox) successBox.style.display = 'none';
+        if (miniTrigger) miniTrigger.classList.remove('cp-mini-trigger-saved');
+      }
+      return;
+    }
+
+    var currentDef = getDefaultFolderSync();
+    var currentFolderId = currentDef && currentDef.id ? String(currentDef.id) : '';
+    var currentFolderName = currentDef && currentDef.name != null ? String(currentDef.name) : '';
+    var currentIsBatch = Boolean(currentDef && (currentDef.is_disposable_batch || currentDef.batch_id));
+    var stateFolderId = state.folderId ? String(state.folderId) : '';
+    var stateFolderName = state.folderName != null ? String(state.folderName) : '';
+    var stateIsBatch = Boolean(state && (state.isDisposableBatch || state.batchId));
+    var folderChanged = Boolean(
+      !currentIsBatch &&
+      !stateIsBatch &&
+      (currentFolderId || currentFolderName) &&
+      (currentFolderId !== stateFolderId || currentFolderName !== stateFolderName)
+    );
+
+    if (saveBtn) {
+      if (folderChanged && (state.status === 'saved' || state.status === 'duplicate')) {
+        saveBtn.style.display = 'flex';
+        saveBtn.disabled = false;
+        saveBtn.style.background = 'linear-gradient(135deg, #059669 0%, #4f46e5 100%)';
+        saveBtn.innerHTML = '<span>Move to ' + escapeHtml(currentFolderName.slice(0, 18)) + '</span>';
+      } else {
+        saveBtn.style.display = 'none';
+      }
+    }
+
+    if (miniSaveBtn) {
+      miniSaveBtn.disabled = false;
+      miniSaveBtn.classList.remove('cp-mini-saved', 'cp-mini-duplicate', 'cp-mini-queued');
+      if (folderChanged && (state.status === 'saved' || state.status === 'duplicate')) {
+        miniSaveBtn.textContent = 'Move';
+      } else if (state.status === 'queued') {
+        miniSaveBtn.textContent = 'Queued ✓';
+        miniSaveBtn.classList.add('cp-mini-queued');
+      } else if (state.status === 'duplicate') {
+        miniSaveBtn.textContent = 'In Pipeline ✓';
+        miniSaveBtn.classList.add('cp-mini-duplicate');
+      } else {
+        miniSaveBtn.textContent = 'Saved ✓';
+        miniSaveBtn.classList.add('cp-mini-saved');
+      }
+    }
+
+    if (successBox) {
+      successBox.style.display = 'flex';
+    }
+    if (successBanner) {
+      successBanner.classList.toggle('cp-banner-duplicate', state.status === 'duplicate');
+    }
+    if (successText) {
+      successText.textContent = state.text || (state.status === 'queued'
+        ? 'Queued for pipeline sync'
+        : state.status === 'duplicate'
+          ? 'Already in Pipeline'
+          : 'Saved to Choice Pipeline!');
+    }
+    if (miniTrigger) {
+      miniTrigger.classList.add('cp-mini-trigger-saved');
+    }
+  }
+
+  // ── Fast In-Memory, Extension Storage & LocalStorage Folder Cache ───────────────
+  function getCachedFolders() {
+    if (cachedFolders && cachedFolders.length > 0) return cachedFolders;
+    try {
+      var localData = localStorage.getItem('cp_pipeline_folders_cache');
+      if (localData) {
+        var parsed = JSON.parse(localData);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          cachedFolders = parsed;
+          return cachedFolders;
+        }
+      }
+    } catch (e) {}
+    return [];
+  }
+
+  function setCachedFolders(folders) {
+    if (!Array.isArray(folders)) return;
+    cachedFolders = folders;
+    try {
+      localStorage.setItem('cp_pipeline_folders_cache', JSON.stringify(folders));
+    } catch (e) {}
+    try {
+      if (EXTENSION_API && EXTENSION_API.storage && EXTENSION_API.storage.local) {
+        EXTENSION_API.storage.local.set({ cp_folders_cache: folders });
+      }
+    } catch (e) {}
+  }
+
+  function getDefaultFolderSync() {
+    if (activeDefaultFolder) return activeDefaultFolder;
+    try {
+      var raw = localStorage.getItem('cp_default_folder');
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && (parsed.id || parsed.name != null)) {
+          activeDefaultFolder = parsed;
+          return activeDefaultFolder;
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function setDefaultFolder(folder) {
+    var hasBatch = Boolean(folder && (folder.is_disposable_batch || folder.batch_id));
+    activeDefaultFolder = folder && (folder.id || folder.name != null)
+      ? {
+          id: folder.id || null,
+          name: String(folder.name != null ? folder.name : ''),
+          description: folder.description || '',
+          batch_id: folder.batch_id || null,
+          batch_uuid: folder.batch_uuid || null,
+          is_disposable_batch: hasBatch,
+          icon: folder.icon || (hasBatch ? '📦' : '📁')
+        }
+      : null;
+    try {
+      if (activeDefaultFolder) {
+        localStorage.setItem('cp_default_folder', JSON.stringify(activeDefaultFolder));
+      } else {
+        localStorage.removeItem('cp_default_folder');
+      }
+    } catch (e) {}
+    try {
+      if (EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage) {
+        EXTENSION_API.runtime.sendMessage({ type: 'SET_DEFAULT_FOLDER', folder: activeDefaultFolder });
+      }
+    } catch (e) {}
+  }
+
+  async function apiListFolders() {
+    if (EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage) {
+      var bgRes = await new Promise(function (resolve) {
+        try {
+          EXTENSION_API.runtime.sendMessage({ type: 'LIST_FOLDERS' }, function (resp) {
+            resolve(EXTENSION_API.runtime.lastError ? null : resp);
+          });
+        } catch (e) { resolve(null); }
+      });
+      if (bgRes && bgRes.ok && Array.isArray(bgRes.folders)) {
+        return bgRes.folders;
+      }
+    }
+    var url = EDGE_URL + '?secret=' + encodeURIComponent(SECRET) + '&action=list_folders';
+    var res = await fetch(url);
+    if (res.ok) {
+      var data = await res.json();
+      if (data && Array.isArray(data.folders)) return data.folders;
+    }
+    return null;
+  }
+
+  async function apiCreateFolder(name, description) {
+    var rawName = name != null ? String(name) : '';
+    var rawDesc = description != null ? String(description) : '';
+    if (EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage) {
+      var bgRes = await new Promise(function (resolve) {
+        try {
+          EXTENSION_API.runtime.sendMessage({
+            type: 'CREATE_FOLDER',
+            name: rawName,
+            description: rawDesc
+          }, function (resp) {
+            resolve(EXTENSION_API.runtime.lastError ? null : resp);
+          });
+        } catch (e) { resolve(null); }
+      });
+      if (bgRes && bgRes.ok && bgRes.id) {
+        return bgRes.folder || {
+          id: bgRes.id,
+          name: bgRes.name != null ? String(bgRes.name) : rawName,
+          description: rawDesc,
+          batch_id: bgRes.batch_id || null,
+          batch_uuid: bgRes.batch_uuid || null,
+          is_disposable_batch: Boolean(bgRes.is_disposable_batch || bgRes.batch_id),
+          icon: bgRes.icon || '📁',
+          color: bgRes.color || '#6366f1'
+        };
+      }
+      if (bgRes && bgRes.ok === false && bgRes.code === 'batch_id_already_used') {
+        var conflictErr = new Error(bgRes.error || 'That 4-digit Batch ID has already been used.');
+        conflictErr.noFallback = true;
+        conflictErr.code = bgRes.code;
+        throw conflictErr;
+      }
+    }
+    var res = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
+      body: JSON.stringify({
+        action: 'create_folder',
+        name: rawName,
+        description: rawDesc
+      })
+    });
+    var data = await res.json();
+    if (res.ok && data && data.ok && data.id) {
+      return {
+        id: data.id,
+        name: data.name != null ? String(data.name) : rawName,
+        description: rawDesc,
+        batch_id: data.batch_id || null,
+        batch_uuid: data.batch_uuid || null,
+        is_disposable_batch: Boolean(data.is_disposable_batch || data.batch_id),
+        icon: data.icon || '📁',
+        color: data.color || '#6366f1'
+      };
+    }
+    var err = new Error((data && (data.message || data.error)) || 'Failed to create folder');
+    if (res.status === 409 || (data && data.error === 'batch_id_already_used')) {
+      err.noFallback = true;
+      err.code = data && data.error;
+    }
+    throw err;
+  }
+
+  // ── Inject Custom Styles ────────────────────────────────────
+  function injectStyles() {
+    if (document.getElementById('cp-live-styles')) return;
+    var style = document.createElement('style');
+    style.id = 'cp-live-styles';
+    style.textContent = `
+      #cp-widget-container {
+        position: fixed;
+        bottom: max(16px, env(safe-area-inset-bottom));
+        right: max(12px, env(safe-area-inset-right));
+        z-index: 2147483647;
+        width: 360px;
+        max-width: calc(100vw - 32px);
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 18px;
+        box-shadow: 0 16px 40px -6px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 102, 241, 0.25);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #f8fafc;
+        overflow: hidden;
+        transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, bottom 0.2s ease;
+        box-sizing: border-box;
+        touch-action: none;
+      }
+      #cp-widget-container.cp-dragging {
+        opacity: 0.98;
+        box-shadow: 0 24px 50px -4px rgba(0, 0, 0, 0.75), 0 0 0 2px rgba(99, 102, 241, 0.6);
+        transition: none !important;
+        cursor: grabbing !important;
+      }
+      #cp-widget-container * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      #cp-widget-container.cp-minimized {
+        width: auto;
+        border-radius: 28px;
+        background: rgba(15, 23, 42, 0.92);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      }
+      #cp-widget-container.cp-minimized .cp-full-body {
+        display: none !important;
+      }
+      .cp-mini-trigger {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        font-size: 13px;
+        font-weight: 600;
+        color: #e2e8f0;
+      }
+      #cp-widget-container.cp-dragging .cp-mini-trigger {
+        cursor: grabbing;
+      }
+      .cp-mini-trigger > span {
+        max-width: min(44vw, 230px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #cp-mini-save-btn {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        margin-left: 4px;
+        padding: 8px 14px;
+        border: 0;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: #fff;
+        font: inherit;
+        font-weight: 700;
+        white-space: nowrap;
+        touch-action: manipulation;
+      }
+      #cp-mini-save-btn:disabled {
+        opacity: 0.75;
+      }
+      #cp-mini-save-btn.cp-mini-saved {
+        background: linear-gradient(135deg, #059669, #047857);
+        box-shadow: 0 0 0 1px rgba(167, 243, 208, 0.45) inset;
+        opacity: 1;
+      }
+      #cp-mini-save-btn.cp-mini-duplicate {
+        background: linear-gradient(135deg, #b45309, #d97706);
+        box-shadow: 0 0 0 1px rgba(253, 230, 138, 0.4) inset;
+        opacity: 1;
+      }
+      #cp-mini-save-btn.cp-mini-queued {
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        opacity: 1;
+      }
+      .cp-success-banner.cp-banner-duplicate {
+        color: #fbbf24;
+      }
+      .cp-mini-trigger-saved {
+        border: 1px solid rgba(52, 211, 153, 0.45);
+        border-radius: 28px;
+      }
+      #cp-widget-container.cp-mobile-save-compact #cp-mini-save-btn {
+        display: inline-flex;
+      }
+      #cp-widget-container.cp-minimized .cp-mini-trigger {
+        display: flex !important;
+      }
+      .cp-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: rgba(30, 41, 59, 0.75);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .cp-header:active,
+      #cp-widget-container.cp-dragging .cp-header {
+        cursor: grabbing;
+      }
+      .cp-drag-grip {
+        display: inline-flex;
+        align-items: center;
+        margin-right: 2px;
+        color: #64748b;
+        opacity: 0.7;
+        cursor: grab;
+      }
+      .cp-header:hover .cp-drag-grip {
+        color: #94a3b8;
+        opacity: 1;
+      }
+      .cp-brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .cp-logo-icon {
+        width: 22px;
+        height: 22px;
+        background: linear-gradient(135deg, #10b981 0%, #6366f1 100%);
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+      }
+      .cp-brand-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: #f1f5f9;
+        letter-spacing: -0.01em;
+      }
+      .cp-header-badges {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .cp-badge-verified {
+        font-size: 10px;
+        font-weight: 600;
+        background: rgba(16, 185, 129, 0.18);
+        color: #34d399;
+        padding: 2px 7px;
+        border-radius: 999px;
+        border: 1px solid rgba(52, 211, 153, 0.25);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .cp-header-btn {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        width: 44px;
+        height: 44px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        transition: color 0.15s, background 0.15s;
+      }
+      .cp-header-btn:hover {
+        color: #f8fafc;
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .cp-body {
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .cp-property-snapshot {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .cp-address-line {
+        font-size: 13px;
+        font-weight: 600;
+        color: #f8fafc;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .cp-chips-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      .cp-chip {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #cbd5e1;
+      }
+      .cp-chip-price {
+        background: rgba(99, 102, 241, 0.2);
+        color: #a5b4fc;
+        border: 1px solid rgba(165, 180, 252, 0.25);
+      }
+      .cp-chip-photos {
+        background: rgba(16, 185, 129, 0.18);
+        color: #6ee7b7;
+      }
+      .cp-chip-warn {
+        background: rgba(239, 68, 68, 0.18);
+        color: #fca5a5;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+      }
+      .cp-accordion-toggle {
+        font-size: 11px;
+        color: #818cf8;
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-weight: 600;
+        min-height: 44px;
+        padding: 8px 0;
+        text-align: left;
+      }
+      .cp-accordion-toggle:hover {
+        color: #a5b4fc;
+      }
+      .cp-inspector-tray {
+        display: none;
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 8px;
+        padding: 10px;
+        font-size: 11px;
+        color: #94a3b8;
+        line-height: 1.6;
+      }
+      .cp-inspector-tray.cp-open {
+        display: block;
+      }
+      .cp-inspector-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+      .cp-inspector-item strong {
+        color: #e2e8f0;
+      }
+      /* Folder Pill & Auto-Collapsing Folder Popover */
+      .cp-folder-bar {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .cp-folder-pill-trigger {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 7px 11px;
+        background: rgba(30, 41, 59, 0.72);
+        border: 1px solid rgba(255, 255, 255, 0.11);
+        border-radius: 10px;
+        color: #e2e8f0;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.16s ease;
+        user-select: none;
+        text-align: left;
+      }
+      .cp-folder-pill-trigger:hover {
+        background: rgba(30, 41, 59, 0.95);
+        border-color: rgba(99, 102, 241, 0.45);
+      }
+      .cp-folder-pill-trigger.cp-folder-active {
+        background: rgba(99, 102, 241, 0.16);
+        border-color: rgba(129, 140, 248, 0.4);
+      }
+      .cp-folder-pill-left {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        min-width: 0;
+        flex: 1;
+      }
+      .cp-folder-pill-icon {
+        font-size: 13px;
+        flex-shrink: 0;
+      }
+      .cp-folder-pill-text {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+        overflow: hidden;
+      }
+      .cp-folder-pill-label {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #94a3b8;
+        flex-shrink: 0;
+      }
+      .cp-folder-pill-name {
+        font-size: 12px;
+        font-weight: 700;
+        color: #f8fafc;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .cp-folder-active .cp-folder-pill-name {
+        color: #c7d2fe;
+      }
+      .cp-folder-pill-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #818cf8;
+        padding: 2px 7px;
+        border-radius: 6px;
+        background: rgba(99, 102, 241, 0.14);
+        flex-shrink: 0;
+        margin-left: 8px;
+      }
+      .cp-folder-pill-trigger:hover .cp-folder-pill-action {
+        background: rgba(99, 102, 241, 0.28);
+        color: #c7d2fe;
+      }
+      .cp-folder-popover {
+        display: none;
+        flex-direction: column;
+        gap: 10px;
+        background: rgba(15, 23, 42, 0.98);
+        border: 1px solid rgba(129, 140, 248, 0.35);
+        border-radius: 12px;
+        padding: 12px;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+      }
+      .cp-folder-popover.cp-open {
+        display: flex;
+      }
+      .cp-folder-popover-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .cp-folder-popover-title {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #a5b4fc;
+      }
+      .cp-folder-popover-close {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        font-size: 15px;
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 4px;
+        line-height: 1;
+      }
+      .cp-folder-popover-close:hover {
+        color: #f8fafc;
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .cp-folder-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        max-height: 135px;
+        overflow-y: auto;
+        padding-right: 2px;
+      }
+      .cp-folder-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 7px 9px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        background: rgba(30, 41, 59, 0.55);
+        color: #e2e8f0;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        text-align: left;
+      }
+      .cp-folder-item:hover {
+        background: rgba(51, 65, 85, 0.75);
+        border-color: rgba(255, 255, 255, 0.12);
+      }
+      .cp-folder-item.cp-selected {
+        background: rgba(99, 102, 241, 0.22);
+        border-color: rgba(129, 140, 248, 0.45);
+        color: #ffffff;
+        font-weight: 700;
+      }
+      .cp-folder-item-main {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        min-width: 0;
+        flex: 1;
+      }
+      .cp-folder-item-name {
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .cp-folder-item-desc {
+        font-size: 10px;
+        color: #94a3b8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 400;
+      }
+      .cp-folder-item-check {
+        color: #34d399;
+        font-size: 12px;
+        font-weight: 800;
+        margin-left: 6px;
+        flex-shrink: 0;
+      }
+      .cp-folder-divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.08);
+        margin: 2px 0;
+      }
+      .cp-folder-create-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: 100%;
+        padding: 7px 10px;
+        border-radius: 8px;
+        border: 1px dashed rgba(129, 140, 248, 0.45);
+        background: rgba(99, 102, 241, 0.1);
+        color: #a5b4fc;
+        font-size: 11.5px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .cp-folder-create-toggle:hover {
+        background: rgba(99, 102, 241, 0.2);
+        border-color: #818cf8;
+        color: #e0e7ff;
+      }
+      .cp-folder-create-form {
+        display: none;
+        flex-direction: column;
+        gap: 7px;
+        padding-top: 2px;
+      }
+      .cp-folder-create-form.cp-open {
+        display: flex;
+      }
+      .cp-folder-input {
+        width: 100%;
+        padding: 7px 10px;
+        border-radius: 7px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(15, 23, 42, 0.9);
+        color: #f8fafc;
+        font-size: 12px;
+        font-family: inherit;
+        outline: none;
+      }
+      .cp-folder-input::placeholder {
+        color: #64748b;
+      }
+      .cp-folder-input:focus {
+        border-color: #818cf8;
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+      }
+      .cp-folder-form-actions {
+        display: flex;
+        gap: 6px;
+      }
+      .cp-folder-btn-cancel {
+        flex: 1;
+        padding: 7px 10px;
+        border-radius: 7px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: #cbd5e1;
+        font-size: 11.5px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .cp-folder-btn-submit {
+        flex: 1.5;
+        padding: 7px 12px;
+        border-radius: 7px;
+        border: none;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: #ffffff;
+        font-size: 11.5px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .cp-folder-btn-submit:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+      }
+      .cp-save-action-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+        min-height: 48px;
+        padding: 13px 20px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 9999px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 30%, #4f46e5 100%);
+        color: #ffffff;
+        font-size: 14.5px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        cursor: pointer;
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+        transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+        user-select: none;
+        touch-action: manipulation;
+      }
+      .cp-save-action-btn svg {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+      }
+      @media (max-width: 480px) {
+        #cp-widget-container {
+          width: calc(100vw - 20px);
+          max-width: calc(100vw - 20px);
+          right: 10px;
+          backdrop-filter: none;
+          -webkit-backdrop-filter: none;
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+          transition: opacity 0.15s ease;
+        }
+        #cp-widget-container.cp-minimized {
+          width: auto;
+          max-width: calc(100vw - 20px);
+          border-radius: 26px;
+        }
+        #cp-widget-container.cp-mobile-save-compact .cp-mini-trigger {
+          gap: 8px;
+          padding: 6px 7px 6px 10px;
+        }
+        .cp-header {
+          padding: 8px 10px;
+        }
+        .cp-body {
+          padding: 10px;
+        }
+        .cp-inspector-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .cp-save-action-btn:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 30%, #4338ca 100%);
+        box-shadow: 0 10px 28px rgba(16, 185, 129, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+        transform: translateY(-2px) scale(1.01);
+      }
+      .cp-save-action-btn:active {
+        transform: scale(0.98);
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+      }
+      .cp-save-action-btn:disabled {
+        opacity: 0.8;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+      /* Success State */
+      .cp-success-box {
+        display: none;
+        flex-direction: column;
+        gap: 10px;
+        padding: 6px 0;
+      }
+      .cp-success-banner {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #34d399;
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .cp-success-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .cp-btn-secondary {
+        flex: 1;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.08);
+        color: #f8fafc;
+        transition: background 0.15s;
+      }
+      .cp-btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.16);
+      }
+      .cp-btn-primary-sm {
+        flex: 1.2;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+        border: none;
+        background: #10b981;
+        color: #ffffff;
+        box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4);
+        transition: background 0.15s;
+      }
+      .cp-btn-primary-sm:hover {
+        background: #059669;
+      }
+      /* Spinner */
+      .cp-spinner {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: #ffffff;
+        border-radius: 50%;
+        animation: cp-spin 0.7s linear infinite;
+        display: inline-block;
+      }
+      @keyframes cp-spin {
+        to { transform: rotate(360deg); }
+      }
+      /* ── Zillow Search-Card Quick-Save Pills & Floating HUD ── */
+      .cp-card-pill-wrap {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 2147483000;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px;
+        border-radius: 9999px;
+        background: rgba(15, 23, 42, 0.88);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        pointer-events: auto;
+      }
+      .cp-card-select-cb {
+        width: 16px;
+        height: 16px;
+        margin-left: 5px;
+        accent-color: #6366f1;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      .cp-card-pill {
+        appearance: none;
+        border: none;
+        border-radius: 9999px;
+        padding: 6px 11px;
+        min-height: 28px;
+        font-size: 11.5px;
+        font-weight: 700;
+        line-height: 1.1;
+        cursor: pointer;
+        color: #ffffff;
+        background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+        transition: transform 0.12s ease, opacity 0.15s ease, background 0.15s ease;
+        white-space: nowrap;
+        touch-action: manipulation;
+      }
+      .cp-card-pill:hover:not(:disabled) { transform: scale(1.03); }
+      .cp-card-pill:disabled { opacity: 0.85; cursor: default; }
+      .cp-card-pill-ready { background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); }
+      .cp-card-pill-hydrating,
+      .cp-card-pill-saving,
+      .cp-card-pill-queued { background: #334155; color: #e2e8f0; }
+      .cp-card-pill-saved { background: linear-gradient(135deg, #059669 0%, #10b981 100%); }
+      .cp-card-pill-in_pipeline,
+      .cp-card-pill-published { background: rgba(16, 185, 129, 0.25); color: #6ee7b7; border: 1px solid rgba(52, 211, 153, 0.45); }
+      .cp-card-pill-for_sale { background: rgba(217, 119, 6, 0.88); color: #fef3c7; }
+      .cp-card-pill-prohibited { background: rgba(220, 38, 38, 0.9); color: #fee2e2; }
+      .cp-card-pill-error { background: #dc2626; color: #ffffff; }
+      .cp-card-sub-badge {
+        font-size: 10px;
+        font-weight: 700;
+        color: #cbd5e1;
+        padding: 2px 6px 2px 2px;
+        white-space: nowrap;
+      }
+      #cp-search-hud {
+        position: fixed;
+        bottom: max(18px, env(safe-area-inset-bottom));
+        right: max(14px, env(safe-area-inset-right));
+        z-index: 2147483646;
+        width: 340px;
+        max-width: calc(100vw - 24px);
+        background: rgba(15, 23, 42, 0.96);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 16px;
+        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 102, 241, 0.25);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: #f8fafc;
+        overflow: visible;
+        box-sizing: border-box;
+      }
+      #cp-search-hud.cp-dragging {
+        opacity: 0.98;
+        box-shadow: 0 24px 50px -4px rgba(0, 0, 0, 0.75), 0 0 0 2px rgba(99, 102, 241, 0.6);
+        transition: none !important;
+        cursor: grabbing !important;
+      }
+      #cp-search-hud * { box-sizing: border-box; }
+      .cp-hud-mini {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 15px;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: #f8fafc;
+        border-radius: 9999px;
+      }
+      #cp-search-hud.cp-hud-minimized {
+        width: auto;
+        border-radius: 9999px;
+      }
+      #cp-search-hud.cp-hud-minimized .cp-hud-body { display: none; }
+      #cp-search-hud.cp-hud-minimized .cp-hud-mini { display: flex; }
+      .cp-hud-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #10b981;
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+        flex-shrink: 0;
+      }
+      .cp-hud-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+        background: rgba(30, 41, 59, 0.78);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px 16px 0 0;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      #cp-search-hud.cp-dragging .cp-hud-header,
+      #cp-search-hud.cp-dragging .cp-hud-mini {
+        cursor: grabbing;
+      }
+      .cp-hud-title-row {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: #f8fafc;
+      }
+      .cp-hud-content {
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+      }
+      .cp-hud-stats {
+        font-size: 12px;
+        font-weight: 600;
+        color: #cbd5e1;
+      }
+      .cp-hud-toggles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        font-size: 11px;
+        color: #cbd5e1;
+      }
+      .cp-hud-chk {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .cp-hud-chk input { accent-color: #6366f1; cursor: pointer; }
+      .cp-hud-progress {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        padding: 8px 10px;
+        background: rgba(30, 41, 59, 0.65);
+        border-radius: 9px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .cp-hud-progress-text {
+        font-size: 11px;
+        font-weight: 600;
+        color: #e2e8f0;
+      }
+      .cp-hud-actions {
+        display: flex;
+        gap: 7px;
+        flex-wrap: wrap;
+      }
+      .cp-hud-btn-primary {
+        flex: 1.4;
+        min-height: 36px;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #10b981 0%, #4f46e5 100%);
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .cp-hud-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+      .cp-hud-btn-secondary {
+        flex: 1;
+        min-height: 36px;
+        padding: 8px 10px;
+        border: 1px solid rgba(129, 140, 248, 0.45);
+        border-radius: 10px;
+        background: rgba(99, 102, 241, 0.18);
+        color: #c7d2fe;
+        font-size: 11.5px;
+        font-weight: 700;
+        cursor: pointer;
+        align-items: center;
+        justify-content: center;
+      }
+      .cp-hud-btn-stop {
+        min-height: 36px;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 10px;
+        background: #dc2626;
+        color: #ffffff;
+        font-size: 11.5px;
+        font-weight: 700;
+        cursor: pointer;
+        align-items: center;
+        justify-content: center;
+      }
+      .cp-hud-failed-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 8px 10px;
+        background: rgba(127, 29, 29, 0.45);
+        border: 1px solid rgba(248, 113, 113, 0.35);
+        border-radius: 9px;
+      }
+      .cp-hud-failed-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #fecaca;
+      }
+      .cp-hud-btn-dismiss {
+        background: transparent;
+        border: 1px solid rgba(254, 202, 202, 0.25);
+        border-radius: 5px;
+        color: #fecaca;
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 6px;
+        cursor: pointer;
+      }
+      .cp-hud-failed-list {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        max-height: 82px;
+        overflow-y: auto;
+      }
+      .cp-hud-failed-item,
+      .cp-hud-failed-more {
+        font-size: 10.5px;
+        line-height: 1.35;
+        color: #fee2e2;
+        word-break: break-word;
+      }
+      .cp-hud-btn-retry {
+        min-height: 32px;
+        padding: 6px 10px;
+        border: 1px solid rgba(252, 165, 165, 0.45);
+        border-radius: 8px;
+        background: rgba(220, 38, 38, 0.85);
+        color: #ffffff;
+        font-size: 11.5px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .cp-hud-btn-retry:disabled { opacity: 0.6; cursor: not-allowed; }
+      .cp-folder-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 7px 9px;
+        border-radius: 8px;
+        background: rgba(30, 41, 59, 0.55);
+        border: 1px solid transparent;
+        cursor: pointer;
+        font-size: 12px;
+        color: #e2e8f0;
+      }
+      .cp-folder-option:hover {
+        background: rgba(51, 65, 85, 0.78);
+        border-color: rgba(255, 255, 255, 0.12);
+      }
+      .cp-folder-option.cp-selected {
+        background: rgba(99, 102, 241, 0.22);
+        border-color: rgba(129, 140, 248, 0.45);
+        color: #ffffff;
+        font-weight: 700;
+      }
+      .cp-folder-opt-icon { flex-shrink: 0; font-size: 13px; }
+      .cp-folder-opt-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+      .cp-folder-opt-name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .cp-folder-opt-sub { font-size: 10px; color: #94a3b8; font-weight: 400; }
+      .cp-folder-opt-check { color: #34d399; font-size: 12px; font-weight: 800; flex-shrink: 0; }
+      @media (max-width: 480px) {
+        #cp-search-hud {
+          width: calc(100vw - 20px);
+          right: 10px;
+          backdrop-filter: none;
+          -webkit-backdrop-filter: none;
+        }
+        #cp-search-hud.cp-hud-minimized { width: auto; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // ── Smart Layout Collision Avoidance & Viewport Clamping ────
+  function clampWidgetToViewport(el) {
+    if (!el || !el._userPositioned) return;
+    var rect = el.getBoundingClientRect();
+    var vw = window.innerWidth || document.documentElement.clientWidth || 1024;
+    var vh = window.innerHeight || document.documentElement.clientHeight || 768;
+    var maxLeft = Math.max(8, vw - rect.width - 8);
+    var maxTop = Math.max(8, vh - rect.height - 8);
+    el.style.right = 'auto';
+    el.style.bottom = 'auto';
+    el.style.left = Math.min(Math.max(8, rect.left), maxLeft) + 'px';
+    el.style.top = Math.min(Math.max(8, rect.top), maxTop) + 'px';
+  }
+
+  function restoreWidgetPosition(el) {
+    if (!el) return;
+    try {
+      var raw = localStorage.getItem(WIDGET_POS_KEY);
+      if (!raw) return;
+      var pos = JSON.parse(raw);
+      if (pos && typeof pos.left === 'number' && typeof pos.top === 'number') {
+        el._userPositioned = true;
+        el.style.right = 'auto';
+        el.style.bottom = 'auto';
+        el.style.left = pos.left + 'px';
+        el.style.top = pos.top + 'px';
+        requestAnimationFrame(function () { clampWidgetToViewport(el); });
+      }
+    } catch (_) {}
+  }
+
+  function persistWidgetPosition(el) {
+    if (!el || !el._userPositioned) return;
+    try {
+      var rect = el.getBoundingClientRect();
+      localStorage.setItem(WIDGET_POS_KEY, JSON.stringify({ left: Math.round(rect.left), top: Math.round(rect.top) }));
+    } catch (_) {}
+  }
+
+  function updateWidgetPosition() {
+    if (!activeWidget) return;
+    if (activeWidget._userPositioned) {
+      clampWidgetToViewport(activeWidget);
+      return;
+    }
+    var bottomOffset = 24;
+
+    // Check Zillow's sticky bottom bars or action panels
+    var stickySelectors = [
+      '[data-testid="bottom-bar"]',
+      '.hdp-bottom-bar',
+      'div[class*="BottomBar"]',
+      'div[class*="sticky-bottom"]',
+      '#search-detail-root [data-testid="bottom-bar"]',
+      '.floating-bottom-bar',
+      'div[class*="StickyBanner"]'
+    ];
+
+    for (var i = 0; i < stickySelectors.length; i++) {
+      var el = document.querySelector(stickySelectors[i]);
+      if (el) {
+        var rect = el.getBoundingClientRect();
+        if (rect.height > 20 && rect.top < window.innerHeight && rect.bottom > 0) {
+          var barHeight = window.innerHeight - rect.top;
+          if (barHeight > 10 && barHeight < 250) {
+            bottomOffset = Math.max(bottomOffset, barHeight + 14);
+          }
+        }
+      }
+    }
+
+    activeWidget.style.bottom = 'max(' + bottomOffset + 'px, env(safe-area-inset-bottom))';
+  }
+
+  function scheduleWidgetPositionUpdate() {
+    if (positionUpdateScheduled) return;
+    positionUpdateScheduled = true;
+    requestAnimationFrame(function () {
+      positionUpdateScheduled = false;
+      updateWidgetPosition();
+    });
+  }
+
+  // ── URL & Page Support Detection ────────────────────────────
+  function isDetailPage(url) {
+    return /zillow\.com\/(homedetails|homes|b|community|apartments)\/.*_zpid/i.test(url) ||
+           /zillow\.com\/.*_zpid/i.test(url) ||
+           /zillow\.com\/(homedetails|b|community)\//i.test(url) ||
+           /realtor\.com\/realestateandhomes-detail/i.test(url) ||
+           /apartments\.com\/[^/]+\/[^/]+/i.test(url) ||
+           /redfin\.com\/[^/]+\/[^/]+\/[^/]+\/[^/]+/i.test(url) ||
+           /opendoor\.com\/(homes|properties|listings|[^/]+\/[^/]+)/i.test(url) ||
+           /rentprogress\.com\/(houses-for-rent|homes|properties|rental-homes|property-details|[^/]+\/[^/]+)/i.test(url) ||
+           /(cjproperties\.org|cjrealestate\.com|appfolio\.com)\/[^/]+/i.test(url) ||
+           /invitationhomes\.com\/(?:property|homes-for-rent|houses-for-rent)\/[^/?#]+/i.test(url);
+  }
+
+  function isSearchPage(url) {
+    if (window.CP_Extractors && typeof window.CP_Extractors.isZillowSearchUrl === 'function') {
+      return window.CP_Extractors.isZillowSearchUrl(url, document);
+    }
+    return /zillow\.com\/(homes|for_rent|rentals|houses|apartments|myzillow\/savedhomes|search)/i.test(url);
+  }
+
+  function extractCurrentListing() {
+    if (!window.CP_Extractors || typeof window.CP_Extractors.extract !== 'function') return null;
+    try {
+      return window.CP_Extractors.extract(location.href, document);
+    } catch (err) {
+      console.warn('[CP] Listing extraction notice:', err);
+      return null;
+    }
+  }
+
+  function extractionSignature(data) {
+    if (!data) return '';
+    var photos = extractPhotoUrls(data.original_image_urls);
+    if (!photos.length && Array.isArray(data.photo_urls)) photos = data.photo_urls;
+    return [
+      data.source,
+      data.source_listing_id,
+      data.source_url,
+      data.address,
+      data.city,
+      data.state,
+      data.zip,
+      data.monthly_rent != null ? data.monthly_rent : data.rent,
+      data.bedrooms != null ? data.bedrooms : data.beds,
+      data.bathrooms != null ? data.bathrooms : data.baths,
+      data.square_footage != null ? data.square_footage : data.sqft,
+      photos.length,
+      data.description ? String(data.description).length : 0
+    ].join('|');
+  }
+
+  function updateWidgetSnapshot(data) {
+    if (!activeWidget || !data) return;
+    var address = data.address || 'Detected Listing';
+    if (data.city && data.state) address += ', ' + data.city + ', ' + data.state;
+    var rent = data.monthly_rent != null ? data.monthly_rent : data.rent;
+    var rentText = rent != null ? '$' + Number(rent).toLocaleString() + '/mo' : 'Rent pending';
+    var beds = data.bedrooms != null ? data.bedrooms : data.beds;
+    var baths = data.bathrooms != null ? data.bathrooms : data.baths;
+    var specs = [beds != null ? beds + ' bd' : '', baths != null ? baths + ' ba' : ''].filter(Boolean).join(' • ');
+    var sqft = data.square_footage != null ? data.square_footage : data.sqft;
+    if (sqft) specs += (specs ? ' • ' : '') + Number(sqft).toLocaleString() + ' sqft';
+    var photos = extractPhotoUrls(data.original_image_urls);
+    if (!photos.length && Array.isArray(data.photo_urls)) photos = data.photo_urls;
+    photos = dedupePhotoUrls(photos);
+    var photoCount = photos.length;
+    var photoBadgeClass = photoCount >= 4 ? 'cp-chip-photos' : 'cp-chip-warn';
+    var photoBadgeText = photoCount > 0 ? ('📸 ' + photoCount + ' photos') : '📸 No photos';
+    var compactSummary = activeWidget.querySelector('#cp-mini-summary');
+    var addressLine = activeWidget.querySelector('#cp-address-line');
+    var rentChip = activeWidget.querySelector('#cp-rent-chip');
+    var specsChip = activeWidget.querySelector('#cp-specs-chip');
+    var photosChip = activeWidget.querySelector('#cp-photos-chip');
+    if (compactSummary) compactSummary.textContent = address + ' • ' + rentText;
+    if (addressLine) {
+      addressLine.textContent = address;
+      addressLine.title = address;
+    }
+    if (rentChip) rentChip.textContent = rentText;
+    if (specsChip) specsChip.textContent = specs || 'Listing details';
+    if (photosChip) {
+      photosChip.className = 'cp-chip ' + photoBadgeClass;
+      photosChip.textContent = photoBadgeText;
+    }
+  }
+
+  function scheduleListingRefresh(delay) {
+    var refreshGeneration = listingGeneration;
+    if (listingRefreshTimer) {
+      if (listingRefreshTimer.generation === refreshGeneration) return;
+      clearTimeout(listingRefreshTimer.id);
+      listingRefreshTimer = null;
+    }
+    var timerId = setTimeout(function () {
+      listingRefreshTimer = null;
+      if (refreshGeneration !== listingGeneration) return;
+      if (!isDetailPage(location.href)) {
+        if (isSearchPage(location.href)) {
+          startSearchCardEngine();
+        }
+        return;
+      }
+      if (window.CP_CardEngine) window.CP_CardEngine.stop();
+      var next = extractCurrentListing();
+      if (!next) return;
+      var nextSignature = extractionSignature(next);
+      if (!activeWidget) {
+        injectWidget(next);
+      } else if (nextSignature !== renderedListingSignature) {
+        var isSameListing = currentExtractedData
+          && currentExtractedData.source === next.source
+          && currentExtractedData.source_listing_id
+          && currentExtractedData.source_listing_id === next.source_listing_id;
+        if (isSameListing) {
+          currentExtractedData = next;
+          renderedListingSignature = nextSignature;
+          updateWidgetSnapshot(next);
+        } else {
+          injectWidget(next);
+        }
+      }
+    }, delay == null ? LISTING_REFRESH_DELAY : delay);
+    listingRefreshTimer = { id: timerId, generation: refreshGeneration };
+  }
+
+  function scheduleHydrationRefreshes() {
+    hydrationRefreshTimers.forEach(function (timer) { clearTimeout(timer); });
+    hydrationRefreshTimers = [0, 500, 1500, 3200].map(function (delay) {
+      return setTimeout(function () {
+        scheduleListingRefresh(0);
+      }, delay);
+    });
+  }
+
+  // ── Extract Photo URLs Helper ───────────────────────────────
+  function extractPhotoUrls(raw) {
+    var urls = [];
+    if (!raw) return urls;
+    try {
+      var parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if (Array.isArray(parsed)) {
+        parsed.forEach(function (item) {
+          if (!item) return;
+          if (typeof item === 'string') urls.push(item);
+          else if (typeof item === 'object' && typeof item.url === 'string') urls.push(item.url);
+        });
+      }
+    } catch (e) {}
+    return urls;
+  }
+
+  function dedupePhotoUrls(urls) {
+    var seen = new Set();
+    var unique = [];
+    if (!Array.isArray(urls)) return unique;
+    urls.forEach(function (raw) {
+      if (!raw) return;
+      var url = typeof raw === 'string' ? raw.trim() : (raw.url || '');
+      if (!url || !/^https?:\/\//i.test(url) || seen.has(url)) return;
+      seen.add(url);
+      unique.push(url);
+    });
+    return unique;
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[char];
+    });
+  }
+
+  // ── Build & Inject Main Widget ──────────────────────────────
+  function removeWidget() {
+    if (widgetDragCleanup) {
+      try { widgetDragCleanup(); } catch (_) {}
+      widgetDragCleanup = null;
+    }
+    if (activeWidget) {
+      activeWidget.remove();
+      activeWidget = null;
+    }
+    renderedListingSignature = '';
+  }
+
+  function injectWidget(extractedOverride) {
+    removeWidget();
+    if (!isDetailPage(location.href)) return;
+
+    injectStyles();
+
+    // Run pre-flight extraction
+    var extracted = extractedOverride || extractCurrentListing();
+    currentExtractedData = extracted;
+    renderedListingSignature = extractionSignature(extracted);
+
+    var container = document.createElement('div');
+    container.id = 'cp-widget-container';
+
+    // Format display attributes
+    var rentStr = 'Rent pending';
+    if (extracted && (extracted.monthly_rent || extracted.rent)) {
+      var rentNum = extracted.monthly_rent || extracted.rent;
+      rentStr = '$' + Number(rentNum).toLocaleString() + '/mo';
+    }
+
+    var bedsBaths = 'Listing details';
+    if (extracted && (extracted.bedrooms != null || extracted.bathrooms != null)) {
+      var beds = extracted.bedrooms != null ? extracted.bedrooms + ' bd' : '';
+      var baths = extracted.bathrooms != null ? extracted.bathrooms + ' ba' : '';
+      bedsBaths = [beds, baths].filter(Boolean).join(' • ');
+      if (extracted.square_footage) {
+        bedsBaths += ' • ' + Number(extracted.square_footage).toLocaleString() + ' sqft';
+      }
+    }
+
+    var photoUrls = [];
+    if (extracted) {
+      photoUrls = extractPhotoUrls(extracted.original_image_urls);
+      if (!photoUrls.length && Array.isArray(extracted.photo_urls)) {
+        photoUrls = extracted.photo_urls;
+      }
+    }
+    photoUrls = dedupePhotoUrls(photoUrls);
+    var photoCount = photoUrls.length;
+    var photoBadgeClass = photoCount >= 4 ? 'cp-chip-photos' : 'cp-chip-warn';
+    var photoBadgeText = photoCount > 0 ? ('📸 ' + photoCount + ' photos') : '📸 No photos';
+    var sourceLabel = extracted && extracted.source ? String(extracted.source).replace(/_/g, ' ') : 'Listing';
+
+    var addressStr = (extracted && extracted.address) ? extracted.address : 'Detected Listing';
+    if (extracted && extracted.city && extracted.state) {
+      addressStr += ', ' + extracted.city + ', ' + extracted.state;
+    }
+
+    var defaultFolder = getDefaultFolderSync();
+    var isBatchDefault = Boolean(defaultFolder && (defaultFolder.is_disposable_batch || defaultFolder.batch_id));
+    var currentFolderLabel = defaultFolder && defaultFolder.name != null && String(defaultFolder.name) !== ''
+      ? (isBatchDefault ? ('Batch #' + String(defaultFolder.batch_id || defaultFolder.name)) : String(defaultFolder.name))
+      : 'Main Inbox (Default)';
+    var currentFolderIcon = isBatchDefault ? '📦' : '📁';
+    var isCustomFolderActive = Boolean(defaultFolder && (defaultFolder.id || (defaultFolder.name != null && String(defaultFolder.name) !== '')));
+
+    container.innerHTML = `
+      <!-- Minimized State Trigger -->
+      <div class="cp-mini-trigger" id="cp-expand-trigger" title="Click to expand Choice Properties importer">
+        <div class="cp-logo-icon">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+        </div>
+        <span id="cp-mini-summary">${escapeHtml(addressStr)} • ${escapeHtml(rentStr)}</span>
+        <button type="button" id="cp-mini-save-btn" aria-label="Save this property to the pipeline">Save</button>
+      </div>
+
+      <!-- Full Body -->
+      <div class="cp-full-body">
+        <div class="cp-header" id="cp-header-bar" title="Drag to move widget anywhere on screen">
+          <div class="cp-brand">
+            <span class="cp-drag-grip" title="Drag to move">
+              <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+                <circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/>
+                <circle cx="2" cy="7" r="1.5"/><circle cx="8" cy="7" r="1.5"/>
+                <circle cx="2" cy="12" r="1.5"/><circle cx="8" cy="12" r="1.5"/>
+              </svg>
+            </span>
+            <div class="cp-logo-icon">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+            </div>
+            <span class="cp-brand-title">Choice Properties</span>
+          </div>
+          <div class="cp-header-badges">
+            <span class="cp-badge-verified">${escapeHtml(sourceLabel)} capture</span>
+            <button class="cp-header-btn" id="cp-btn-minimize" title="Minimize widget">_</button>
+            <button class="cp-header-btn" id="cp-btn-close" title="Close widget">×</button>
+          </div>
+        </div>
+
+        <div class="cp-body">
+          <div class="cp-property-snapshot">
+            <div class="cp-address-line" id="cp-address-line" title="${escapeHtml(addressStr)}">${escapeHtml(addressStr)}</div>
+            <div class="cp-chips-row">
+              <span class="cp-chip cp-chip-price" id="cp-rent-chip">${escapeHtml(rentStr)}</span>
+              <span class="cp-chip" id="cp-specs-chip">${escapeHtml(bedsBaths)}</span>
+              <span class="cp-chip ${photoBadgeClass}" id="cp-photos-chip">${escapeHtml(photoBadgeText)}</span>
+            </div>
+            <button class="cp-accordion-toggle" id="cp-toggle-tray">
+              <span>View details breakdown</span> <span id="cp-chevron">▾</span>
+            </button>
+            <div class="cp-inspector-tray" id="cp-inspector-tray">
+              <div class="cp-inspector-grid">
+                <div class="cp-inspector-item">Deposit Default: <strong>1x Rent</strong></div>
+                <div class="cp-inspector-item">App Fee Default: <strong>$50</strong></div>
+                <div class="cp-inspector-item">Source Capture: <strong>Full Fidelity ✓</strong></div>
+                <div class="cp-inspector-item">Publish Policy: <strong>Sanitized ✓</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Compact Folder Pill & Auto-Collapsing Popover -->
+          <div class="cp-folder-bar">
+            <button type="button" class="cp-folder-pill-trigger ${isCustomFolderActive ? 'cp-folder-active' : ''}" id="cp-folder-pill-btn" title="Click to switch folder or create a new folder">
+              <div class="cp-folder-pill-left">
+                <span class="cp-folder-pill-icon" id="cp-folder-pill-icon">${currentFolderIcon}</span>
+                <div class="cp-folder-pill-text">
+                  <span class="cp-folder-pill-label">Folder:</span>
+                  <span class="cp-folder-pill-name" id="cp-folder-pill-name">${escapeHtml(currentFolderLabel)}</span>
+                </div>
+              </div>
+              <span class="cp-folder-pill-action" id="cp-folder-pill-action">Change / + New ▾</span>
+            </button>
+
+            <div class="cp-folder-popover" id="cp-folder-popover">
+              <div class="cp-folder-popover-header">
+                <span class="cp-folder-popover-title">Target Pipeline Folder</span>
+                <button type="button" class="cp-folder-popover-close" id="cp-folder-popover-close" title="Close">×</button>
+              </div>
+
+              <div class="cp-folder-list" id="cp-folder-list"></div>
+
+              <div class="cp-folder-divider"></div>
+
+              <button type="button" class="cp-folder-create-toggle" id="cp-folder-create-toggle">
+                <span>+ Create New Folder</span>
+              </button>
+
+              <div class="cp-folder-create-form" id="cp-folder-create-form">
+                <input type="text" id="cp-new-folder-name" class="cp-folder-input" placeholder="Folder name (e.g. 1, 102, Columbus)" autocomplete="off" />
+                <input type="text" id="cp-new-folder-desc" class="cp-folder-input" placeholder="Description (optional)" autocomplete="off" />
+                <div id="cp-folder-create-err" style="display:none;font-size:11px;color:#fca5a5;background:rgba(239,68,68,0.16);border:1px solid rgba(239,68,68,0.3);border-radius:6px;padding:6px 8px;line-height:1.35"></div>
+                <div class="cp-folder-form-actions">
+                  <button type="button" class="cp-folder-btn-cancel" id="cp-folder-btn-cancel">Cancel</button>
+                  <button type="button" class="cp-folder-btn-submit" id="cp-folder-btn-create">Create &amp; Set Default</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Action Button with Large Accessible Hit Area -->
+          <button class="cp-save-action-btn" id="cp-btn-save" title="Save to Choice Pipeline (Cmd/Ctrl+Shift+S)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>Save to Pipeline</span>
+          </button>
+
+          <!-- Integrated Progress Box -->
+          <!-- Success State -->
+          <div class="cp-success-box" id="cp-success-box">
+            <div class="cp-success-banner">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span id="cp-success-text">Saved to Choice Pipeline!</span>
+            </div>
+            <div class="cp-success-actions">
+              <a class="cp-btn-secondary" id="cp-copy-link-btn" href="javascript:void(0)">Copy Link</a>
+              <a class="cp-btn-primary-sm" id="cp-open-pipeline-btn" target="_blank" href="https://choice-properties-site.pages.dev/admin/pipeline.html">Open Pipeline ↗</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (IS_MOBILE) {
+      container.classList.add('cp-mobile-save-compact', 'cp-minimized');
+      isMinimized = true;
+    }
+    document.body.appendChild(container);
+    activeWidget = container;
+    restoreWidgetPosition(container);
+
+    // ── Draggable Window Controller (Header + Minimized Pill) ──
+    var headerBar = container.querySelector('#cp-header-bar') || container.querySelector('.cp-header');
+    var expandTrigger = container.querySelector('#cp-expand-trigger');
+    var isDragging = false;
+    var movedBeyondThreshold = false;
+    var dragStartX = 0, dragStartY = 0;
+    var initLeft = 0, initTop = 0;
+    var suppressExpandClickUntil = 0;
+
+    function handleDragStart(clientX, clientY, target) {
+      if (target && target.closest('.cp-header-btn, #cp-mini-save-btn, input, select, textarea, a')) return false;
+      isDragging = true;
+      movedBeyondThreshold = false;
+      dragStartX = clientX;
+      dragStartY = clientY;
+      var rect = container.getBoundingClientRect();
+      initLeft = rect.left;
+      initTop = rect.top;
+      return true;
+    }
+
+    function handleDragMove(clientX, clientY) {
+      if (!isDragging) return false;
+      var dx = clientX - dragStartX;
+      var dy = clientY - dragStartY;
+      if (!movedBeyondThreshold) {
+        if (Math.hypot(dx, dy) < 6) return false;
+        movedBeyondThreshold = true;
+        container.classList.add('cp-dragging');
+        container.style.transition = 'none';
+        container.style.bottom = 'auto';
+        container.style.right = 'auto';
+        container.style.left = initLeft + 'px';
+        container.style.top = initTop + 'px';
+        container._userPositioned = true;
+      }
+      var rect = container.getBoundingClientRect();
+      var vw = window.innerWidth || document.documentElement.clientWidth || 1024;
+      var vh = window.innerHeight || document.documentElement.clientHeight || 768;
+      var maxLeft = Math.max(8, vw - rect.width - 8);
+      var maxTop = Math.max(8, vh - rect.height - 8);
+      container.style.left = Math.min(Math.max(8, initLeft + dx), maxLeft) + 'px';
+      container.style.top = Math.min(Math.max(8, initTop + dy), maxTop) + 'px';
+      return true;
+    }
+
+    function handleDragEnd() {
+      if (!isDragging) return;
+      isDragging = false;
+      container.classList.remove('cp-dragging');
+      container.style.transition = '';
+      if (movedBeyondThreshold) {
+        suppressExpandClickUntil = Date.now() + 260;
+        persistWidgetPosition(container);
+      }
+      movedBeyondThreshold = false;
+    }
+
+    function onDragMouseDown(e) {
+      if (e.button !== 0) return;
+      if (handleDragStart(e.clientX, e.clientY, e.target) && e.target && !e.target.closest('button')) {
+        e.preventDefault();
+      }
+    }
+
+    function onDragTouchStart(e) {
+      if (e.touches && e.touches.length === 1) {
+        handleDragStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
+      }
+    }
+
+    function onWinMouseMove(e) {
+      if (isDragging && handleDragMove(e.clientX, e.clientY)) {
+        e.preventDefault();
+      }
+    }
+
+    function onWinTouchMove(e) {
+      if (isDragging && e.touches && e.touches.length === 1) {
+        if (handleDragMove(e.touches[0].clientX, e.touches[0].clientY)) {
+          e.preventDefault();
+        }
+      }
+    }
+
+    function onWinResize() {
+      clampWidgetToViewport(container);
+    }
+
+    if (headerBar) {
+      headerBar.addEventListener('mousedown', onDragMouseDown);
+      headerBar.addEventListener('touchstart', onDragTouchStart, { passive: true });
+    }
+    if (expandTrigger) {
+      expandTrigger.addEventListener('mousedown', onDragMouseDown);
+      expandTrigger.addEventListener('touchstart', onDragTouchStart, { passive: true });
+      expandTrigger.addEventListener('click', function (e) {
+        if (Date.now() < suppressExpandClickUntil) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+        }
+      }, true);
+    }
+
+    window.addEventListener('mousemove', onWinMouseMove);
+    window.addEventListener('touchmove', onWinTouchMove, { passive: false });
+    window.addEventListener('mouseup', handleDragEnd);
+    window.addEventListener('touchend', handleDragEnd);
+    window.addEventListener('resize', onWinResize);
+    widgetDragCleanup = function () {
+      window.removeEventListener('mousemove', onWinMouseMove);
+      window.removeEventListener('touchmove', onWinTouchMove);
+      window.removeEventListener('mouseup', handleDragEnd);
+      window.removeEventListener('touchend', handleDragEnd);
+      window.removeEventListener('resize', onWinResize);
+    };
+
+    // Attach Event Listeners
+    var minimizeBtn = container.querySelector('#cp-btn-minimize');
+    var closeBtn = container.querySelector('#cp-btn-close');
+    var miniSaveBtn = container.querySelector('#cp-mini-save-btn');
+    var toggleTrayBtn = container.querySelector('#cp-toggle-tray');
+    var inspectorTray = container.querySelector('#cp-inspector-tray');
+    var chevron = container.querySelector('#cp-chevron');
+    var saveBtn = container.querySelector('#cp-btn-save');
+    var copyLinkBtn = container.querySelector('#cp-copy-link-btn');
+
+    // Folder UI Elements
+    var folderPillBtn = container.querySelector('#cp-folder-pill-btn');
+    var folderPillName = container.querySelector('#cp-folder-pill-name');
+    var folderPillAction = container.querySelector('#cp-folder-pill-action');
+    var folderPopover = container.querySelector('#cp-folder-popover');
+    var folderPopoverClose = container.querySelector('#cp-folder-popover-close');
+    var folderListEl = container.querySelector('#cp-folder-list');
+    var folderCreateToggle = container.querySelector('#cp-folder-create-toggle');
+    var folderCreateForm = container.querySelector('#cp-folder-create-form');
+    var newFolderNameInput = container.querySelector('#cp-new-folder-name');
+    var newFolderDescInput = container.querySelector('#cp-new-folder-desc');
+    var folderBtnCancel = container.querySelector('#cp-folder-btn-cancel');
+    var folderBtnCreate = container.querySelector('#cp-folder-btn-create');
+
+    var folderPillIcon = container.querySelector('#cp-folder-pill-icon');
+    var folderCreateErr = container.querySelector('#cp-folder-create-err');
+
+    function closeFolderPopover() {
+      if (!folderPopover) return;
+      folderPopover.classList.remove('cp-open');
+      if (folderCreateForm) folderCreateForm.classList.remove('cp-open');
+      if (folderCreateToggle) folderCreateToggle.style.display = 'flex';
+      if (folderCreateErr) { folderCreateErr.style.display = 'none'; folderCreateErr.textContent = ''; }
+      if (folderPillAction) folderPillAction.textContent = 'Change / + New ▾';
+    }
+
+    function updateFolderPillDisplay() {
+      var def = getDefaultFolderSync();
+      if (def && (def.id || (def.name != null && String(def.name) !== ''))) {
+        var isBatch = Boolean(def.is_disposable_batch || def.batch_id);
+        if (folderPillName) {
+          folderPillName.textContent = isBatch
+            ? ('Batch #' + String(def.batch_id || def.name))
+            : String(def.name);
+        }
+        if (folderPillIcon) folderPillIcon.textContent = isBatch ? '📦' : '📁';
+        if (folderPillBtn) folderPillBtn.classList.add('cp-folder-active');
+      } else {
+        if (folderPillName) folderPillName.textContent = 'Main Inbox (Default)';
+        if (folderPillIcon) folderPillIcon.textContent = '📁';
+        if (folderPillBtn) folderPillBtn.classList.remove('cp-folder-active');
+      }
+    }
+
+    function renderFolderList() {
+      if (!folderListEl) return;
+      var folders = getCachedFolders();
+      var def = getDefaultFolderSync();
+      var selectedId = def && def.id ? String(def.id) : '';
+      var selectedName = def && def.name != null ? String(def.name) : '';
+
+      var html = '';
+      var isInboxSelected = !selectedId && !selectedName;
+      html += '<button type="button" class="cp-folder-item ' + (isInboxSelected ? 'cp-selected' : '') + '" data-folder-id="" data-folder-name="" data-batch-id="" data-batch-uuid="" data-is-disposable="false">' +
+        '<div class="cp-folder-item-main">' +
+          '<div class="cp-folder-item-name">📥 Main Inbox (Default)</div>' +
+          '<div class="cp-folder-item-desc">Unassigned pipeline staging</div>' +
+        '</div>' +
+        (isInboxSelected ? '<span class="cp-folder-item-check">✓</span>' : '') +
+      '</button>';
+
+      folders.forEach(function (f) {
+        if (!f) return;
+        var fId = f.id ? String(f.id) : '';
+        var fName = f.name != null ? String(f.name) : '';
+        var fDesc = f.description != null ? String(f.description) : '';
+        var fBatchId = f.batch_id ? String(f.batch_id) : '';
+        var fBatchUuid = f.batch_uuid ? String(f.batch_uuid) : '';
+        var fIsBatch = Boolean(f.is_disposable_batch || fBatchId);
+        var isSel = (selectedId && fId === selectedId) || (!selectedId && selectedName && fName === selectedName);
+        var itemIcon = f.icon || (fIsBatch ? '📦' : '📁');
+        var itemTitle = fIsBatch ? ('Batch #' + (fBatchId || fName)) : fName;
+        var batchTag = fIsBatch ? ' <span style="font-size:10px;opacity:0.8;color:#a5b4fc">(Batch)</span>' : '';
+        html += '<button type="button" class="cp-folder-item ' + (isSel ? 'cp-selected' : '') + '" data-folder-id="' + escapeHtml(fId) + '" data-folder-name="' + escapeHtml(fName) + '" data-folder-desc="' + escapeHtml(fDesc) + '" data-batch-id="' + escapeHtml(fBatchId) + '" data-batch-uuid="' + escapeHtml(fBatchUuid) + '" data-is-disposable="' + (fIsBatch ? 'true' : 'false') + '">' +
+          '<div class="cp-folder-item-main">' +
+            '<div class="cp-folder-item-name">' + escapeHtml(itemIcon) + ' ' + escapeHtml(itemTitle) + batchTag + '</div>' +
+            (fDesc ? '<div class="cp-folder-item-desc">' + escapeHtml(fDesc) + '</div>' : '') +
+          '</div>' +
+          (isSel ? '<span class="cp-folder-item-check">✓</span>' : '') +
+        '</button>';
+      });
+
+      folderListEl.innerHTML = html;
+
+      var items = folderListEl.querySelectorAll('.cp-folder-item');
+      items.forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var fId = btn.getAttribute('data-folder-id') || '';
+          var fName = btn.getAttribute('data-folder-name') || '';
+          var fDesc = btn.getAttribute('data-folder-desc') || '';
+          var fBatchId = btn.getAttribute('data-batch-id') || '';
+          var fBatchUuid = btn.getAttribute('data-batch-uuid') || '';
+          var fIsBatch = btn.getAttribute('data-is-disposable') === 'true';
+          if (!fId && !fName) {
+            setDefaultFolder(null);
+          } else {
+            setDefaultFolder({
+              id: fId || null,
+              name: fName,
+              description: fDesc,
+              batch_id: fBatchId || null,
+              batch_uuid: fBatchUuid || null,
+              is_disposable_batch: fIsBatch,
+              icon: fIsBatch ? '📦' : '📁'
+            });
+          }
+          updateFolderPillDisplay();
+          renderFolderList();
+          closeFolderPopover();
+          if (currentExtractedData) {
+            applySavedStateToWidget(container, currentExtractedData, true);
+            if (!getSavedState(currentExtractedData) && currentExtractedData.source_listing_id) {
+              checkExistingInPipeline(currentExtractedData, listingGeneration);
+            }
+          }
+        });
+      });
+    }
+
+    renderFolderList();
+
+    if (folderPillBtn) {
+      folderPillBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var isOpen = folderPopover && folderPopover.classList.contains('cp-open');
+        if (isOpen) {
+          closeFolderPopover();
+        } else if (folderPopover) {
+          renderFolderList();
+          folderPopover.classList.add('cp-open');
+          if (folderPillAction) folderPillAction.textContent = 'Close ▴';
+        }
+      });
+    }
+
+    if (folderPopoverClose) {
+      folderPopoverClose.addEventListener('click', function (e) {
+        e.stopPropagation();
+        closeFolderPopover();
+      });
+    }
+
+    if (folderCreateToggle) {
+      folderCreateToggle.addEventListener('click', function (e) {
+        e.stopPropagation();
+        folderCreateToggle.style.display = 'none';
+        if (folderCreateErr) { folderCreateErr.style.display = 'none'; folderCreateErr.textContent = ''; }
+        if (folderCreateForm) {
+          folderCreateForm.classList.add('cp-open');
+          if (newFolderNameInput) newFolderNameInput.focus();
+        }
+      });
+    }
+
+    if (folderBtnCancel) {
+      folderBtnCancel.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (folderCreateForm) folderCreateForm.classList.remove('cp-open');
+        if (folderCreateErr) { folderCreateErr.style.display = 'none'; folderCreateErr.textContent = ''; }
+        if (folderCreateToggle) folderCreateToggle.style.display = 'flex';
+      });
+    }
+
+    [newFolderNameInput, newFolderDescInput].forEach(function (inp) {
+      if (!inp) return;
+      inp.addEventListener('keydown', function (e) {
+        e.stopPropagation();
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (folderBtnCreate) folderBtnCreate.click();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          closeFolderPopover();
+        }
+      });
+    });
+
+    if (folderBtnCreate) {
+      folderBtnCreate.addEventListener('click', async function (e) {
+        e.stopPropagation();
+        if (folderCreateErr) { folderCreateErr.style.display = 'none'; folderCreateErr.textContent = ''; }
+        var rawName = newFolderNameInput ? String(newFolderNameInput.value) : '';
+        var rawDesc = newFolderDescInput ? String(newFolderDescInput.value) : '';
+        if (!rawName.length) {
+          rawName = '1';
+        }
+        folderBtnCreate.disabled = true;
+        folderBtnCreate.textContent = 'Creating…';
+        try {
+          var created = await apiCreateFolder(rawName, rawDesc);
+          var folderObj = {
+            id: created && created.id ? created.id : null,
+            name: created && created.name != null ? String(created.name) : rawName,
+            description: rawDesc,
+            batch_id: created && created.batch_id ? created.batch_id : null,
+            batch_uuid: created && created.batch_uuid ? created.batch_uuid : null,
+            is_disposable_batch: Boolean(created && (created.is_disposable_batch || created.batch_id)),
+            icon: (created && created.icon) || '📁'
+          };
+          var existingList = getCachedFolders().filter(function (f) {
+            return f && f.id !== folderObj.id && String(f.name) !== String(folderObj.name);
+          });
+          existingList.unshift(folderObj);
+          setCachedFolders(existingList);
+          setDefaultFolder(folderObj);
+          updateFolderPillDisplay();
+          renderFolderList();
+          if (newFolderNameInput) newFolderNameInput.value = '';
+          if (newFolderDescInput) newFolderDescInput.value = '';
+          closeFolderPopover();
+          if (currentExtractedData) {
+            applySavedStateToWidget(container, currentExtractedData, true);
+            if (!getSavedState(currentExtractedData) && currentExtractedData.source_listing_id) {
+              checkExistingInPipeline(currentExtractedData, listingGeneration);
+            }
+          }
+        } catch (err) {
+          if (err && err.noFallback) {
+            if (folderCreateErr) {
+              folderCreateErr.textContent = err.message || 'Cannot use that folder/batch ID.';
+              folderCreateErr.style.display = 'block';
+            }
+          } else {
+            var fallbackObj = { id: null, name: rawName, description: rawDesc, batch_id: null, batch_uuid: null, is_disposable_batch: false, icon: '📁' };
+            var list = getCachedFolders();
+            list.unshift(fallbackObj);
+            setCachedFolders(list);
+            setDefaultFolder(fallbackObj);
+            updateFolderPillDisplay();
+            renderFolderList();
+            closeFolderPopover();
+            if (currentExtractedData) applySavedStateToWidget(container, currentExtractedData, true);
+          }
+        } finally {
+          folderBtnCreate.disabled = false;
+          folderBtnCreate.textContent = 'Create & Set Default';
+        }
+      });
+    }
+
+    minimizeBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      container.classList.add('cp-minimized');
+      isMinimized = true;
+      requestAnimationFrame(function () { clampWidgetToViewport(container); });
+    });
+
+    closeBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      removeWidget();
+    });
+
+    expandTrigger.addEventListener('click', function () {
+      container.classList.remove('cp-minimized');
+      isMinimized = false;
+      requestAnimationFrame(function () { clampWidgetToViewport(container); });
+    });
+
+    toggleTrayBtn.addEventListener('click', function () {
+      isExpanded = !isExpanded;
+      if (isExpanded) {
+        inspectorTray.classList.add('cp-open');
+        chevron.textContent = '▴';
+      } else {
+        inspectorTray.classList.remove('cp-open');
+        chevron.textContent = '▾';
+      }
+    });
+
+    saveBtn.addEventListener('click', handleSave);
+    if (miniSaveBtn) {
+      miniSaveBtn.addEventListener('click', function (event) {
+        event.stopPropagation();
+        var existingState = currentExtractedData ? getSavedState(currentExtractedData) : null;
+        var currentDef = getDefaultFolderSync();
+        var currentFolderId = currentDef && currentDef.id ? String(currentDef.id) : '';
+        var currentFolderName = currentDef && currentDef.name != null ? String(currentDef.name) : '';
+        var currentIsBatch = Boolean(currentDef && (currentDef.is_disposable_batch || currentDef.batch_id));
+        var stateIsBatch = Boolean(existingState && (existingState.isDisposableBatch || existingState.batchId));
+        var folderChanged = Boolean(
+          existingState &&
+          !currentIsBatch &&
+          !stateIsBatch &&
+          (currentFolderId || currentFolderName) &&
+          (currentFolderId !== (existingState.folderId || '') || currentFolderName !== (existingState.folderName || ''))
+        );
+        // If already saved/in-pipeline in this folder, tapping badge expands card so user sees banner & Open Pipeline
+        if (existingState && !folderChanged) {
+          container.classList.remove('cp-minimized');
+          isMinimized = false;
+          requestAnimationFrame(function () { clampWidgetToViewport(container); });
+          return;
+        }
+        handleSave();
+      });
+    }
+
+    copyLinkBtn.addEventListener('click', function () {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(location.href);
+        copyLinkBtn.textContent = 'Copied! ✓';
+        setTimeout(function () { copyLinkBtn.textContent = 'Copy Link'; }, 2500);
+      }
+    });
+
+    updateWidgetPosition();
+
+    // Sync Default Folder & Revalidate Folders in background
+    (async function fetchFolders() {
+      try {
+        if (EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage) {
+          EXTENSION_API.runtime.sendMessage({ type: 'GET_DEFAULT_FOLDER' }, function (resp) {
+            if (!EXTENSION_API.runtime.lastError && resp && resp.ok) {
+              if (resp.defaultFolder && !activeDefaultFolder) {
+                activeDefaultFolder = resp.defaultFolder;
+                try { localStorage.setItem('cp_default_folder', JSON.stringify(activeDefaultFolder)); } catch (_) {}
+                updateFolderPillDisplay();
+                renderFolderList();
+              }
+              if (Array.isArray(resp.folders) && resp.folders.length > 0 && cachedFolders.length === 0) {
+                setCachedFolders(resp.folders);
+                renderFolderList();
+              }
+            }
+          });
+        }
+        var foldersList = await apiListFolders();
+        if (Array.isArray(foldersList) && foldersList.length > 0) {
+          setCachedFolders(foldersList);
+          var def = getDefaultFolderSync();
+          if (def && (def.id || def.name != null)) {
+            var matched = foldersList.find(function (f) {
+              return f && ((def.id && String(f.id) === String(def.id)) || (def.name != null && String(f.name) === String(def.name)));
+            });
+            if (matched && matched.id) {
+              setDefaultFolder({
+                id: matched.id,
+                name: matched.name,
+                description: matched.description || def.description,
+                batch_id: matched.batch_id || null,
+                batch_uuid: matched.batch_uuid || null,
+                is_disposable_batch: Boolean(matched.is_disposable_batch || matched.batch_id),
+                icon: matched.icon || (matched.is_disposable_batch ? '📦' : '📁')
+              });
+            }
+          }
+          updateFolderPillDisplay();
+          renderFolderList();
+        }
+      } catch (e) {}
+    })();
+
+    // Restore saved/duplicate state immediately, or quietly check pipeline
+    if (extracted) {
+      applySavedStateToWidget(container, extracted);
+      if (!getSavedState(extracted) && extracted.source_listing_id) {
+        checkExistingInPipeline(extracted, listingGeneration);
+      }
+    }
+  }
+
+  async function checkExistingInPipeline(extracted, expectedGen) {
+    if (!extracted || !extracted.source_listing_id) return;
+    try {
+      var defFolder = getDefaultFolderSync();
+      var reqBatchId = defFolder && defFolder.batch_id ? String(defFolder.batch_id) : '';
+      var reqFolderId = defFolder && defFolder.id ? String(defFolder.id) : '';
+      var reqFolderName = defFolder && defFolder.name != null ? String(defFolder.name) : '';
+
+      var res = null;
+      if (EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage) {
+        res = await new Promise(function (resolve) {
+          var t = setTimeout(function () { resolve(null); }, 4500);
+          try {
+            EXTENSION_API.runtime.sendMessage({
+              type: 'CHECK_LISTING',
+              source: extracted.source || 'zillow',
+              source_listing_id: extracted.source_listing_id,
+              address: extracted.address || undefined,
+              city: extracted.city || undefined,
+              state: extracted.state || undefined,
+              batch_id: reqBatchId || undefined,
+              folder_id: reqFolderId || undefined,
+              folder_name: reqFolderName || undefined
+            }, function (resp) {
+              clearTimeout(t);
+              resolve(EXTENSION_API.runtime.lastError ? null : resp);
+            });
+          } catch (_) {
+            clearTimeout(t);
+            resolve(null);
+          }
+        });
+      }
+      if (!res) {
+        var checkUrl = EDGE_URL
+          + '?secret=' + encodeURIComponent(SECRET)
+          + '&action=check_listing'
+          + '&source=' + encodeURIComponent(extracted.source || 'zillow')
+          + '&source_listing_id=' + encodeURIComponent(extracted.source_listing_id)
+          + (extracted.address ? '&address=' + encodeURIComponent(extracted.address) : '')
+          + (extracted.city ? '&city=' + encodeURIComponent(extracted.city) : '')
+          + (extracted.state ? '&state=' + encodeURIComponent(extracted.state) : '')
+          + (reqBatchId ? '&batch_id=' + encodeURIComponent(reqBatchId) : '')
+          + (reqFolderId ? '&folder_id=' + encodeURIComponent(reqFolderId) : '')
+          + (reqFolderName ? '&folder_name=' + encodeURIComponent(reqFolderName) : '');
+        var fRes = await fetch(checkUrl, {
+          method: 'GET',
+          headers: { 'x-import-secret': SECRET },
+          signal: AbortSignal.timeout ? AbortSignal.timeout(4500) : undefined
+        });
+        if (fRes.ok) res = await fRes.json().catch(function () { return null; });
+      }
+      if (!res || !res.ok || (!res.exists && !res.active_on_site)) return;
+      if (expectedGen !== listingGeneration || isSaving || getSavedState(extracted)) return;
+      var folderName = res.folder && res.folder.name ? String(res.folder.name) : '';
+      var folderId = res.folder && res.folder.folder_id ? String(res.folder.folder_id) : '';
+      var resBatchId = res.batch_id || (res.folder && res.folder.batch_id) || '';
+      var isBatchFolder = Boolean(resBatchId || (res.folder && res.folder.is_disposable_batch));
+      var serial = res.folder && res.folder.serial ? ' (#' + res.folder.serial + ')' : '';
+      var statusLabel;
+      if (!res.exists && res.active_on_site) {
+        statusLabel = 'Already Live on Site (Active)';
+      } else if (res.active_on_site) {
+        statusLabel = isBatchFolder
+          ? ('In Batch #' + (resBatchId || folderName) + serial + ' • Live on Site')
+          : folderName
+            ? ('In Folder: ' + folderName + serial + ' • Live on Site')
+            : 'Already Live on Site (Active)';
+      } else if (res.status === 'archived') {
+        statusLabel = 'Already in Pipeline (Archived)';
+      } else if (isBatchFolder) {
+        statusLabel = 'In Batch #' + (resBatchId || folderName) + serial;
+      } else if (folderName) {
+        statusLabel = 'In Folder: ' + folderName + serial;
+      } else {
+        statusLabel = 'Already in Choice Pipeline';
+      }
+      setSavedState(extracted, {
+        status: 'duplicate',
+        text: statusLabel,
+        folderId: folderId,
+        folderName: folderName,
+        batchId: resBatchId ? String(resBatchId) : '',
+        isDisposableBatch: isBatchFolder,
+        duplicateStatus: res.status || (res.active_on_site ? 'active' : 'scraped')
+      });
+      if (activeWidget) applySavedStateToWidget(activeWidget, extracted);
+    } catch (_) {}
+  }
+
+  // ── Save Execution Flow ─────────────────────────────────────
+  async function handleSave() {
+    if (isSaving) return;
+    if (errorResetTimer) {
+      clearTimeout(errorResetTimer);
+      errorResetTimer = null;
+    }
+    var saveBtn = document.querySelector('#cp-btn-save');
+    var successBox = document.querySelector('#cp-success-box');
+    var successText = document.querySelector('#cp-success-text');
+
+    if (!saveBtn) return;
+    isSaving = true;
+    var miniSaveBtn = activeWidget && activeWidget.querySelector('#cp-mini-save-btn');
+    if (miniSaveBtn) {
+      miniSaveBtn.disabled = true;
+      miniSaveBtn.classList.remove('cp-mini-saved', 'cp-mini-duplicate', 'cp-mini-queued');
+      miniSaveBtn.textContent = 'Saving…';
+    }
+
+    var openPopover = document.querySelector('#cp-folder-popover.cp-open');
+    if (openPopover) {
+      openPopover.classList.remove('cp-open');
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="cp-spinner"></span> <span>Saving to pipeline…</span>';
+    saveBtn.style.background = '#6366f1';
+
+    try {
+      var saveUrl = location.href;
+      var extracted = extractCurrentListing();
+      for (var extractAttempt = 0;
+        (!extracted || !extracted.source_listing_id || !extracted.address) && extractAttempt < 5;
+        extractAttempt++) {
+        await new Promise(function (resolve) { setTimeout(resolve, 350); });
+        if (location.href !== saveUrl) {
+          setError('Listing changed; open the new listing and save again');
+          isSaving = false;
+          return;
+        }
+        extracted = extractCurrentListing();
+      }
+      if (!extracted || !extracted.source_listing_id || !extracted.address) {
+        setError('Listing details are still loading; try again');
+        isSaving = false;
+        return;
+      }
+
+      // The page may hydrate facts after the widget appears. Accept fresher
+      // data for the same listing, but never submit data after SPA navigation.
+      if (currentExtractedData && extractionSignature(currentExtractedData) !== extractionSignature(extracted)) {
+        if (!isSameListing(currentExtractedData, extracted)) {
+          currentExtractedData = extracted;
+          injectWidget(extracted);
+          setError('Listing changed; refreshed');
+          isSaving = false;
+          return;
+        }
+        currentExtractedData = extracted;
+        renderedListingSignature = extractionSignature(extracted);
+        updateWidgetSnapshot(extracted);
+      }
+
+      var photoUrls = extractPhotoUrls(extracted.original_image_urls);
+      if (!photoUrls.length && Array.isArray(extracted.photo_urls)) {
+        photoUrls = extracted.photo_urls;
+      }
+      photoUrls = dedupePhotoUrls(photoUrls);
+
+      var defaultFolder = getDefaultFolderSync();
+      var selectedFolderId = defaultFolder && defaultFolder.id ? String(defaultFolder.id) : null;
+      var selectedFolderName = defaultFolder && defaultFolder.name != null && String(defaultFolder.name) !== ''
+        ? String(defaultFolder.name)
+        : null;
+      var selectedBatchId = defaultFolder && defaultFolder.batch_id ? String(defaultFolder.batch_id) : null;
+
+      if (selectedFolderId || selectedFolderName) {
+        setDefaultFolder({
+          id: selectedFolderId,
+          name: selectedFolderName || '',
+          description: (defaultFolder && defaultFolder.description) || '',
+          batch_id: selectedBatchId,
+          batch_uuid: (defaultFolder && defaultFolder.batch_uuid) || null,
+          is_disposable_batch: Boolean(defaultFolder && (defaultFolder.is_disposable_batch || selectedBatchId)),
+          icon: (defaultFolder && defaultFolder.icon) || (selectedBatchId ? '📦' : '📁')
+        });
+      }
+
+      var rentVal = extracted.monthly_rent != null ? extracted.monthly_rent : extracted.rent;
+      var bathsVal = extracted.bathrooms != null ? extracted.bathrooms : extracted.baths;
+      var totalBathsVal = extracted.total_bathrooms != null ? extracted.total_bathrooms : bathsVal;
+      var metaByUrl = {};
+      if (Array.isArray(extracted.photo_metadata)) {
+        extracted.photo_metadata.forEach(function (pm) {
+          if (pm && pm.url) metaByUrl[pm.url] = pm;
+        });
+      }
+      var richPhotos = photoUrls.map(function (u) {
+        var pm = metaByUrl[u];
+        if (!pm) return { url: u };
+        var entry = { url: u };
+        if (pm.caption) entry.caption = pm.caption;
+        if (pm.room_label) entry.room_label = pm.room_label;
+        if (pm.source_url) entry.source_url = pm.source_url;
+        if (pm.media_type) entry.media_type = pm.media_type;
+        return entry;
+      });
+
+      var payload = {
+        source: extracted.source || 'zillow',
+        source_listing_id: extracted.source_listing_id,
+        source_url: extracted.source_url || extracted.url || location.href,
+        title: extracted.title,
+        address: extracted.address,
+        unit_number: extracted.unit_number || null,
+        city: extracted.city,
+        state: extracted.state,
+        zip: extracted.zip,
+        lat: extracted.lat,
+        lng: extracted.lng,
+        monthly_rent: rentVal,
+        bedrooms: extracted.bedrooms != null ? extracted.bedrooms : extracted.beds,
+        bathrooms: bathsVal,
+        half_bathrooms: extracted.half_bathrooms,
+        total_bathrooms: totalBathsVal,
+        square_footage: extracted.square_footage != null ? extracted.square_footage : extracted.sqft,
+        lot_size_sqft: extracted.lot_size_sqft != null ? extracted.lot_size_sqft : extracted.lot_sqft,
+        year_built: extracted.year_built,
+        floors: extracted.floors,
+        garage_spaces: extracted.garage_spaces,
+        total_units: extracted.total_units,
+        property_type: extracted.property_type || 'APARTMENT',
+        property_subtype: extracted.property_subtype || null,
+        description: extracted.description,
+        original_description: extracted.original_description || extracted.description,
+        showing_instructions: extracted.showing_instructions || null,
+        available_date: extracted.available_date || null,
+        minimum_lease_months: extracted.minimum_lease_months != null ? extracted.minimum_lease_months : null,
+        lease_terms: typeof extracted.lease_terms === 'string' ? extracted.lease_terms : (extracted.lease_terms ? JSON.stringify(extracted.lease_terms) : null),
+        pets_allowed: extracted.pets_allowed != null ? extracted.pets_allowed : null,
+        pet_types_allowed: typeof extracted.pet_types_allowed === 'string' ? extracted.pet_types_allowed : (extracted.pet_types_allowed ? JSON.stringify(extracted.pet_types_allowed) : null),
+        pet_weight_limit: extracted.pet_weight_limit != null ? extracted.pet_weight_limit : null,
+        pet_details: extracted.pet_details || null,
+        smoking_allowed: extracted.smoking_allowed != null ? extracted.smoking_allowed : null,
+        application_fee: 50,
+        security_deposit: extracted.security_deposit != null ? extracted.security_deposit : rentVal,
+        pet_deposit: extracted.pet_deposit != null ? extracted.pet_deposit : null,
+        admin_fee: extracted.admin_fee != null ? extracted.admin_fee : null,
+        last_months_rent: extracted.last_months_rent,
+        move_in_special: extracted.move_in_special,
+        parking_fee: extracted.parking_fee,
+        hoa_fee: extracted.hoa_fee,
+        hoa_fee_frequency: extracted.hoa_fee_frequency || null,
+        tax_annual_amount: extracted.tax_annual_amount != null ? extracted.tax_annual_amount : null,
+        amenities: typeof extracted.amenities === 'string' ? extracted.amenities : JSON.stringify(extracted.amenities || []),
+        appliances: typeof extracted.appliances === 'string' ? extracted.appliances : JSON.stringify(extracted.appliances || []),
+        flooring: typeof extracted.flooring === 'string' ? extracted.flooring : (extracted.flooring ? JSON.stringify(extracted.flooring) : null),
+        utilities_included: typeof extracted.utilities_included === 'string' ? extracted.utilities_included : JSON.stringify(extracted.utilities_included || []),
+        parking: extracted.parking,
+        ev_charging: extracted.ev_charging || null,
+        heating_type: extracted.heating_type,
+        cooling_type: extracted.cooling_type,
+        laundry_type: extracted.laundry_type,
+        has_basement: extracted.has_basement,
+        has_central_air: extracted.has_central_air,
+        neighborhood: extracted.neighborhood,
+        county: extracted.county,
+        location_context: extracted.location_context,
+        virtual_tour_url: extracted.virtual_tour_url,
+        agent_name: extracted.agent_name,
+        broker_name: extracted.broker_name,
+        listed_at: extracted.listed_at,
+        source_last_updated_at: extracted.source_last_updated_at || null,
+        source_status: extracted.source_status || null,
+        folder_id: selectedFolderId,
+        folder_name: selectedFolderName,
+        batch_id: selectedBatchId,
+        original_image_urls: JSON.stringify(richPhotos),
+        structural_details: extracted.structural_details || null,
+        utility_details: extracted.utility_details || null,
+        financial_details: extracted.financial_details || null,
+        location_details: extracted.location_details || null,
+        floor_plans: extracted.floor_plans || null,
+        videos: extracted.videos || null,
+        source_raw_payload: extracted.source_raw_payload || null,
+        field_provenance: {
+          source: extracted.source || 'zillow',
+          extractor_version: 'v' + VERSION,
+          captured_at: new Date().toISOString(),
+          save_nonce: generateSaveNonce(),
+          normalized_defaults: ['application_fee']
+        },
+        _import: 'browser-extension-v' + VERSION,
+      };
+
+      if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES && payload.source_raw_payload) {
+        payload.source_raw_payload = null;
+      }
+      if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
+        isSaving = false;
+        setError('Listing payload is too large');
+        return;
+      }
+
+      // ── Step 1: Save property record first ───────────────────
+      var resp = await submitPayload(payload);
+
+      if (resp && resp.queued) {
+        setSavedState(extracted, {
+          status: 'queued',
+          text: 'Queued for pipeline sync',
+          folderId: selectedFolderId || '',
+          folderName: selectedFolderName || '',
+          batchId: selectedBatchId || '',
+          isDisposableBatch: Boolean(selectedBatchId)
+        });
+        applySavedStateToWidget(activeWidget, extracted);
+        isSaving = false;
+      } else if (resp && resp.ok) {
+        try {
+          if (EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage) {
+            EXTENSION_API.runtime.sendMessage({ type: 'SAVED' });
+          }
+        } catch (_) {}
+
+        var savedFolderName = selectedFolderName || '';
+        var savedFolderId = selectedFolderId || '';
+        var savedBatchId = resp.batch_id || (resp.folder && resp.folder.batch_id) || selectedBatchId || '';
+        var savedIsBatch = Boolean(savedBatchId || (resp.folder && resp.folder.is_disposable_batch));
+        var savedLabel = 'Saved to Choice Pipeline!';
+        if (resp.folder && resp.folder.name != null) {
+          savedFolderName = String(resp.folder.name);
+          if (resp.folder.folder_id) {
+            savedFolderId = String(resp.folder.folder_id);
+            setDefaultFolder({
+              id: resp.folder.folder_id,
+              name: savedFolderName,
+              description: (defaultFolder && defaultFolder.description) || '',
+              batch_id: savedBatchId || null,
+              batch_uuid: resp.batch_uuid || (defaultFolder && defaultFolder.batch_uuid) || null,
+              is_disposable_batch: savedIsBatch,
+              icon: savedIsBatch ? '📦' : '📁'
+            });
+          }
+          var displayFolder = savedIsBatch ? ('Batch #' + (savedBatchId || savedFolderName)) : savedFolderName;
+          savedLabel = 'Saved to ' + displayFolder + (resp.folder.serial ? ' (#' + resp.folder.serial + ')' : '');
+        } else if (savedBatchId) {
+          savedLabel = 'Saved to Batch #' + savedBatchId;
+        }
+        if (resp.photos_queued) {
+          savedLabel += ' • Photos processing';
+        }
+
+        setSavedState(extracted, {
+          status: 'saved',
+          text: savedLabel,
+          folderId: savedFolderId,
+          folderName: savedFolderName,
+          batchId: savedBatchId ? String(savedBatchId) : '',
+          isDisposableBatch: savedIsBatch
+        });
+        applySavedStateToWidget(activeWidget, extracted);
+        isSaving = false;
+      } else if (resp && resp.duplicate) {
+        isSaving = false;
+        var dupFolderName = '';
+        var dupFolderId = '';
+        var dupBatchId = resp.batch_id || (resp.folder && resp.folder.batch_id) || '';
+        var dupIsBatch = Boolean(dupBatchId || (resp.folder && resp.folder.is_disposable_batch));
+        var dupLabel = resp.message || 'Already in Pipeline';
+
+        if (resp.folder && (resp.folder.folder || resp.folder.name)) {
+          dupFolderName = String(resp.folder.folder || resp.folder.name);
+          dupFolderId = resp.folder.folder_id ? String(resp.folder.folder_id) : '';
+          if (resp.folder_updated && dupFolderId) {
+            setDefaultFolder({
+              id: dupFolderId,
+              name: dupFolderName,
+              description: (defaultFolder && defaultFolder.description) || '',
+              batch_id: dupBatchId || null,
+              batch_uuid: resp.batch_uuid || null,
+              is_disposable_batch: dupIsBatch,
+              icon: dupIsBatch ? '📦' : '📁'
+            });
+          }
+          var dupDisplay = dupIsBatch ? ('Batch #' + (dupBatchId || dupFolderName)) : dupFolderName;
+          if (resp.folder_updated) {
+            dupLabel = 'Moved to ' + dupDisplay + (resp.folder.serial ? ' (#' + resp.folder.serial + ')' : '');
+          } else {
+            dupLabel = (resp.message || 'Already in Pipeline') + ' • ' + dupDisplay;
+          }
+        }
+
+        setSavedState(extracted, {
+          status: 'duplicate',
+          text: dupLabel,
+          folderId: dupFolderId,
+          folderName: dupFolderName,
+          batchId: dupBatchId ? String(dupBatchId) : '',
+          isDisposableBatch: dupIsBatch,
+          duplicateStatus: resp.status || 'scraped'
+        });
+        applySavedStateToWidget(activeWidget, extracted);
+      } else {
+        isSaving = false;
+        setError(resp && resp.error ? resp.error.slice(0, 45) : 'Save failed');
+      }
+    } catch (e) {
+      console.error('[CP] handleSave error:', e);
+      isSaving = false;
+      setError('Network connection error');
+    }
+  }
+
+  async function submitPayload(payload) {
+    var canMessageBackground = EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.sendMessage;
+    var bridgeError = null;
+
+    if (canMessageBackground) {
+      for (var attempt = 0; attempt < 2; attempt++) {
+        try {
+          var response = await new Promise(function (resolve, reject) {
+            var responseTimer = setTimeout(function () {
+              resolve({ ok: false, error: 'Background save timed out', bridgeFailure: true });
+            }, 18000);
+            try {
+              EXTENSION_API.runtime.sendMessage({
+                type: 'UPLOAD_PAYLOAD',
+                payload: payload,
+                settings: { offlineQueue: true }
+              }, function (backgroundResponse) {
+                clearTimeout(responseTimer);
+                var runtimeError = EXTENSION_API.runtime.lastError;
+                resolve(runtimeError
+                  ? { ok: false, error: runtimeError.message, bridgeFailure: true }
+                  : backgroundResponse);
+              });
+            } catch (error) {
+              clearTimeout(responseTimer);
+              reject(error);
+            }
+          });
+          if (response && (response.ok || response.duplicate || response.queued || response.prohibited)) return response;
+          if (!response || response.bridgeFailure) {
+            bridgeError = response && response.error
+              ? response.error
+              : 'Background save returned no response';
+            break;
+          }
+          if (response && response.error && !response.bridgeFailure
+            && !/network|fetch|connection|receiving end|message port/i.test(response.error)) {
+            return response;
+          }
+          bridgeError = response.error || 'Background save failed';
+          if (attempt < 1) await new Promise(function (resolve) { setTimeout(resolve, 700); });
+        } catch (err) {
+          bridgeError = err && err.message ? err.message : 'Background save failed';
+          break;
+        }
+      }
+    }
+
+    try {
+      var saveRes = await fetch(EDGE_URL + '?secret=' + encodeURIComponent(SECRET), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-import-secret': SECRET },
+        body: JSON.stringify(payload),
+      });
+      var body = await saveRes.json().catch(function () { return null; });
+      if (!saveRes.ok) {
+        return {
+          ok: false,
+          error: body && body.error ? body.error : 'Server rejected import (HTTP ' + saveRes.status + ')'
+        };
+      }
+      if (!body || typeof body !== 'object') {
+        return { ok: false, error: 'Import service returned an invalid response' };
+      }
+      return body;
+    } catch (err) {
+      var directError = err && err.message ? err.message : 'Network connection error';
+      return {
+        ok: false,
+        error: bridgeError ? bridgeError + '; direct retry failed: ' + directError : directError
+      };
+    }
+  }
+
+  function setError(msg) {
+    var saveBtn = document.querySelector('#cp-btn-save');
+    if (!saveBtn) return;
+    if (errorResetTimer) {
+      clearTimeout(errorResetTimer);
+      errorResetTimer = null;
+    }
+    var miniSaveBtn = document.querySelector('#cp-mini-save-btn');
+    if (IS_MOBILE && activeWidget && activeWidget.classList.contains('cp-minimized')) {
+      activeWidget.classList.remove('cp-minimized');
+      isMinimized = false;
+    }
+    saveBtn.innerHTML = '<span>Failed: ' + escapeHtml(msg) + '</span>';
+    saveBtn.style.background = '#dc2626';
+    saveBtn.disabled = false;
+    if (miniSaveBtn) {
+      miniSaveBtn.disabled = false;
+      miniSaveBtn.classList.remove('cp-mini-saved', 'cp-mini-duplicate', 'cp-mini-queued');
+      miniSaveBtn.textContent = 'Retry';
+      miniSaveBtn.title = msg;
+    }
+    errorResetTimer = setTimeout(function () {
+      errorResetTimer = null;
+      var btn = document.querySelector('#cp-btn-save');
+      var miniBtn = document.querySelector('#cp-mini-save-btn');
+      if (getSavedState(currentExtractedData)) {
+        if (activeWidget) applySavedStateToWidget(activeWidget, currentExtractedData);
+        return;
+      }
+      if (btn) {
+        btn.innerHTML = buildSaveBtnDefaultHtml();
+        btn.style.background = 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)';
+      }
+      if (miniBtn && miniBtn.textContent === 'Retry') {
+        miniBtn.textContent = 'Save';
+        miniBtn.title = '';
+      }
+    }, 4000);
+  }
+
+  function sendRuntimeMessageAsync(msg, timeoutMs) {
+    return new Promise(function (resolve) {
+      if (!EXTENSION_API || !EXTENSION_API.runtime || !EXTENSION_API.runtime.sendMessage) {
+        resolve(null);
+        return;
+      }
+      var done = false;
+      var timer = setTimeout(function () {
+        if (!done) { done = true; resolve(null); }
+      }, timeoutMs || 8000);
+      try {
+        EXTENSION_API.runtime.sendMessage(msg, function (resp) {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          resolve(EXTENSION_API.runtime.lastError ? null : resp);
+        });
+      } catch (_) {
+        if (!done) { done = true; clearTimeout(timer); resolve(null); }
+      }
+    });
+  }
+
+  function startSearchCardEngine() {
+    if (!window.CP_CardEngine || !isSearchPage(location.href) || isDetailPage(location.href)) return;
+    injectStyles();
+    removeWidget();
+    window.CP_CardEngine.start({
+      EDGE_URL: EDGE_URL,
+      SECRET: SECRET,
+      VERSION: VERSION,
+      IS_MOBILE: IS_MOBILE,
+      getDefaultFolder: getDefaultFolderSync,
+      setDefaultFolder: setDefaultFolder,
+      getCachedFolders: getCachedFolders,
+      setCachedFolders: setCachedFolders,
+      apiListFolders: apiListFolders,
+      apiCreateFolder: apiCreateFolder,
+      submitPayload: submitPayload,
+      sendRuntimeMessage: sendRuntimeMessageAsync,
+      escapeHtml: escapeHtml
+    });
+  }
+
+  function syncPageMode() {
+    if (isDetailPage(location.href)) {
+      if (window.CP_CardEngine) window.CP_CardEngine.stop();
+      injectWidget();
+    } else if (isSearchPage(location.href)) {
+      removeWidget();
+      startSearchCardEngine();
+    } else {
+      if (window.CP_CardEngine) window.CP_CardEngine.stop();
+      removeWidget();
+    }
+  }
+
+  function setupRuntimeListeners() {
+    try {
+      if (EXTENSION_API && EXTENSION_API.runtime && EXTENSION_API.runtime.onMessage) {
+        EXTENSION_API.runtime.onMessage.addListener(function (msg, _sender, sendResponse) {
+          if (!msg || !msg.type) return;
+          if (msg.type === 'EXTRACT_PAGE_LISTING') {
+            var extracted = extractCurrentListing();
+            sendResponse({ ok: Boolean(extracted && extracted.address), extracted: extracted || null });
+            return true;
+          }
+          if (msg.type === 'CP_SETTINGS_UPDATED' && window.CP_CardEngine) {
+            window.CP_CardEngine.syncSettings(msg.settings);
+          }
+        });
+      }
+    } catch (_) {}
+  }
+
+  // ── Navigation & Lifecycle Watcher ──────────────────────────
+  function hookHistoryMethods() {
+    var rawPushState = history.pushState;
+    var rawReplaceState = history.replaceState;
+
+    history.pushState = function () {
+      var result = rawPushState.apply(this, arguments);
+      onPageChange();
+      return result;
+    };
+
+    history.replaceState = function () {
+      var result = rawReplaceState.apply(this, arguments);
+      onPageChange();
+      return result;
+    };
+  }
+
+  function onPageChange() {
+    if (location.href !== lastUrl) {
+      var prevPath = canonicalListingPath(lastUrl);
+      var nextPath = canonicalListingPath(location.href);
+      lastUrl = location.href;
+      if (activeWidget && isDetailPage(location.href)) {
+        if (prevPath === nextPath) {
+          scheduleListingRefresh(120);
+          scheduleWidgetPositionUpdate();
+          return;
+        }
+        var nextCandidate = extractCurrentListing();
+        if (nextCandidate && isSameListing(currentExtractedData, nextCandidate)) {
+          scheduleListingRefresh(120);
+          scheduleWidgetPositionUpdate();
+          return;
+        }
+      }
+      listingGeneration += 1;
+      currentExtractedData = null;
+      removeWidget();
+      if (isSearchPage(location.href) && !isDetailPage(location.href)) {
+        startSearchCardEngine();
+      } else if (window.CP_CardEngine) {
+        window.CP_CardEngine.stop();
+      }
+      scheduleHydrationRefreshes();
+    } else {
+      scheduleListingRefresh();
+      scheduleWidgetPositionUpdate();
+    }
+  }
+
+  function checkUrlChange() {
+    if (location.href !== lastUrl) onPageChange();
+  }
+
+  function setupWatchers() {
+    hookHistoryMethods();
+    window.addEventListener('popstate', onPageChange);
+    window.addEventListener('pageshow', checkUrlChange);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) checkUrlChange();
+    });
+    window.addEventListener('resize', scheduleWidgetPositionUpdate);
+    window.addEventListener('scroll', scheduleWidgetPositionUpdate, { passive: true });
+    setInterval(checkUrlChange, 750);
+
+    var observer = new MutationObserver(function (records) {
+      var pageChanged = records.some(function (record) {
+        if (record.target.nodeType === 1 && record.target.closest && (
+          record.target.closest('#cp-widget-container') ||
+          record.target.closest('#cp-search-hud') ||
+          record.target.closest('.cp-card-pill-wrap')
+        )) {
+          return false;
+        }
+        var nodes = Array.from(record.addedNodes || []).concat(Array.from(record.removedNodes || []));
+        return nodes.some(function (node) {
+          if (node.nodeType !== 1 || node.matches('img, picture, source, svg, path')) return false;
+          return node.id !== 'cp-widget-container'
+            && node.id !== 'cp-search-hud'
+            && !(node.closest && (node.closest('#cp-widget-container') || node.closest('#cp-search-hud') || node.closest('.cp-card-pill-wrap')))
+            && !(node.querySelector && node.querySelector('#cp-widget-container'));
+        });
+      });
+      if (!pageChanged) return;
+      scheduleListingRefresh();
+    });
+
+    if (document.body) {
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+  }
+
+  // ── Startup ─────────────────────────────────────────────────
+  setupRuntimeListeners();
+  syncPageMode();
+  setupWatchers();
+  scheduleHydrationRefreshes();
+  console.log('[Choice Properties] Live extension UI v' + VERSION + ' active');
+})();

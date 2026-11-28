@@ -1,0 +1,281 @@
+Overall Implementation Result
+Verdict: Not ready for use
+
+While the architectural design of the 6-step application workflow, simulated card-first payment gateway, dual household completion methods (Method A and Method B), Option A/Option B payment arrangements, and approval-guard triggers is well-structured in places, live end-to-end verification uncovered multiple Critical and High live integration defects that block production use:
+
+Database RLS Infinite Recursion (42P17): Cross-referencing RLS policies between applications and application_applicants crash direct client SELECT queries with HTTP 500 (infinite recursion detected in policy for relation "application_applicants"), rendering the Applicant Dashboard (/tenant/portal.html), Admin Applications (/admin/applications.html), Admin Leases (/admin/leases.html), and Admin Move-Ins (/admin/move-ins.html) unable to load applications.
+
+Card Payment Receipt & Confirmation Failure: Server-side receipt generation and confirmation emails (confirm-card-payment) silently fail (401 Unauthorized due to rotated service-role secret mismatch, plus a 23503 FK violation on payment_receipts.created_by), and the payment success UI displays **"Application Fee Waived (
+50.00` card payment.
+
+Method B / Guarantor / Co-Signer Blockers: A database CHECK constraint rejects 'guarantor' and 'co_signer' screening consent events (HTTP 400), and request-upload-url rejects unauthenticated Method B token uploads (HTTP 401, verify_jwt: true) as well as uploads under additional_info_required (HTTP 403).
+
+B. Detailed Test Results
+Feature / Test	Result	Findings
+1. Application Submission Workflow	Passed with minor issues	6-step validation, $50 fee preview, submission via receive-application, unique CP-* reference creation, and automatic redirect to /apply/pay.html?app_id=... all worked end-to-end. Leaving and returning to /apply/pay.html preserved session state without restarting. Footer on /apply/index.html displays a phone number next to the email icon (707-706-3137).
+2. Card Payment Flow & Validation (Simulated)	Partial / Misleading UI	Payment gateway uses an internal simulated card_gateway (client-tokenized tok_card_* / tok_decline_* descriptors; no real external merchant processor is configured). Card form renders properly and charges $50.00 in DB/ledger, but once amount_due_now drops to 0, /apply/js/pay.js renders "Application Fee Waived ($0.00)" and credit-waiver copy instead of "Payment Successful".
+3. Payment Failure, Retry & Contact Support	Passed	Declined card (4000 0000 0000 0002) returned 402, set Payment Failed, and showed the expected error message. "Contact Support" transitioned state to Payment Assistance Required. Retrying with 4242 4242 4242 4242 succeeded on attempt #2 while keeping attempt #1 and #2 linked to the same application, and kept status = 'pending' separate from payment_status = 'paid'.
+4. Household Method A (Primary Completes)	Passed	Primary applicant completed Method A Co-Applicant fields cleanly (info_completed: true). Co-applicant opened /co-applicant-consent.html, saw read-only summary + $50.00 Option B banner, checked consent boxes, confirmed via confirm-co-applicant-screening, and received the card payment link.
+5. Household Method B (Private Invites, Guarantors/Co-Signers, Uploads)	Failed	receive-application minted tokens and sent invite emails, and /co-applicant-consent.html correctly gated Guarantor-only vs Occupant-only fields. However: (a) uploading supporting documents returned HTTP 401 (verify_jwt: true on request-upload-url), and (b) submitting Guarantor screening consent returned HTTP 400 because application_screening_consent_events_applicant_type_check only permits 'primary' and 'co_applicant' (leaving info_completed: true saved while screening_consent stayed false).
+6. Household Fee Calculation ($50/Adult & Option A)	Passed	$50.00 per screened adult (primary, co-applicant, guarantor, co-signer) calculated accurately in Step 1 ($150 for 3 adults under Option A) and persisted in applications.fee_breakdown and application_applicants.screening_fee_amount.
+7. Option B Individual Member Payments & Rollup	Passed with issues	Option B tracked individual $50.00 shares ($50.00 / $150.00 (1/3 Paid) -> $100.00 / $150.00 (2/3 Paid) after Co-Applicant paid) without falsely marking the whole household paid until all members pay. However, paid shares still showed "Application Fee Waived ($0.00)" on /apply/pay.html, and portal.js routes Primary's payment CTA to Primary's own already-paid applicant_id.
+8. Applicant Dashboard (/tenant/portal.html)	Failed	Failed to load for signed-in applicants. tenant_portal_state RPC returned HTTP 400 (record "v_app" has no field "lease_executed_at"), and the fallback applications query returned HTTP 500 (infinite recursion detected in policy for relation "application_applicants"). Additionally, tenant_portal_state filters payment_receipts.status = 'active' instead of 'issued', and Option B portal CTA logic targets currentUserApp.id even when already paid.
+9. Admin Applications Dashboard & Payment Ledger	Failed	/api/payments/ledger returned HTTP 200 with transaction records, and /admin/applications.html rendered the filter bar and ledger shell, but the applications list failed to load with HTTP 500 (infinite recursion detected in policy for relation "application_applicants"). By code/RPC audit, admin_update_applicant_role also has a parameter mismatch (p_new_type + p_actor vs live DB signature (p_application_id, p_applicant_id, p_new_applicant_type)).
+10. Statuses, Separation & Approval Guard Trigger	Passed (DB layer)	Payment status (paid / unpaid / Awaiting Payment / Payment Failed / Payment Assistance Required) remained strictly separated from review status (pending, additional_info_required, approved). PostgreSQL trigger prevent_approval_without_co_applicant_consent properly raised P0001 blocking status = 'approved' while any member had info_completed = false or screening_consent != true. However, tenant uploads under additional_info_required failed (HTTP 403).
+11. Receipts & PDF Download (/receipt.html & confirm-card-payment)	Failed	Card payments produced zero payment_receipts rows and zero payment_confirmed emails because /api/payments/* sends the legacy service_role JWT while confirm-card-payment expects the rotated SUPABASE_SERVICE_ROLE_KEY (401 Unauthorized). Even with a valid key, confirm-card-payment passes app.id as created_by causing an FK error (23503) on auth.users(id). Clicking "View Receipt" unauthenticated from /apply/pay.html fails with 401 (verify_jwt: true on download-payment-receipt).
+12. Navigation, UX & Mobile Responsiveness	Passed	Desktop (1440x900) and mobile (390x844) checks across /, /listings.html, /property.html, /apply/index.html, /apply/pay.html, /co-applicant-consent.html, /receipt.html, /tenant/portal.html, and /admin/dashboard.html showed 0 horizontal overflow (scrollWidth === 390 on mobile) and 0 uncaught JS pageerror exceptions.
+13. Live Deployment & Environment Consistency	Failed (Config Drift)	GitHub main (97845f1) matches Cloudflare Pages deployment 647434d7 (success). However, Cloudflare Pages production env vars omit SUPABASE_SERVICE_ROLE_KEY (falling back to a hardcoded legacy key in functions/api/payments/[[path]].js), Edge Functions request-upload-url and download-payment-receipt have verify_jwt: true contrary to caller code, and live DB RLS/RPCs/constraints are out of sync with frontend expectations.
+14. Existing Website Regression	Partial (Regression Detected)	Public home, /listings.html, /property.html, /rent/<state>/<city>/<slug>, private placement #share= isolation (2,593 private_placement rows), and /admin/dashboard.html (via dashboard_pulse RPC) loaded properly. However, /admin/leases.html and /admin/move-ins.html regressed and now fail with the same 500 RLS recursion error when querying applications. Pre-existing: get_location_notifications returns 404 PGRST202, and 14 of 286 active properties still have non-null pets_allowed/pet_deposit in DB.
+C. Issues Identified
+
+Issue 1 — RLS Infinite Recursion Breaks applications & application_applicants Queries
+Feature/Page Affected: /tenant/portal.html, /admin/applications.html, /admin/leases.html, /admin/move-ins.html (all direct PostgREST SELECT queries against public.applications and public.application_applicants).
+
+Current Behavior: Live PostgreSQL policy app_applicants_tenant_select on application_applicants queries applications, whose permissive SELECT policies (applications_tenant_select, tenant_portal_select) query application_applicants. Every client query to applications or application_applicants fails with HTTP 500 (code: "42P17", infinite recursion detected in policy for relation "application_applicants").
+
+Expected Behavior: Authenticated applicants should only read their own/household applications, and authenticated admins should read all applications without policy recursion.
+
+Steps to Reproduce:
+
+Sign in as either a tenant on /tenant/portal.html or an admin on /admin/applications.html.
+
+Observe GET /rest/v1/applications?... fail with HTTP 500 and UI display "Could not load application details" (Tenant) or "Error loading: infinite recursion detected..." (Admin).
+
+Severity: Critical
+
+Recommended Correction: Break the circular reference in PostgreSQL RLS by replacing inline EXISTS (SELECT ... FROM applications ...) / EXISTS (SELECT ... FROM application_applicants ...) subqueries inside app_applicants_tenant_select, applications_tenant_select, and tenant_portal_select with SECURITY DEFINER helper functions (e.g., user_belongs_to_application(uuid)) that bypass RLS internally when resolving membership.
+
+Issue 2 — tenant_portal_state RPC Fails (400) and Returns Incompatible Payload/Receipt Filter
+Feature/Page Affected: /tenant/portal.html (tenant_portal_state PostgreSQL RPC & /js/tenant/portal.js).
+
+Current Behavior: tenant_portal_state(p_app_id text) references v_app.lease_executed_at (a column that does not exist on public.applications), throwing SQL 42703 (HTTP 400). Furthermore, the RPC return object omits 'success': true and 'app' (expected by portal.js lines 2213–2214) and filters payment_receipts by pr.status = 'active' (an impossible value per payment_receipts_status_check, which only allows 'pending' | 'issued' | 'void').
+
+Expected Behavior: tenant_portal_state executes cleanly, returns { success: true, app, receipts, transactions, ... }, and queries issued receipts (status = 'issued').
+
+Steps to Reproduce:
+
+Sign in on /tenant/portal.html with a household email.
+
+Inspect network traffic for POST /rest/v1/rpc/tenant_portal_state -> HTTP 400.
+
+Severity: Critical
+
+Recommended Correction: Update tenant_portal_state to remove v_app.lease_executed_at, align its JSON response shape with portal.js (success, app, property, documents, receipts, transactions), and change the receipt status filter to pr.status IN ('issued', 'active') (or 'issued').
+
+Issue 3 — Card Payments Silently Fail to Issue Receipts or Confirmation Emails (401 + 23503)
+Feature/Page Affected: /lib/payment-router.js, /functions/api/payments/[[path]].js, /supabase/functions/confirm-card-payment/index.ts.
+
+Current Behavior:
+
+triggerPostPaymentConfirmation calls confirm-card-payment using the legacy service_role JWT (and Cloudflare Pages production lacks SUPABASE_SERVICE_ROLE_KEY in env_vars, falling back to a hardcoded legacy JWT in [[path]].js). Because Supabase Edge Function secret SUPABASE_SERVICE_ROLE_KEY was rotated/updated, confirm-card-payment rejects the call with 401 Unauthorized, which .catch(() => {}) swallows silently. Result: 0 receipts created and 0 payment confirmation emails sent.
+
+Even when called with the matching Edge secret key (200 OK), confirm-card-payment/index.ts line 63 sets actorId = String(app.landlord_id || app.id || '') and passes it to issuePaymentReceipt, inserting app.id into payment_receipts.created_by. Because payment_receipts_created_by_fkey references auth.users(id), PostgreSQL throws a foreign-key violation (23503), which confirm-card-payment catches and logs as a warning, returning receipt_number: null.
+
+Expected Behavior: Successful card payments reliably trigger confirm-card-payment, create an 'issued' receipt row + PDF in payment_receipts, and send the confirmation email.
+
+Steps to Reproduce:
+
+Submit an application and complete a simulated card payment (4242...) on /apply/pay.html.
+
+Query payment_receipts and email_logs for the app_id: 0 receipt rows and 0 payment_confirmed email rows exist.
+
+Severity: Critical
+
+Recommended Correction:
+
+Remove hardcoded fallback service-role keys from lib/payment-router.js and functions/api/payments/[[path]].js; configure the active SUPABASE_SERVICE_ROLE_KEY secret in Cloudflare Pages production env vars (and ensure confirm-card-payment either validates the active secret cleanly or checks an internal webhook secret). Do not swallow non-2xx responses in triggerPostPaymentConfirmation.
+
+In confirm-card-payment/index.ts, pass null (or a validated auth.users.id, e.g., app.applicant_user_id if present in auth.users, otherwise null) for created_by when app.landlord_id is absent.
+
+Issue 4 — Paid Card Applications Display "Application Fee Waived ($0.00)" on /apply/pay.html
+Feature/Page Affected: /apply/js/pay.js (lines 300–322).
+
+Current Behavior: Once a card payment succeeds (payment_status === 'paid'), /api/payments/session and /api/payments/process return amount_due_now: 0. In pay.js, session.payment_status === 'waived' || amountDueNow === 0 evaluates to true, overwriting #successHeadline with "Application Fee Waived ($0.00)" and #successSubcopy with "Your application fee is waived under an eligible credit...", even though #receiptAmountPaid shows $50.00 and Option B progress shows $100.00 / $150.00 (2/3 Paid).
+
+Expected Behavior: Only applications with payment_status === 'waived' (or credit waiver) should show the waived headline/copy; paid card transactions must show "Payment Successful" and the card confirmation copy (or Option B remaining-members copy).
+
+Steps to Reproduce:
+
+Open /apply/pay.html?app_id=... for any unpaid application ($50.00 due).
+
+Pay with test card 4242 4242 4242 4242.
+
+Observe #successPanel displays "Application Fee Waived ($0.00)".
+
+Severity: High
+
+Recommended Correction: Update /apply/js/pay.js lines 300 and 305 to check session.payment_status === 'waived' || (session.payment_status !== 'paid' && amountDueNow === 0) (not amountDueNow === 0 unconditionally).
+
+Issue 5 — Guarantors & Co-Signers Are Permanently Blocked From Confirming Screening Consent (HTTP 400)
+Feature/Page Affected: /co-applicant-consent.html, confirm-co-applicant-screening Edge Function, confirm_co_applicant_screening RPC, and public.application_screening_consent_events.
+
+Current Behavior: Live table constraint application_screening_consent_events_applicant_type_check only allows applicant_type IN ('primary', 'co_applicant'). When a Guarantor or Co-Signer submits /co-applicant-consent.html, confirm-co-applicant-screening/index.ts first saves their profile with info_completed = true (line 319), then calls confirm_co_applicant_screening RPC, which attempts INSERT INTO application_screening_consent_events with 'guarantor' / 'co_signer'. Postgres throws a check-constraint violation (23514), returning HTTP 400 ("This authorization link is invalid, expired, or already used"). Additionally, prevent_approval_without_co_applicant_consent blocks admins from approving any household with an unconsented guarantor/co-signer.
+
+Expected Behavior: Guarantors and Co-Signers can submit Method B / Method A consent seamlessly, and their consent event is recorded under 'guarantor' or 'co_signer'.
+
+Steps to Reproduce:
+
+Submit an application with a Guarantor (Method A or Method B).
+
+Open the Guarantor's /co-applicant-consent.html?token=... link, complete details, check both consent boxes, and click submit.
+
+Observe POST /functions/v1/confirm-co-applicant-screening returns 400.
+
+Severity: Critical
+
+Recommended Correction: Alter application_screening_consent_events_applicant_type_check to CHECK (applicant_type = ANY (ARRAY['primary', 'co_applicant', 'guarantor', 'co_signer'])), and run the profile update + consent confirmation atomically (or roll back info_completed if RPC fails). Also confirm getSiteUrl() vs local/preview origin handling if preview environments are used.
+
+Issue 6 — Method B Document Upload Fails With 401 (verify_jwt: true on request-upload-url)
+Feature/Page Affected: /co-applicant-consent.html (/js/tenant/co-applicant-consent.js + deployed Edge Function request-upload-url v79).
+
+Current Behavior: co-applicant-consent.js sends consent_token in JSON body with only the apikey header (no Authorization bearer token, because the invited member is unauthenticated). However, deployed request-upload-url has verify_jwt: true at the Supabase Edge Gateway, rejecting the request with HTTP 401 (Missing authorization header) and showing "Could not initialize document upload."
+
+Expected Behavior: Method B invitees with a valid, unconsumed consent_token can obtain signed upload URLs and upload ID/income documents.
+
+Steps to Reproduce:
+
+Open a Method B private link on /co-applicant-consent.html?token=....
+
+Select a valid PNG/PDF in Supporting Documents and upload.
+
+Observe 401 on POST /functions/v1/request-upload-url.
+
+Severity: Critical
+
+Recommended Correction: Deploy request-upload-url with verify_jwt: false (--no-verify-jwt), matching its internal dual-auth handler (which validates either a Supabase JWT or co_applicant_consent_tokens).
+
+Issue 7 — Applicant Document Upload Fails With 403 When Status Is additional_info_required
+Feature/Page Affected: /supabase/functions/request-upload-url/index.ts (line 177) & /tenant/portal.html.
+
+Current Behavior: When an admin clicks Request Info, application status becomes additional_info_required. When the applicant uploads the requested documents via request-upload-url, uploadableStatuses (line 177) excludes 'additional_info_required', returning HTTP 403 ("Documents cannot be uploaded for this application status.").
+
+Expected Behavior: Applications in additional_info_required must allow applicants to upload requested documents.
+
+Steps to Reproduce:
+
+Set an application's status to additional_info_required.
+
+Call POST /functions/v1/request-upload-url as the authenticated applicant -> 403 Forbidden.
+
+Severity: High
+
+Recommended Correction: Add 'additional_info_required' to uploadableStatuses in /supabase/functions/request-upload-url/index.ts.
+
+Issue 8 — Unauthenticated "View Receipt" Fails (401) & Cross-Origin Receipt Fetch Blocked on Non-Prod Origin
+Feature/Page Affected: /apply/pay.html -> /receipt.html (/js/tenant/receipt.js & download-payment-receipt v12).
+
+Current Behavior:
+
+Clicking "View Receipt" from /apply/pay.html without being logged in sends no Authorization header to download-payment-receipt (which is deployed with verify_jwt: true), returning HTTP 401; fallback anon query on applications also returns 401, showing "This receipt is not available for the signed-in account. Sign in to the resident portal."
+
+When accessing /receipt.html from a non-production origin (e.g., http://127.0.0.1:3000), download-payment-receipt returns Access-Control-Allow-Origin: https://choice-properties-site.pages.dev, triggering a browser CORS failure.
+
+Expected Behavior: Payers redirected from /apply/pay.html should either be guided seamlessly into an authenticated/tokenized receipt view (using a short-lived payment session token or signed receipt token—not an unauthenticated app_id-only PII leak) and see their receipt reliably after payment.
+
+Steps to Reproduce:
+
+Pay on /apply/pay.html while not signed into Supabase Auth.
+
+Click "View Receipt". Observe 401 and error prompt.
+
+Severity: High
+
+Recommended Correction: Issue a scoped receipt access token (or require signed-in session / payment-session token validation inside download-payment-receipt), set verify_jwt: false on download-payment-receipt if using receipt/consent token auth (never expose full PII by app_id alone without proof), and ensure _shared/cors.ts supports configured dev/preview origins when applicable.
+
+Issue 9 — Option B Primary Applicant Portal "Pay" CTA Routes to Already-Paid Share
+Feature/Page Affected: /js/tenant/portal.js (renderPaymentStatus, lines 574–579 & 704–716).
+
+Current Behavior: Under Option B (household_payment_mode = 'individual'), if Primary has paid $50 while other members remain unpaid, household app.payment_status stays 'unpaid'. portal.js still renders a primary "Pay $100.00 by Card" button whose href passes &applicant_id=${currentUserApp.id} (Primary's own already-paid applicant_id). Clicking it lands on /apply/pay.html showing Primary's already-paid confirmation screen instead of an unpaid member or member payment breakdown.
+
+Expected Behavior: Once Primary has paid their Option B share, Primary's portal view should show "Your $50.00 Share Paid" and surface unpaid household members' status / copyable invite/pay links rather than routing Primary to pay their own already-paid share.
+
+Steps to Reproduce:
+
+Create an Option B household ($150 total), pay Primary's $50 share only.
+
+Open /tenant/portal.html as Primary and click the payment CTA.
+
+Severity: High
+
+Recommended Correction: In portal.js, distinguish currentUserApp.payment_status === 'paid' from household rollup.remaining > 0, hide/update Primary's personal "Pay" CTA when currentUserApp is paid, and render a per-member Option B payment status/action list for unpaid members.
+
+Issue 10 — admin_update_applicant_role RPC Parameter Mismatch (404 PGRST202)
+Feature/Page Affected: /js/cp-api.js (lines 1971–1976) & /admin/applications.html role selector.
+
+Current Behavior: CP.Applications.updateApplicantRole invokes admin_update_applicant_role with { p_application_id, p_applicant_id, p_new_type, p_actor }, whereas the live PostgreSQL function signature is (p_application_id uuid, p_applicant_id uuid, p_new_applicant_type text). PostgREST fails with 404 PGRST202, forcing a partial client-side table update fallback (which skips server-side recalculate_application_household_metrics when RLS blocks direct updates).
+
+Expected Behavior: Calling updateApplicantRole executes admin_update_applicant_role cleanly (200 OK) and recalculates household income and fee totals server-side.
+
+Steps to Reproduce:
+
+Open an expanded household card in /admin/applications.html.
+
+Change a Co-Applicant's role dropdown and confirm -> observe 404 on POST /rest/v1/rpc/admin_update_applicant_role.
+
+Severity: Medium
+
+Recommended Correction: Update /js/cp-api.js lines 1971–1976 to pass { p_application_id, p_applicant_id, p_new_applicant_type: normalizedType } matching the PostgreSQL signature.
+
+Issue 11 — Pre-Existing Minor Defects (get_location_notifications 404, Apply Footer Typo, Legacy Pet Data)
+Feature/Page Affected: /admin/dashboard.html (js/admin/dashboard.js + js/cp-api.js line 2197), /apply/index.html line 1021, public.properties legacy rows.
+
+Current Behavior:
+
+/admin/dashboard.html triggers a console 404 calling POST /rest/v1/rpc/get_location_notifications (PGRST202, function not present in schema).
+
+/apply/index.html line 1021 displays <i class="fas fa-envelope"></i> 707-706-3137 (phone number next to email icon).
+
+14 of 286 active public.properties rows still hold non-null pets_allowed / pet_deposit values in the database (AGENTS.md invariant check).
+
+Severity: Low
+
+Recommended Correction: Guard/deploy get_location_notifications, replace the apply footer email label with the official support email (CONFIG.COMPANY_EMAIL), and null out legacy pet columns on active rows per AGENTS.md.
+
+D. Missing or Incomplete Requirements
+Real External Payment Processor Integration: The application uses an internal simulated card gateway (card_gateway in lib/payment-router.js and functions/api/payments/[[path]].js) accepting client-tokenized tok_card_* / tok_decline_* descriptors. No live Stripe/merchant processor or real webhook verification is configured; real-world card charging, 3DS challenges, and live processor settlement cannot be verified until a live processor is wired.
+
+End-to-End Authenticated Receipt Issuance & Download: Because confirm-card-payment fails silently (401 + 23503) and download-payment-receipt enforces verify_jwt: true, neither card-payment receipt generation nor unauthenticated payer receipt viewing from /apply/pay.html is complete.
+
+Tenant Portal Live Viewing & Post-Submission Support: Due to RLS recursion (42P17) and tenant_portal_state failure (400), tenants cannot currently view household completion progress, Method B statuses, receipts, payment attempt history, or upload requested documents on additional_info_required.
+
+E. Existing Functionality Regression
+Regressions Caused by Recent Changes:
+
+Admin Leases (/admin/leases.html) & Admin Move-Ins (/admin/move-ins.html): Both pre-existing admin tools query public.applications directly and now fail with HTTP 500 (42P17: infinite recursion detected in policy for relation "application_applicants") introduced by the updated cross-table RLS policies.
+
+Admin Applications (/admin/applications.html): Existing application review, status changes, and card expansion are inaccessible until the RLS recursion is resolved.
+
+Unbroken Existing Functionality:
+
+Public home (/), /listings.html, /property.html, /rent/<state>/<city>/<slug>, private placement #share= token isolation (2,593 private_placement listings remained hidden from public listings), and /admin/dashboard.html (which reads via SECURITY DEFINER dashboard_pulse RPC) loaded cleanly with zero layout overflow on desktop (1440x900) and mobile (390x844).
+
+Pre-Existing Issues (Not Newly Introduced):
+
+get_location_notifications 404 PGRST202 on Admin Dashboard, /apply/index.html line 1021 footer phone/email typo, and 14 legacy active properties with non-null pets_allowed/pet_deposit.
+
+F. Final Recommendation
+Recommendation: Do NOT release to users until the critical blockers below are corrected and re-verified.
+
+Prioritized Fix Order (awaiting your authorization before making any edits):
+
+Fix PostgreSQL RLS Infinite Recursion (42P17) across applications and application_applicants using SECURITY DEFINER membership helper functions so /tenant/portal.html, /admin/applications.html, /admin/leases.html, and /admin/move-ins.html load cleanly.
+
+Fix tenant_portal_state RPC (remove nonexistent lease_executed_at, return { success: true, app, ... }, filter status IN ('issued', 'active')).
+
+Fix Receipt & Email Confirmation Pipeline: Set SUPABASE_SERVICE_ROLE_KEY in Cloudflare Pages env vars (removing hardcoded fallback keys), ensure confirm-card-payment authorization succeeds and passes a valid auth.users.id or null for created_by, and fix download-payment-receipt token/auth flow so payers can reliably view receipts after card payment.
+
+Fix Guarantor/Co-Signer Screening Consent Constraint: Expand application_screening_consent_events_applicant_type_check to include 'guarantor' and 'co_signer', and make confirm-co-applicant-screening atomic.
+
+Fix Edge Function JWT & Status Gates: Redeploy request-upload-url with verify_jwt: false so Method B token uploads work, and add 'additional_info_required' to uploadableStatuses.
+
+Fix Frontend UI & RPC Bugs:
+
+/apply/js/pay.js: Stop displaying "Application Fee Waived ($0.00)" on paid transactions.
+
+/js/tenant/portal.js: Fix Option B Primary CTA destination when Primary's share is already paid.
+
+/js/cp-api.js: Fix admin_update_applicant_role RPC argument name (p_new_applicant_type).
+
+Clean Up Minor Pre-Existing Items: get_location_notifications, /apply/index.html footer email typo, and legacy pets_allowed/pet_deposit rows.
+
+Please confirm if you would like me to proceed with implementing these corrections and running a full post-fix verification pass.

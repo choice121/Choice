@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1795848827638"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0D2137">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Application Submitted — Choice Properties</title>
+  <meta name="description" content="Your Choice Properties rental application has been submitted. Save your application reference and open the Tenant Portal.">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/apply/css/success.css?v=1795848827638">
+</head>
+<body>
+  <main class="success-viewport" id="successViewport">
+    <div class="success-shell">
+      <header class="top-bar">
+        <a href="/index.html" class="brand-link" id="brandLink" aria-label="Choice Properties Home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 9.5L12 3L21 9.5V20C21 20.55 20.55 21 20 21H15V15H9V21H4C3.45 21 3 20.55 3 20V9.5Z" fill="white" opacity="0.95"/>
+              <circle cx="12" cy="11" r="2.5" fill="#C9A04A"/>
+            </svg>
+          </span>
+          <span class="brand-name">Choice Properties</span>
+        </a>
+        <button type="button" class="lang-toggle-btn" id="successLangToggle" aria-label="Switch language">
+          <i class="fas fa-language" aria-hidden="true"></i>
+          <span id="successLangText">Español</span>
+        </button>
+      </header>
+
+      <section class="confirmation-card" aria-labelledby="successHeading">
+        <div class="hero-block">
+          <div class="status-badge" aria-hidden="true">
+            <i class="fas fa-check"></i>
+          </div>
+          <h1 id="successHeading">Application Submitted</h1>
+          <p class="hero-subtitle" id="successSubtitle">Saved securely — confirmation sent to your email.</p>
+          <div class="property-pill" id="propertyPill" hidden>
+            <i class="fas fa-home" aria-hidden="true"></i>
+            <span id="propertyAddressText"></span>
+          </div>
+        </div>
+
+        <div class="reference-box">
+          <div class="reference-label" id="referenceLabel">Application Reference</div>
+          <div class="reference-row">
+            <code class="reference-code" id="referenceCode">CP-PENDING</code>
+            <button type="button" class="copy-ref-btn" id="copyRefBtn" aria-label="Copy application reference">
+              <i class="fas fa-copy" aria-hidden="true"></i>
+              <span id="copyRefText">Copy</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="summary-panel">
+          <div class="summary-row" id="feeSummaryRow">
+            <div class="summary-row-top">
+              <span class="summary-kicker" id="feeLabel">Application Fee</span>
+              <span class="summary-fee" id="feeAmount">$50.00</span>
+            </div>
+            <div class="prefs-row" id="prefsRow" hidden>
+              <span class="prefs-caption" id="prefsCaption">Preferred:</span>
+              <div class="prefs-chips" id="prefsChips"></div>
+            </div>
+          </div>
+
+          <div class="summary-divider" id="summaryDivider"></div>
+
+          <div class="summary-row summary-timeline">
+            <i class="fas fa-clock" aria-hidden="true"></i>
+            <p id="nextStepSummary">Someone from our team will contact you shortly to coordinate your fee and begin your review.</p>
+          </div>
+
+          <div class="extra-note-row" id="extraNoteRow" hidden>
+            <i class="fas fa-check-circle" aria-hidden="true"></i>
+            <span id="extraNoteText"></span>
+          </div>
+        </div>
+
+        <div class="actions-block">
+          <a href="/tenant/portal.html" class="primary-cta" id="portalCta">
+            <i class="fas fa-folder-open" aria-hidden="true"></i>
+            <span id="portalCtaText">Open Tenant Portal</span>
+          </a>
+          <div class="secondary-links">
+            <a href="/listings.html" class="sec-link" id="browseListingsLink">
+              <i class="fas fa-home" aria-hidden="true"></i>
+              <span id="browseListingsText">Browse Listings</span>
+            </a>
+            <span class="dot-sep" id="browseListingsSep" aria-hidden="true">·</span>
+            <a href="#" class="sec-link" id="backToListingLink" hidden>
+              <span id="backToListingText">View Listing</span>
+            </a>
+            <span class="dot-sep" id="backToListingSep" hidden aria-hidden="true">·</span>
+            <a href="tel:7077063137" class="sec-link">
+              <i class="fas fa-phone-alt" aria-hidden="true"></i>
+              <span>707-706-3137</span>
+            </a>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script defer src="/apply/js/success.js?v=1795848827638"></script>
+</body>
+</html>

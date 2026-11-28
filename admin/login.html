@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/js/cp-error-reporter.js?v=1795848827638"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Choice Admin">
+<meta name="robots" content="noindex, nofollow">
+<title>Admin Login · Choice Properties</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/cp-design.css?v=1795848827638">
+<script defer src="/config.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" integrity="sha384-YieCqqg9gQufX7+5HcFvCEg/n3KUEdl8/Jb+A6J0npf1mB740VayvwKjTrtCeUoy" crossorigin="anonymous"></script>
+</head>
+<body data-portal="auth">
+
+<div class="auth-shell">
+  <div class="auth-shell-card">
+    <div class="auth-shell-brand">
+      <div class="name">Choice Properties</div>
+      <div class="sub">Administration Portal</div>
+      <div class="divider"></div>
+    </div>
+
+    <!-- Shown while scripts load -->
+    <div class="auth-init" id="initOverlay">
+      <div class="spinner"></div>
+      <span>Initialising…</span>
+    </div>
+
+    <!-- Main form (hidden until scripts ready) -->
+    <div id="formWrap" style="display:none">
+      <p class="auth-shell-subtitle" id="authSubtitle">Sign in to continue</p>
+
+      <div class="auth-alert info" id="sessionNotice">Checking existing session…</div>
+      <div class="auth-alert error"   id="alertError"></div>
+      <div class="auth-alert success" id="alertSuccess"></div>
+
+      <!-- Device-bound 2-digit Quick PIN keypad (shown only when this device is enrolled) -->
+      <div id="pinPadWrap" class="pin-pad-wrap" style="display:none">
+        <div class="pin-device-tag" id="pinDeviceLabel">This Device</div>
+        <div class="pin-dots" aria-label="2-digit PIN progress">
+          <div class="pin-dot" id="pinDot0"></div>
+          <div class="pin-dot" id="pinDot1"></div>
+        </div>
+        <div class="pin-grid" id="pinGrid" role="group" aria-label="Numeric keypad">
+          <button type="button" class="pin-key" data-digit="1">1</button>
+          <button type="button" class="pin-key" data-digit="2">2</button>
+          <button type="button" class="pin-key" data-digit="3">3</button>
+          <button type="button" class="pin-key" data-digit="4">4</button>
+          <button type="button" class="pin-key" data-digit="5">5</button>
+          <button type="button" class="pin-key" data-digit="6">6</button>
+          <button type="button" class="pin-key" data-digit="7">7</button>
+          <button type="button" class="pin-key" data-digit="8">8</button>
+          <button type="button" class="pin-key" data-digit="9">9</button>
+          <button type="button" class="pin-key pin-key-fn" id="pinClearBtn">Clear</button>
+          <button type="button" class="pin-key" data-digit="0">0</button>
+          <button type="button" class="pin-key pin-key-fn" id="pinBackBtn" aria-label="Backspace">⌫</button>
+        </div>
+        <div class="pin-verifying" id="pinVerifying"></div>
+        <div class="auth-shell-links">
+          <button type="button" id="usePasswordBtn">Use email &amp; password instead</button>
+        </div>
+      </div>
+
+      <!-- Standard email + password form -->
+      <form id="loginForm" autocomplete="on" novalidate style="display:none">
+        <div class="field">
+          <label class="field-label" for="email">Email Address</label>
+          <input class="field-input" type="email" id="email" name="email"
+                 placeholder="admin@example.com"
+                 autocomplete="username email"
+                 inputmode="email" required>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="password">Password</label>
+          <div class="field-input-wrap">
+            <input class="field-input has-suffix" type="password" id="password" name="password"
+                   placeholder="••••••••"
+                   autocomplete="current-password" required>
+            <button type="button" class="field-suffix-btn" id="pwToggle"
+                    aria-label="Show password" title="Show/hide password">
+              <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg id="eyeClosed" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-auth" id="btnSubmit">
+          <span class="btn-text">Sign In</span>
+          <div class="btn-spinner"></div>
+        </button>
+
+        <div class="auth-shell-links">
+          <button type="button" id="forgotBtn">Forgot password?</button>
+          <button type="button" id="usePinBtn" style="display:none">Use 2-digit Quick PIN</button>
+        </div>
+      </form>
+
+      <!-- Password reset completion form (shown when arriving from reset email) -->
+      <form id="recoveryForm" novalidate style="display:none">
+        <div class="field">
+          <label class="field-label" for="newPassword">New Password</label>
+          <input class="field-input" type="password" id="newPassword"
+                 placeholder="Minimum 8 characters" autocomplete="new-password" required>
+        </div>
+        <div class="field">
+          <label class="field-label" for="confirmPassword">Confirm New Password</label>
+          <input class="field-input" type="password" id="confirmPassword"
+                 placeholder="Re-enter new password" autocomplete="new-password" required>
+        </div>
+        <button type="submit" class="btn-auth" id="btnRecoverySubmit">
+          <span class="btn-text">Save New Password</span>
+          <div class="btn-spinner"></div>
+        </button>
+      </form>
+
+      <div class="auth-shell-foot">Admin access only. Unauthorised access is prohibited.</div>
+    </div>
+  </div>
+</div>
+
+<script nonce="__CSP_NONCE__">
+// ─── Wait for Supabase SDK + CONFIG to be available ───────────────────────
+function waitForDeps() {
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+    const max    = 100;
+    const id = setInterval(() => {
+      attempts++;
+      const ready =
+        typeof window.supabase !== 'undefined' &&
+        typeof window.CONFIG    !== 'undefined' &&
+        window.CONFIG.SUPABASE_URL;
+      if (ready) { clearInterval(id); resolve(); return; }
+      if (attempts >= max) {
+        clearInterval(id);
+        reject(new Error('Supabase or config failed to load. Please refresh the page.'));
+      }
+    }, 50);
+  });
+}
+
+let _sb = null;
+function sb() { return _sb; }
+
+const $ = id => document.getElementById(id);
+const initOverlay       = $('initOverlay');
+const formWrap          = $('formWrap');
+const authSubtitle      = $('authSubtitle');
+const pinPadWrap        = $('pinPadWrap');
+const pinDeviceLabel    = $('pinDeviceLabel');
+const pinDot0           = $('pinDot0');
+const pinDot1           = $('pinDot1');
+const pinGrid           = $('pinGrid');
+const pinClearBtn       = $('pinClearBtn');
+const pinBackBtn        = $('pinBackBtn');
+const pinVerifying      = $('pinVerifying');
+const usePasswordBtn    = $('usePasswordBtn');
+const loginForm         = $('loginForm');
+const emailInput        = $('email');
+const passInput         = $('password');
+const btnSubmit         = $('btnSubmit');
+const usePinBtn         = $('usePinBtn');
+const alertError        = $('alertError');
+const alertSuccess      = $('alertSuccess');
+const sessionNotice     = $('sessionNotice');
+const pwToggle          = $('pwToggle');
+const eyeOpen           = $('eyeOpen');
+const eyeClosed         = $('eyeClosed');
+const forgotBtn         = $('forgotBtn');
+const recoveryForm      = $('recoveryForm');
+const newPasswordInput  = $('newPassword');
+const confirmPassInput  = $('confirmPassword');
+const btnRecoverySubmit = $('btnRecoverySubmit');
+
+let _deviceEnrolled = false;
+let _pinBuffer = '';
+let _pinSubmitting = false;
+
+function showError(msg) {
+  alertError.textContent = msg;
+  alertError.classList.add('visible');
+  alertSuccess.classList.remove('visible');
+}
+function showSuccess(msg) {
+  alertSuccess.textContent = msg;
+  alertSuccess.classList.add('visible');
+  alertError.classList.remove('visible');
+}
+function clearAlerts() {
+  alertError.classList.remove('visible');
+  alertSuccess.classList.remove('visible');
+}
+function setLoading(on) {
+  btnSubmit.disabled = on;
+  btnSubmit.classList.toggle('loading', on);
+}
+
+function showPinMode(deviceLabel) {
+  pinPadWrap.style.display = 'flex';
+  loginForm.style.display = 'none';
+  recoveryForm.style.display = 'none';
+  authSubtitle.textContent = 'Tap your 2 numbers to unlock';
+  pinDeviceLabel.textContent = deviceLabel || 'This Device';
+  updatePinDots();
+}
+
+function showPasswordMode() {
+  pinPadWrap.style.display = 'none';
+  loginForm.style.display = 'block';
+  recoveryForm.style.display = 'none';
+  authSubtitle.textContent = 'Sign in to continue';
+  usePinBtn.style.display = _deviceEnrolled ? '' : 'none';
+  emailInput.focus();
+}
+
+function showRecoveryMode() {
+  pinPadWrap.style.display = 'none';
+  loginForm.style.display = 'none';
+  recoveryForm.style.display = 'block';
+  authSubtitle.textContent = 'Set a new admin password';
+  newPasswordInput.focus();
+}
+
+function updatePinDots(isError = false) {
+  pinDot0.classList.toggle('filled', _pinBuffer.length >= 1 && !isError);
+  pinDot1.classList.toggle('filled', _pinBuffer.length >= 2 && !isError);
+  pinDot0.classList.toggle('error', isError);
+  pinDot1.classList.toggle('error', isError);
+}
+
+function setKeypadDisabled(disabled) {
+  pinGrid.querySelectorAll('button').forEach(b => { b.disabled = disabled; });
+}
+
+async function submitPin(pin) {
+  if (_pinSubmitting) return;
+  _pinSubmitting = true;
+  clearAlerts();
+  setKeypadDisabled(true);
+  pinVerifying.textContent = 'Verifying…';
+
+  try {
+    const res = await fetch('/api/admin/pin-login', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'ChoiceAdmin',
+      },
+      body: JSON.stringify({ pin }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.ok || !data.token_hash) {
+      updatePinDots(true);
+      if (data.locked || data.enrolled === false) {
+        _deviceEnrolled = false;
+        _pinBuffer = '';
+        showPasswordMode();
+        showError(data.error || 'Quick PIN unavailable. Please sign in with your email and password.');
+      } else {
+        showError(data.error || 'Incorrect numbers. Try again.');
+        setTimeout(() => {
+          _pinBuffer = '';
+          updatePinDots(false);
+        }, 350);
+      }
+      pinVerifying.textContent = '';
+      setKeypadDisabled(false);
+      _pinSubmitting = false;
+      return;
+    }
+
+    const { data: otpData, error: otpErr } = await sb().auth.verifyOtp({
+      token_hash: data.token_hash,
+      type: data.verification_type || 'magiclink',
+    });
+
+    if (otpErr || !otpData?.session) {
+      _pinBuffer = '';
+      updatePinDots(true);
+      showError('Could not open admin session. Please sign in with your email and password.');
+      pinVerifying.textContent = '';
+      setKeypadDisabled(false);
+      _pinSubmitting = false;
+      return;
+    }
+
+    pinVerifying.textContent = 'Unlocked!';
+    location.href = 'dashboard.html';
+  } catch (err) {
+    _pinBuffer = '';
+    updatePinDots(true);
+    showError('Connection error. Please try again.');
+    pinVerifying.textContent = '';
+    setKeypadDisabled(false);
+    _pinSubmitting = false;
+  }
+}
+
+function appendDigit(digit) {
+  if (_pinSubmitting || pinPadWrap.style.display === 'none') return;
+  if (_pinBuffer.length >= 2) return;
+  clearAlerts();
+  _pinBuffer += digit;
+  updatePinDots(false);
+  if (_pinBuffer.length === 2) {
+    submitPin(_pinBuffer);
+  }
+}
+
+pinGrid.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-digit]');
+  if (!btn) return;
+  appendDigit(btn.dataset.digit);
+});
+
+pinClearBtn.addEventListener('click', () => {
+  if (_pinSubmitting) return;
+  _pinBuffer = '';
+  clearAlerts();
+  updatePinDots(false);
+});
+
+pinBackBtn.addEventListener('click', () => {
+  if (_pinSubmitting) return;
+  _pinBuffer = _pinBuffer.slice(0, -1);
+  clearAlerts();
+  updatePinDots(false);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (pinPadWrap.style.display === 'none' || _pinSubmitting) return;
+  if (/^\d$/.test(e.key)) {
+    e.preventDefault();
+    appendDigit(e.key);
+  } else if (e.key === 'Backspace') {
+    e.preventDefault();
+    _pinBuffer = _pinBuffer.slice(0, -1);
+    updatePinDots(false);
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    _pinBuffer = '';
+    updatePinDots(false);
+  }
+});
+
+usePasswordBtn.addEventListener('click', () => {
+  clearAlerts();
+  showPasswordMode();
+});
+
+usePinBtn.addEventListener('click', () => {
+  clearAlerts();
+  _pinBuffer = '';
+  showPinMode(pinDeviceLabel.textContent);
+});
+
+pwToggle.addEventListener('click', () => {
+  const show = passInput.type === 'password';
+  passInput.type = show ? 'text' : 'password';
+  eyeOpen  .style.display = show ? 'none' : '';
+  eyeClosed.style.display = show ? ''     : 'none';
+  pwToggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+  passInput.focus();
+});
+
+forgotBtn.addEventListener('click', async () => {
+  const email = emailInput.value.trim();
+  if (!email) {
+    showError('Enter your email address above first, then click "Forgot password?".');
+    emailInput.focus();
+    return;
+  }
+  clearAlerts();
+  forgotBtn.disabled = true;
+  forgotBtn.textContent = 'Sending…';
+  try {
+    const { error } = await sb().auth.resetPasswordForEmail(email, {
+      redirectTo: location.origin + '/admin/login.html'
+    });
+    if (error) { showError(error.message); }
+    else        { showSuccess('Password reset email sent! Open the link in your inbox to set a new password.'); }
+  } catch (e) {
+    showError('Could not send reset email. Please try again.');
+  } finally {
+    forgotBtn.disabled = false;
+    forgotBtn.textContent = 'Forgot password?';
+  }
+});
+
+recoveryForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearAlerts();
+  const pw = newPasswordInput.value;
+  const confirmPw = confirmPassInput.value;
+  if (!pw || pw.length < 8) {
+    showError('Password must be at least 8 characters.');
+    return;
+  }
+  if (pw !== confirmPw) {
+    showError('Passwords do not match.');
+    return;
+  }
+  btnRecoverySubmit.disabled = true;
+  btnRecoverySubmit.classList.add('loading');
+  try {
+    const { error: updErr } = await sb().auth.updateUser({ password: pw });
+    if (updErr) {
+      showError(updErr.message || 'Could not update password.');
+      btnRecoverySubmit.disabled = false;
+      btnRecoverySubmit.classList.remove('loading');
+      return;
+    }
+    const { data: { user } } = await sb().auth.getUser();
+    if (!user) {
+      showError('Password saved, please sign in.');
+      showPasswordMode();
+      btnRecoverySubmit.disabled = false;
+      btnRecoverySubmit.classList.remove('loading');
+      return;
+    }
+    const { data: adminRow } = await sb()
+      .from('admin_roles')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (!adminRow) {
+      await sb().auth.signOut();
+      showPasswordMode();
+      showError('Password updated, but this account does not have admin privileges yet.');
+      btnRecoverySubmit.disabled = false;
+      btnRecoverySubmit.classList.remove('loading');
+      return;
+    }
+    history.replaceState(null, '', location.pathname);
+    location.href = 'dashboard.html';
+  } catch (err) {
+    showError('Unexpected error saving password. Please try again.');
+    btnRecoverySubmit.disabled = false;
+    btnRecoverySubmit.classList.remove('loading');
+  }
+});
+
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  clearAlerts();
+
+  const email = emailInput.value.trim();
+  const pass  = passInput.value;
+
+  if (!email || !pass) {
+    showError('Please enter your email and password.');
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const { error: signInErr } = await sb().auth.signInWithPassword({
+      email,
+      password: pass,
+    });
+
+    if (signInErr) {
+      let msg = signInErr.message;
+      if (msg.toLowerCase().includes('invalid login') || msg.toLowerCase().includes('invalid credentials')) {
+        msg = 'Incorrect email or password. Please check and try again.';
+      } else if (msg.toLowerCase().includes('email not confirmed')) {
+        msg = 'Your email address has not been confirmed. Check your inbox.';
+      } else if (msg.toLowerCase().includes('too many requests')) {
+        msg = 'Too many login attempts. Please wait a moment and try again.';
+      }
+      showError(msg);
+      setLoading(false);
+      return;
+    }
+
+    const { data: { user } } = await sb().auth.getUser();
+    if (!user) {
+      showError('Authentication error. Please refresh and try again.');
+      setLoading(false);
+      return;
+    }
+
+    const { data: adminRow } = await sb()
+      .from('admin_roles')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (!adminRow) {
+      await sb().auth.signOut();
+      showError('Access denied — this account does not have admin privileges.');
+      setLoading(false);
+      return;
+    }
+
+    location.href = 'dashboard.html';
+
+  } catch (err) {
+    console.error('[Login error]', err);
+    showError('An unexpected error occurred. Please refresh and try again.');
+    setLoading(false);
+  }
+});
+
+async function handleRecoveryParamsIfPresent() {
+  const q = new URLSearchParams(location.search);
+  const h = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+  const type = q.get('type') || h.get('type') || '';
+  const code = q.get('code');
+  const tokenHash = q.get('token_hash') || h.get('token_hash');
+  const accessToken = h.get('access_token');
+  const refreshToken = h.get('refresh_token');
+
+  if (type === 'recovery' && accessToken && refreshToken) {
+    const { error } = await sb().auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+    return !error;
+  }
+  if (type === 'recovery' && tokenHash) {
+    const { error } = await sb().auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' });
+    return !error;
+  }
+  if (code) {
+    const { error } = await sb().auth.exchangeCodeForSession(code);
+    if (!error) return true;
+  }
+  return false;
+}
+
+(async function init() {
+  try {
+    await waitForDeps();
+
+    _sb = window.supabase.createClient(
+      window.CONFIG.SUPABASE_URL,
+      window.CONFIG.SUPABASE_ANON_KEY,
+      {
+        auth: {
+          persistSession:   true,
+          autoRefreshToken: true,
+          flowType: 'pkce',
+          detectSessionInUrl: false,
+        }
+      }
+    );
+    _sb.auth.onAuthStateChange(() => {});
+
+    sessionNotice.classList.add('visible');
+    formWrap.style.display = 'block';
+    initOverlay.style.display = 'none';
+
+    const inRecovery = await handleRecoveryParamsIfPresent();
+    if (inRecovery) {
+      sessionNotice.classList.remove('visible');
+      showRecoveryMode();
+      return;
+    }
+
+    const { data: { session } } = await sb().auth.getSession();
+    if (session?.user) {
+      const { data: adminRow } = await sb()
+        .from('admin_roles')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (adminRow) {
+        sessionNotice.textContent = 'Restoring session…';
+        location.href = 'dashboard.html';
+        return;
+      }
+    }
+
+    sessionNotice.classList.remove('visible');
+
+    // Check whether this browser holds an enrolled device token cookie
+    try {
+      const devRes = await fetch('/api/admin/trusted-devices', { credentials: 'include' });
+      const devData = await devRes.json().catch(() => ({}));
+      if (devRes.ok && devData.ok && devData.enrolled) {
+        _deviceEnrolled = true;
+        showPinMode(devData.device_label || 'This Device');
+        return;
+      }
+    } catch (_) {}
+
+    showPasswordMode();
+
+  } catch (err) {
+    initOverlay.style.display = 'none';
+    formWrap.style.display = 'block';
+    sessionNotice.classList.remove('visible');
+    showPasswordMode();
+    showError(err.message || 'Failed to initialise. Please refresh the page.');
+  }
+})();
+</script>
+</body>
+</html>
