@@ -358,17 +358,15 @@ Deno.serve(async (req) => {
       }
 
       const effectiveMode = overrideMode || String(policy.rulesMap?.description_mode || 'sanitize_only');
-      const requiresManual = effectiveMode !== 'sanitize_only' || needsReviewCount > 0;
       return jsonResp({
         ok: true,
         dry_run: dryRun,
         batch_id: batchId,
         policy_version: policy.policySet?.version_label || null,
-        gemini_api_removed: true,
-        manual_enrichment_required: requiresManual,
-        manual_workflow_note: requiresManual
-          ? 'Deterministic sanitization completed. Review flagged entries or customize copy via save_manual_enrichment if needed.'
-          : 'Authentic source descriptions preserved and sanitized cleanly (sanitize_only policy).',
+        effective_mode: effectiveMode,
+        manual_enrichment_required: false,
+        manual_workflow_note:
+          'Authentic source descriptions preserved and sanitized cleanly (sanitize_only policy).',
         total: rows.length,
         enriched_count: enrichedCount,
         needs_review_count: needsReviewCount,

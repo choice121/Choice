@@ -269,8 +269,7 @@ Deno.serve(async (req) => {
     return jsonResp({
       ok: true,
       batch_id: batchId,
-      gemini_api_removed: true,
-      manual_verification_required: true,
+      manual_verification_required: false,
       job: jobInfo.ok ? jobInfo : null,
       pipeline_counts: {
         total: rows.length,

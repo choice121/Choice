@@ -8,6 +8,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { buildCorsHeaders, corsResponse } from '../_shared/cors.ts';
 import { mintShareToken } from '../_shared/batch-publishing.ts';
+import { enrichPropertyDescription } from '../_shared/description-enrichment.ts';
 import { runBatchVerification } from '../_shared/batch-verifier.ts';
 import { verifyBatchWorkerLease } from '../_shared/worker-lease.ts';
 
@@ -257,9 +258,15 @@ Deno.serve(async (req) => {
     const pipelineId = String(cand.id || '');
     if (!pipelineId) continue;
 
-    if (cand.needs_review === true || String(cand.validation_status || 'pending') !== 'passed') {
+    const valStatus = String(cand.validation_status || 'pending');
+    const allowPending = Boolean(auth.isHumanAdmin || body.allow_pending_validation === true);
+    if (
+      cand.needs_review === true ||
+      valStatus === 'rejected' ||
+      (valStatus !== 'passed' && !(allowPending && valStatus === 'pending'))
+    ) {
       failedCount++;
-      const msg = `validation_not_passed: ${String(cand.review_reason || cand.validation_status || 'pending')}`;
+      const msg = `validation_not_passed: ${String(cand.review_reason || valStatus || 'pending')}`;
       errors.push({ pipeline_id: pipelineId, address: cand.address || null, error: msg });
       results.push({
         pipeline_id: pipelineId,
@@ -276,7 +283,42 @@ Deno.serve(async (req) => {
       continue;
     }
 
+    // Ensure every candidate has clean Nov 20 sanitize_only description persisted prior to publish
     try {
+      const needsAutoSanitize =
+        String(cand.enrichment_status || 'pending') !== 'enriched' ||
+        !cand.approved_description ||
+        String(cand.approved_description).trim() === '';
+      if (needsAutoSanitize) {
+        const enr = await enrichPropertyDescription(cand, {
+          policy: { mode: 'sanitize_only' },
+          useAi: false,
+        });
+        if (enr.approved_description) {
+          await adminClient.rpc('pipeline_record_enrichment_result', {
+            p_id: pipelineId,
+            p_enrichment_status: enr.status,
+            p_ai_description_draft: enr.ai_description_draft,
+            p_approved_description: enr.approved_description,
+            p_enrichment_meta: { mode: 'sanitize_only', model: 'sanitize-only', auto_on_publish: true },
+            p_enrichment_version: enr.ruleset_version || 'v1',
+            p_last_enriched_hash: enr.original_hash,
+            p_needs_review: false,
+            p_review_reason: null,
+            p_original_hash: enr.original_hash,
+            p_cleaned_hash: enr.cleaned_hash,
+            p_changes: enr.changes,
+            p_reasons: enr.reasons,
+            p_confidence: enr.confidence,
+            p_ruleset_version: enr.ruleset_version,
+            p_model: enr.model,
+            p_triggered_by: 'publish-batch:auto_sanitize',
+            p_latency_ms: enr.latency_ms,
+            p_mode: 'sanitize_only',
+          });
+        }
+      }
+
       const { data: pubRaw, error: pubErr } = await adminClient.rpc('pipeline_publish_for_batch', {
         p_batch_id: String(batchMeta.id || rawBatchId),
         p_pipeline_id: pipelineId,

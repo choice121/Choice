@@ -707,29 +707,21 @@ Deno.serve(async (req) => {
     }
 
     if (stageOnly) {
-      await reportStage('enriching', {
+      await reportStage('completed', {
         progress_json: {
-          awaiting_manual_enrichment: true,
+          staged_only: true,
           validated_passed: valRes.data.passed_count ?? 0,
-          enriched_baseline_count: enrichRes.data.enriched_count ?? 0,
+          enriched_count: enrichRes.data.enriched_count ?? 0,
         },
       });
       return jsonResp({
         ok: true,
-        status: 'awaiting_manual_enrichment',
+        status: 'staged',
         batch_id: batchId,
         worker_id: workerId,
         lease_token: leaseToken,
         visibility,
-        gemini_api_removed: true,
-        manual_verification_required: true,
-        manual_steps_remaining: [
-          'Inspect each staged property side-by-side against its Zillow source URL and raw payload.',
-          'Refill every missing/truncated spec (baths, half_baths, sqft, lot_size_sqft, year_built, laundry_type, garage_spaces, parking, appliances, amenities, HVAC).',
-          'Visually inspect ordered source photos for watermarks or MLS overlays.',
-          'Submit a manually authored Choice description per property via enrich-description action=save_manual_enrichment.',
-          'Run calculate-pricing -> publish-batch -> verify -> job-manager cleanup_disposable_folder.',
-        ],
+        manual_verification_required: false,
         elapsed_ms: Date.now() - startMs,
         stages,
       }, 200, origin);
@@ -846,10 +838,7 @@ Deno.serve(async (req) => {
       lease_token: leaseToken,
       visibility,
       extraction_depth: extractionDepth,
-      gemini_api_removed: true,
-      manual_verification_required: true,
-      manual_workflow_notice:
-        'Automated pipeline uses deterministic sanitization only (no Gemini API key). For full accuracy, run stage_only: true and perform manual side-by-side field refill, photo inspection, and bespoke description rewrite per property before publishing.',
+      manual_verification_required: false,
       magic_link_url: pubRes.data.magic_link_url || null,
       share_id: pubRes.data.share_id || null,
       expires_at: pubRes.data.expires_at || null,

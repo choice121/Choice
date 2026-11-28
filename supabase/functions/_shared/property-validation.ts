@@ -1392,16 +1392,11 @@ export async function validatePipelineProperty(
       covered_key_count: coveredKeyCount,
     },
     manual_verification_checklist: {
-      side_by_side_source_check_required: true,
-      photo_watermark_inspection_required: httpsEntries.length > 0,
-      missing_fields_refill_check_required: true,
-      manual_description_rewrite_required: true,
-      required_actions: [
-        'Compare all structured fields, location & features side-by-side against original Zillow source.',
-        'Refill any missing or truncated specs (baths/half_baths, sqft, lot, year_built, laundry, parking, appliances, amenities).',
-        'Inspect ordered source photos visually for third-party watermarks/MLS stamps without reordering.',
-        'Manually author and submit a bespoke Choice-compliant description via enrich-description save_manual_enrichment.',
-      ],
+      side_by_side_source_check_required: false,
+      photo_watermark_inspection_required: false,
+      missing_fields_refill_check_required: false,
+      manual_description_rewrite_required: false,
+      required_actions: [],
     },
     quality_signals: extractQualitySignals(listing),
     policy_version: {

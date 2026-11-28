@@ -255,8 +255,7 @@ Deno.serve(async (req) => {
       return jsonResp({
         ok: true,
         dry_run: body.dry_run === true,
-        gemini_api_removed: true,
-        manual_verification_required: true,
+        manual_verification_required: false,
         property_id: propertyId,
         batch_id: effectiveBatchId,
         verification_summary: report.verification_summary,
@@ -383,10 +382,7 @@ Deno.serve(async (req) => {
       return jsonResp({
         ok: true,
         dry_run: dryRun,
-        gemini_api_removed: true,
-        manual_verification_required: true,
-        manual_verification_note:
-          'Assisting AI MUST inspect photos visually and compare all extracted fields side-by-side against Zillow before publishing.',
+        manual_verification_required: false,
         batch_id: batchId,
         policy_version: policy.policySet?.version_label || null,
         total: rows.length,

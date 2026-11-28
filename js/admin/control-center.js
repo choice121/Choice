@@ -308,7 +308,7 @@
       ? `Active: ${pSet.version_label} (${pSet.status}) · Activated ${S.fmtDate(pSet.activated_at || pSet.created_at)}`
       : 'No policy loaded';
 
-    if ($('rule-desc-mode')) $('rule-desc-mode').value = String(unwrapRuleVal(rMap.description_mode) || 'baseline_rewrite');
+    if ($('rule-desc-mode')) $('rule-desc-mode').value = String(unwrapRuleVal(rMap.description_mode) || 'sanitize_only');
     if ($('rule-desc-variance')) $('rule-desc-variance').value = String(Number(unwrapRuleVal(rMap.max_description_length_variance_pct) ?? 25));
     if ($('rule-recovery-hours')) $('rule-recovery-hours').value = String(Number(unwrapRuleVal(rMap.recovery_retention_hours) ?? 24));
     if ($('rule-share-ttl')) $('rule-share-ttl').value = String(Number(unwrapRuleVal(rMap.share_link_ttl_days) ?? 90));
