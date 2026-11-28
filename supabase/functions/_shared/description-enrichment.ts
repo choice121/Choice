@@ -90,7 +90,7 @@ const PROHIBITED_CATEGORIES: Array<{ key: string; pattern: RegExp }> = [
   {
     key: 'prohibited_fee_or_sale',
     pattern:
-      /\b(?:free|no|zero|waived|complimentary)\s+(?:application\s+)?fee\b|\bapplication\s+fee\s*(?:is\s*|:\s*)?(?:waived|\$?\d+|free)\b|\bapplication\s+\$?\d+(?:\s*\/\s*person|\s+per\s+adult)?\b|\bapplication\s*:\s*\$\d+|\b(?:app|adm(?:in|inistration)|processing)\s+fee\b|\b(?:for\s+sale|mortgage|down\s+payment|closing\s+costs?|make\s+an\s+offer)\b|\bresidents?\s+benefits?\s+package\b|\bbuilding\s+protection\s+plan\b|\b(?:monthly\s+)?rent\s*(?::|is)\s*\$?\d[\d,]*/i,
+      /\b(?:free|no|zero|waived|complimentary)\s+(?:application\s+)?fee\b|\bapplication\s+fee\s*(?:is\s*|:\s*)?(?:waived|\$?\d+|free)\b|\$\s*(?:0|[1-4]?\d|5[1-9]|[6-9]\d|\d{3,})\s+(?:application|app)\s+fee\b|\bapplication\s+\$?\d+(?:\s*\/\s*person|\s+per\s+adult)?\b|\bapplication\s*:\s*\$\d+|\b(?:app|adm(?:in|inistration)|processing)\s+fee\b|\b(?:for\s+sale|mortgage|down\s+payment|closing\s+costs?|make\s+an\s+offer)\b|\bresidents?\s+benefits?\s+package\b|\bbuilding\s+protection\s+plan\b|\b(?:monthly\s+)?rent\s*(?::|is)\s*\$?\d[\d,]*/i,
   },
 ];
 
